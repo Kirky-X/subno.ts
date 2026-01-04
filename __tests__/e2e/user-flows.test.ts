@@ -1,0 +1,771 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
+
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { POST as publishPOST } from '@/app/api/publish/route';
+import { POST as registerPOST, GET as registerGET } from '@/app/api/register/route';
+import { GET as keysGET } from '@/app/api/keys/[id]/route';
+import { GET as subscribeGET } from '@/app/api/subscribe/route';
+import { POST as channelsPOST } from '@/app/api/channels/route';
+import { EncryptionService } from '@/lib/services/encryption.service';
+import { MessagePriority } from '@/lib/types/message.types';
+import { getRedisClient } from '@/lib/redis';
+
+describe('E2E Tests - End-to-End User Flows', () => {
+  let encryptionService: EncryptionService;
+  let redis: any;
+
+  beforeAll(async () => {
+    encryptionService = new EncryptionService();
+    redis = await getRedisClient();
+    await redis.flushDb();
+  });
+
+  afterAll(async () => {
+    await redis.flushDb();
+  });
+
+  describe('E2E-001: 端到端加密通信', () => {
+    it('应该完成完整的加密消息发送和接收', async () => {
+      // 1. 接收端生成密钥对并注册
+      const { publicKey, privateKey } = encryptionService.generateKeyPair();
+
+      const registerRequest = new Request('http://localhost:3000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publicKey,
+          algorithm: 'RSA-2048',
+          expiresIn: 604800,
+        }),
+      });
+
+      const registerResponse = await registerPOST(registerRequest);
+      const registerData = await registerResponse.json();
+
+      expect(registerResponse.status).toBe(201);
+      expect(registerData.success).toBe(true);
+      const { channelId } = registerData.data;
+
+      // 2. 发送端获取公钥
+      const getKeyRequest = new Request(
+        `http://localhost:3000/api/keys/${channelId}`
+      );
+
+      const getKeyResponse = await keysGET(getKeyRequest, { params: { id: channelId } });
+      const getKeyData = await getKeyResponse.json();
+
+      expect(getKeyResponse.status).toBe(200);
+      expect(getKeyData.success).toBe(true);
+      expect(getKeyData.data.publicKey).toBe(publicKey);
+
+      // 3. 发送端加密消息
+      const plaintext = 'Secret message from sender!';
+      const encrypted = encryptionService.encrypt(plaintext, publicKey);
+
+      // 4. 发送加密消息
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelId,
+          message: encrypted,
+          encrypted: true,
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      const publishData = await publishResponse.json();
+
+      expect(publishResponse.status).toBe(200);
+      expect(publishData.success).toBe(true);
+
+      // 5. 接收端获取消息
+      const messages = await redis.lRange(`channel:${channelId}:queue`, 0, -1);
+      expect(messages.length).toBeGreaterThan(0);
+
+      const messageData = JSON.parse(messages[0]);
+      expect(messageData.encrypted).toBe(true);
+      expect(messageData.message).toBe(encrypted);
+
+      // 6. 接收端解密消息
+      const decrypted = encryptionService.decrypt(messageData.message, privateKey);
+      expect(decrypted).toBe(plaintext);
+    });
+
+    it('应该在密钥不匹配时无法解密', async () => {
+      const { publicKey: publicKey1 } = encryptionService.generateKeyPair();
+      const { privateKey: privateKey2 } = encryptionService.generateKeyPair();
+
+      const plaintext = 'Secret message';
+      const encrypted = encryptionService.encrypt(plaintext, publicKey1);
+
+      expect(() => {
+        encryptionService.decrypt(encrypted, privateKey2);
+      }).toThrow();
+    });
+
+    it('应该支持混合加密的大消息', async () => {
+      const { publicKey, privateKey } = encryptionService.generateKeyPair();
+
+      // 注册公钥
+      const registerRequest = new Request('http://localhost:3000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publicKey,
+          algorithm: 'RSA-2048',
+          expiresIn: 604800,
+        }),
+      });
+
+      const registerResponse = await registerPOST(registerRequest);
+      const registerData = await registerResponse.json();
+      const { channelId } = registerData.data;
+
+      // 使用混合加密发送大消息
+      const largePlaintext = 'x'.repeat(50000);
+      const pkg = encryptionService.hybridEncrypt(largePlaintext, publicKey);
+
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelId,
+          message: JSON.stringify(pkg),
+          encrypted: true,
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      expect(publishResponse.status).toBe(200);
+
+      // 接收并解密
+      const messages = await redis.lRange(`channel:${channelId}:queue`, 0, -1);
+      const messageData = JSON.parse(messages[0]);
+      const pkgReceived = JSON.parse(messageData.message);
+
+      const decrypted = encryptionService.hybridDecrypt(pkgReceived, privateKey);
+      expect(decrypted).toBe(largePlaintext);
+    });
+  });
+
+  describe('E2E-002: 公开频道完整流程', () => {
+    it('应该完成公开频道的创建、发布和订阅', async () => {
+      const channelName = 'e2e-public-channel';
+
+      // 1. 创建公开频道
+      const createRequest = new Request('http://localhost:3000/api/channels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: channelName,
+          type: 'public',
+        }),
+      });
+
+      const createResponse = await channelsPOST(createRequest);
+      const createData = await createResponse.json();
+
+      expect(createResponse.status).toBe(201);
+      expect(createData.success).toBe(true);
+
+      // 2. 发布多条消息
+      const messages = [
+        { content: 'First message', priority: 'high' },
+        { content: 'Second message', priority: 'normal' },
+        { content: 'Third message', priority: 'low' },
+      ];
+
+      for (const msg of messages) {
+        const publishRequest = new Request('http://localhost:3000/api/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel: channelName,
+            message: msg.content,
+            priority: msg.priority,
+          }),
+        });
+
+        const publishResponse = await publishPOST(publishRequest);
+        expect(publishResponse.status).toBe(200);
+      }
+
+      // 3. 验证消息已发布
+      const publishedMessages = await redis.lRange(
+        `channel:${channelName}:queue`,
+        0,
+        -1
+      );
+
+      expect(publishedMessages.length).toBe(3);
+
+      // 4. 验证消息顺序（高优先级在前）
+      const parsedMessages = publishedMessages.map(m => JSON.parse(m));
+      expect(parsedMessages[0].message).toBe('First message');
+      expect(parsedMessages[1].message).toBe('Second message');
+      expect(parsedMessages[2].message).toBe('Third message');
+    });
+  });
+
+  describe('E2E-003: 消息签名和验证', () => {
+    it('应该完成消息签名和验证流程', async () => {
+      const { publicKey, privateKey } = encryptionService.generateKeyPair();
+
+      // 1. 发送端签名消息
+      const message = 'Important signed message';
+      const signature = encryptionService.sign(message, privateKey);
+
+      // 2. 接收端验证签名
+      const isValid = encryptionService.verify(message, signature, publicKey);
+
+      expect(isValid).toBe(true);
+
+      // 3. 验证篡改的消息
+      const tamperedMessage = 'Tampered message';
+      const isTamperedValid = encryptionService.verify(
+        tamperedMessage,
+        signature,
+        publicKey
+      );
+
+      expect(isTamperedValid).toBe(false);
+    });
+
+    it('应该支持带签名的加密消息', async () => {
+      const { publicKey, privateKey } = encryptionService.generateKeyPair();
+
+      // 注册公钥
+      const registerRequest = new Request('http://localhost:3000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publicKey,
+          algorithm: 'RSA-2048',
+          expiresIn: 604800,
+        }),
+      });
+
+      const registerResponse = await registerPOST(registerRequest);
+      const registerData = await registerResponse.json();
+      const { channelId } = registerData.data;
+
+      // 加密并签名消息
+      const plaintext = 'Signed and encrypted message';
+      const encrypted = encryptionService.encrypt(plaintext, publicKey);
+      const signature = encryptionService.sign(encrypted, privateKey);
+
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelId,
+          message: encrypted,
+          signature,
+          encrypted: true,
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      expect(publishResponse.status).toBe(200);
+
+      // 接收并验证
+      const messages = await redis.lRange(`channel:${channelId}:queue`, 0, -1);
+      const messageData = JSON.parse(messages[0]);
+
+      // 验证签名
+      const isValid = encryptionService.verify(
+        messageData.message,
+        messageData.signature,
+        publicKey
+      );
+
+      expect(isValid).toBe(true);
+
+      // 解密
+      const decrypted = encryptionService.decrypt(messageData.message, privateKey);
+      expect(decrypted).toBe(plaintext);
+    });
+  });
+
+  describe('E2E-004: 多接收端场景', () => {
+    it('应该支持多个接收端同时订阅', async () => {
+      const channelName = 'e2e-multi-receiver';
+
+      // 创建频道
+      const createRequest = new Request('http://localhost:3000/api/channels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: channelName,
+          type: 'public',
+        }),
+      });
+
+      await channelsPOST(createRequest);
+
+      // 发布消息
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelName,
+          message: 'Broadcast to all receivers',
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      expect(publishResponse.status).toBe(200);
+
+      // 验证消息已发布
+      const messages = await redis.lRange(`channel:${channelName}:queue`, 0, -1);
+      expect(messages.length).toBe(1);
+
+      // 多个接收端都应该能获取到消息
+      const messageData = JSON.parse(messages[0]);
+      expect(messageData.message).toBe('Broadcast to all receivers');
+    });
+
+    it('应该支持加密频道多接收端', async () => {
+      // 接收端 1
+      const { publicKey: publicKey1, privateKey: privateKey1 } =
+        encryptionService.generateKeyPair();
+
+      const registerRequest1 = new Request('http://localhost:3000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publicKey: publicKey1,
+          algorithm: 'RSA-2048',
+          expiresIn: 604800,
+        }),
+      });
+
+      const registerResponse1 = await registerPOST(registerRequest1);
+      const registerData1 = await registerResponse1.json();
+      const channelId1 = registerData1.data.channelId;
+
+      // 接收端 2
+      const { publicKey: publicKey2, privateKey: privateKey2 } =
+        encryptionService.generateKeyPair();
+
+      const registerRequest2 = new Request('http://localhost:3000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publicKey: publicKey2,
+          algorithm: 'RSA-2048',
+          expiresIn: 604800,
+        }),
+      });
+
+      const registerResponse2 = await registerPOST(registerRequest2);
+      const registerData2 = await registerResponse2.json();
+      const channelId2 = registerData2.data.channelId;
+
+      // 每个接收端应该有独立的加密频道
+      expect(channelId1).not.toBe(channelId2);
+
+      // 发送给接收端 1 的消息，接收端 2 无法解密
+      const plaintext1 = 'Message for receiver 1';
+      const encrypted1 = encryptionService.encrypt(plaintext1, publicKey1);
+
+      const publishRequest1 = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelId1,
+          message: encrypted1,
+          encrypted: true,
+        }),
+      });
+
+      await publishPOST(publishRequest1);
+
+      const messages1 = await redis.lRange(`channel:${channelId1}:queue`, 0, -1);
+      const messageData1 = JSON.parse(messages1[0]);
+
+      const decrypted1 = encryptionService.decrypt(
+        messageData1.message,
+        privateKey1
+      );
+      expect(decrypted1).toBe(plaintext1);
+
+      // 接收端 2 无法解密接收端 1 的消息
+      expect(() => {
+        encryptionService.decrypt(messageData1.message, privateKey2);
+      }).toThrow();
+    });
+  });
+
+  describe('E2E-005: 消息持久化和 TTL', () => {
+    it('应该正确处理消息 TTL', async () => {
+      const channelName = 'e2e-ttl-test';
+
+      // 发布消息
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelName,
+          message: 'Message with TTL',
+          priority: MessagePriority.NORMAL,
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      expect(publishResponse.status).toBe(200);
+
+      // 检查消息是否设置了 TTL
+      const ttl = await redis.ttl(`channel:${channelName}:queue`);
+      expect(ttl).toBeGreaterThan(0);
+    });
+
+    it('应该正确处理加密频道 TTL', async () => {
+      const { publicKey } = encryptionService.generateKeyPair();
+
+      const registerRequest = new Request('http://localhost:3000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publicKey,
+          algorithm: 'RSA-2048',
+          expiresIn: 604800,
+        }),
+      });
+
+      const registerResponse = await registerPOST(registerRequest);
+      const registerData = await registerResponse.json();
+      const { channelId } = registerData.data;
+
+      // 发布加密消息
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelId,
+          message: encryptionService.encrypt('Test', publicKey),
+          encrypted: true,
+        }),
+      });
+
+      await publishPOST(publishRequest);
+
+      // 检查加密频道的 TTL
+      const ttl = await redis.ttl(`channel:${channelId}:queue`);
+      expect(ttl).toBeGreaterThan(0);
+    });
+  });
+
+  describe('E2E-006: 错误处理和恢复', () => {
+    it('应该在频道不存在时返回 404', async () => {
+      const subscribeRequest = new Request(
+        'http://localhost:3000/api/subscribe?channel=non-existent'
+      );
+
+      const subscribeResponse = await subscribeGET(subscribeRequest);
+
+      expect(subscribeResponse.status).toBe(404);
+    });
+
+    it('应该在公钥不存在时返回 404', async () => {
+      const getKeyRequest = new Request(
+        'http://localhost:3000/api/keys/enc_nonexistent'
+      );
+
+      const getKeyResponse = await keysGET(getKeyRequest, {
+        params: { id: 'enc_nonexistent' },
+      });
+
+      expect(getKeyResponse.status).toBe(404);
+    });
+
+    it('应该在无效输入时返回 400', async () => {
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // 缺少必需的 channel 字段
+          message: 'Test message',
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+
+      expect(publishResponse.status).toBe(400);
+    });
+  });
+
+  describe('E2E-007: 性能测试', () => {
+    it('应该快速处理大量消息', async () => {
+      const channelName = 'e2e-performance';
+
+      // 发布 100 条消息
+      const startTime = Date.now();
+
+      const promises = [];
+      for (let i = 0; i < 100; i++) {
+        const publishRequest = new Request('http://localhost:3000/api/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel: channelName,
+            message: `Message ${i}`,
+            priority: i % 2 === 0 ? 'high' : 'normal',
+          }),
+        });
+
+        promises.push(publishPOST(publishRequest));
+      }
+
+      const responses = await Promise.all(promises);
+
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      // 所有请求都应该成功
+      const successful = responses.filter(r => r.status === 200).length;
+      expect(successful).toBe(100);
+
+      // 100 条消息应该在合理时间内完成（< 10秒）
+      expect(duration).toBeLessThan(10000);
+    });
+
+    it('应该支持并发加密操作', async () => {
+      const { publicKey, privateKey } = encryptionService.generateKeyPair();
+
+      // 并发加密 50 条消息
+      const startTime = Date.now();
+
+      const promises = [];
+      for (let i = 0; i < 50; i++) {
+        const plaintext = `Message ${i}`;
+        promises.push(encryptionService.encrypt(plaintext, publicKey));
+      }
+
+      const encryptedMessages = await Promise.all(promises);
+
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      // 所有消息都应该被加密
+      expect(encryptedMessages).toHaveLength(50);
+
+      // 50 次加密应该在合理时间内完成（< 5秒）
+      expect(duration).toBeLessThan(5000);
+
+      // 验证所有消息都能正确解密
+      for (let i = 0; i < 50; i++) {
+        const decrypted = encryptionService.decrypt(
+          encryptedMessages[i],
+          privateKey
+        );
+        expect(decrypted).toBe(`Message ${i}`);
+      }
+    });
+  });
+
+  describe('E2E-008: 完整用户场景', () => {
+    it('应该模拟完整的用户注册、发布、订阅流程', async () => {
+      // 用户 A：接收端
+      const { publicKey: publicKeyA, privateKey: privateKeyA } =
+        encryptionService.generateKeyPair();
+
+      const registerRequestA = new Request('http://localhost:3000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publicKey: publicKeyA,
+          algorithm: 'RSA-2048',
+          expiresIn: 604800,
+        }),
+      });
+
+      const registerResponseA = await registerPOST(registerRequestA);
+      const registerDataA = await registerResponseA.json();
+      const channelIdA = registerDataA.data.channelId;
+
+      // 用户 B：发送端
+      // 获取用户 A 的公钥
+      const getKeyRequest = new Request(
+        `http://localhost:3000/api/keys/${channelIdA}`
+      );
+
+      const getKeyResponse = await keysGET(getKeyRequest, {
+        params: { id: channelIdA },
+      });
+      const getKeyData = await getKeyResponse.json();
+      const retrievedPublicKey = getKeyData.data.publicKey;
+
+      expect(retrievedPublicKey).toBe(publicKeyA);
+
+      // 用户 B 发送多条加密消息
+      const messages = [
+        'Hello from User B!',
+        'This is a test message',
+        'End-to-end encryption works!',
+      ];
+
+      for (const msg of messages) {
+        const encrypted = encryptionService.encrypt(msg, retrievedPublicKey);
+
+        const publishRequest = new Request('http://localhost:3000/api/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel: channelIdA,
+            message: encrypted,
+            encrypted: true,
+          }),
+        });
+
+        const publishResponse = await publishPOST(publishRequest);
+        expect(publishResponse.status).toBe(200);
+      }
+
+      // 用户 A 接收并解密所有消息
+      const receivedMessages = await redis.lRange(
+        `channel:${channelIdA}:queue`,
+        0,
+        -1
+      );
+
+      expect(receivedMessages.length).toBe(3);
+
+      for (let i = 0; i < 3; i++) {
+        const messageData = JSON.parse(receivedMessages[i]);
+        const decrypted = encryptionService.decrypt(
+          messageData.message,
+          privateKeyA
+        );
+        expect(decrypted).toBe(messages[i]);
+      }
+    });
+  });
+
+  describe('E2E-009: 数据一致性', () => {
+    it('应该保证消息在发布和接收间的一致性', async () => {
+      const channelName = 'e2e-consistency';
+
+      const originalMessages = [
+        'Message 1 with special chars: !@#$%',
+        'Message 2 with unicode: 你好世界 🌍',
+        'Message 3 with newlines\nLine 2\nLine 3',
+      ];
+
+      // 发布所有消息
+      for (const msg of originalMessages) {
+        const publishRequest = new Request('http://localhost:3000/api/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel: channelName,
+            message: msg,
+          }),
+        });
+
+        const publishResponse = await publishPOST(publishRequest);
+        expect(publishResponse.status).toBe(200);
+      }
+
+      // 接收所有消息
+      const receivedMessages = await redis.lRange(
+        `channel:${channelName}:queue`,
+        0,
+        -1
+      );
+
+      expect(receivedMessages.length).toBe(3);
+
+      // 验证每条消息的一致性
+      for (let i = 0; i < 3; i++) {
+        const messageData = JSON.parse(receivedMessages[i]);
+        expect(messageData.message).toBe(originalMessages[i]);
+      }
+    });
+
+    it('应该保证加密消息的一致性', async () => {
+      const { publicKey, privateKey } = encryptionService.generateKeyPair();
+
+      const originalMessage = 'Test consistency: 12345!@#$%';
+
+      const encrypted = encryptionService.encrypt(originalMessage, publicKey);
+      const decrypted = encryptionService.decrypt(encrypted, privateKey);
+
+      expect(decrypted).toBe(originalMessage);
+    });
+  });
+
+  describe('E2E-010: 并发场景', () => {
+    it('应该处理多个用户同时注册', async () => {
+      const promises = [];
+
+      for (let i = 0; i < 10; i++) {
+        const { publicKey } = encryptionService.generateKeyPair();
+
+        const registerRequest = new Request('http://localhost:3000/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            publicKey,
+            algorithm: 'RSA-2048',
+            expiresIn: 604800,
+          }),
+        });
+
+        promises.push(registerPOST(registerRequest));
+      }
+
+      const responses = await Promise.all(promises);
+
+      // 所有注册都应该成功
+      const successful = responses.filter(r => r.status === 201).length;
+      expect(successful).toBe(10);
+
+      // 所有 channel ID 应该不同
+      const channelIds = responses.map(r => {
+        const data = r.json();
+        return data.then(d => d.data.channelId);
+      });
+
+      const resolvedIds = await Promise.all(channelIds);
+      const uniqueIds = new Set(resolvedIds);
+      expect(uniqueIds.size).toBe(10);
+    });
+
+    it('应该处理多个用户同时发布', async () => {
+      const channelName = 'e2e-concurrent-publish';
+
+      const promises = [];
+
+      for (let i = 0; i < 20; i++) {
+        const publishRequest = new Request('http://localhost:3000/api/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel: channelName,
+            message: `Concurrent message ${i}`,
+            priority: i % 3 === 0 ? 'high' : 'normal',
+          }),
+        });
+
+        promises.push(publishPOST(publishRequest));
+      }
+
+      const responses = await Promise.all(promises);
+
+      // 所有发布都应该成功
+      const successful = responses.filter(r => r.status === 200).length;
+      expect(successful).toBe(20);
+
+      // 验证所有消息都已发布
+      const messages = await redis.lRange(
+        `channel:${channelName}:queue`,
+        0,
+        -1
+      );
+      expect(messages.length).toBe(20);
+    });
+  });
+});
