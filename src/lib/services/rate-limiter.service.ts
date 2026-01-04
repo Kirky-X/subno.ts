@@ -53,16 +53,59 @@ export class RateLimiterService {
   }
 
   /**
-   * Check register rate limit
+   * Check register rate limit with exponential backoff on repeated failures
+   * Implements progressive throttling to prevent brute force attacks
    * @param identifier - IP address or identifier
    * @returns true if allowed, false if rate limited
    */
   async checkRegisterLimit(identifier: string): Promise<boolean> {
-    return this.checkLimit(
+    // Check if client has been locked out due to repeated failures
+    const lockoutKey = `register:lockout:${identifier}`;
+    const lockedUntil = await this.redis.get(lockoutKey);
+
+    if (lockedUntil) {
+      const lockoutTime = parseInt(lockedUntil);
+      if (lockoutTime > Date.now()) {
+        return false; // Still locked out
+      }
+    }
+
+    const failCount = await this.redis.get(`register:fail:${identifier}`);
+    const currentFailures = failCount ? parseInt(failCount) : 0;
+
+    // Apply progressive rate limiting based on failure count
+    let limit = env.RATE_LIMIT_REGISTER;
+    let windowSeconds = 60;
+
+    if (currentFailures >= 3) {
+      // After 3 failures: 3 requests / 10 minutes
+      limit = 3;
+      windowSeconds = 600;
+    }
+    if (currentFailures >= 5) {
+      // After 5 failures: 1 request / 30 minutes
+      limit = 1;
+      windowSeconds = 1800;
+    }
+    if (currentFailures >= 7) {
+      // After 7 failures: Lock out for 1 hour
+      await this.redis.setex(lockoutKey, 3600, Date.now() + 3600000);
+      return false;
+    }
+
+    const allowed = await this.checkLimit(
       `register:${identifier}`,
-      env.RATE_LIMIT_REGISTER,
-      60 // 60 second window
+      limit,
+      windowSeconds
     );
+
+    if (!allowed) {
+      // Track failed attempts
+      const newFailCount = await this.redis.incr(`register:fail:${identifier}`);
+      await this.redis.expire(`register:fail:${identifier}`, 3600); // Track for 1 hour
+    }
+
+    return allowed;
   }
 
   /**
@@ -111,8 +154,19 @@ export class RateLimiterService {
       return 0;
     }
 
-    // Estimate when the oldest request will expire
-    // This is a simple estimation
-    return 1; // Default to 1 second retry after
+    // Get the oldest request timestamp to calculate accurate retry time
+    const oldestTimestamp = await this.redis.getOldestRequestTimestamp(key);
+
+    if (oldestTimestamp === null) {
+      // Fallback if we can't get the oldest timestamp
+      return 1;
+    }
+
+    // Calculate when the oldest request will expire from the window
+    const expiryTime = oldestTimestamp + windowSeconds * 1000;
+    const retryAfter = Math.max(0, Math.ceil((expiryTime - now) / 1000));
+
+    // Always return at least 1 second
+    return Math.max(1, retryAfter);
   }
 }

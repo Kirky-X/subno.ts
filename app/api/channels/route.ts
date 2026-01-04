@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: Apache-2.0 
-// Copyright (c) 2026 KirkyX. All rights reserved. 
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/lib/db';
@@ -9,11 +9,13 @@ import {
   withCors,
   createErrorResponse,
   getRateLimitKey,
-  withSecurityHeaders
+  withSecurityHeaders,
+  getClientIP
 } from '@/lib/utils/cors.util';
 import { getAuditService, AuditAction } from '@/lib/services/audit.service';
 import { CreateChannelSchema, ValidationError } from '@/lib/utils/validation.util';
 import { env } from '@/config/env';
+import crypto from 'crypto';
 
 const auditService = getAuditService();
 
@@ -27,9 +29,7 @@ const CHANNEL_ID_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
  */
 export async function POST(request: NextRequest) {
   try {
-    const clientIP = request.headers.get('x-forwarded-for') ||
-      request.headers.get('x-real-ip') ||
-      '127.0.0.1';
+    const clientIP = getClientIP(request);
     getRateLimitKey(request);
 
     const body = await request.json();
@@ -261,11 +261,11 @@ export async function GET(request: NextRequest) {
     let result;
     if (type) {
       // Validate type
-      if (!['public', 'private', 'encrypted'].includes(type)) {
+      if (!['public', 'encrypted'].includes(type)) {
         return withSecurityHeaders(withCors(request, createErrorResponse(
           request,
           400,
-          'Invalid channel type. Must be: public, private, or encrypted.',
+          'Invalid channel type. Must be: public or encrypted.',
           'INVALID_TYPE'
         )));
       }

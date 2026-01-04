@@ -1,14 +1,15 @@
-// SPDX-License-Identifier: Apache-2.0 
-// Copyright (c) 2026 KirkyX. All rights reserved. 
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
 
 import crypto from 'crypto';
+import { env } from '@/config/env';
 
 /**
  * RSA Service - Handles RSA key generation, encryption, decryption, signing, and verification
  */
 export class RsaService {
-  private readonly defaultKeySize = 2048;
-  private readonly hashAlgorithm = 'sha256';
+  private readonly defaultKeySize = env.RSA_DEFAULT_KEY_SIZE; // 2048 bits (configurable)
+  private readonly hashAlgorithm = env.RSA_HASH_ALGORITHM; // sha256 (configurable)
 
   /**
    * Generate a new RSA key pair

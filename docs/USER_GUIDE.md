@@ -87,6 +87,21 @@ npm run dev
 curl http://localhost:3000/api/channels
 ```
 
+**SSE 快速测试：**
+
+```javascript
+// 1. 订阅频道
+const eventSource = new EventSource('/api/subscribe?channel=my-channel');
+eventSource.addEventListener('message', (e) => console.log(JSON.parse(e.data)));
+
+// 2. 发布消息
+fetch('/api/publish', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({channel: 'my-channel', message: 'Hello!'})
+});
+```
+
 ---
 
 ## 核心概念
@@ -302,6 +317,63 @@ curl -X DELETE http://localhost:3000/api/keys/channel-123 \
   -H "X-API-Key: sk_live_xxx..."
 ```
 
+### 模式四：SSE 实时订阅
+
+```javascript
+// 基础订阅
+const eventSource = new EventSource('/api/subscribe?channel=my-channel');
+
+eventSource.addEventListener('connected', (e) => {
+  console.log('已连接:', JSON.parse(e.data));
+});
+
+eventSource.addEventListener('message', (e) => {
+  const msg = JSON.parse(e.data);
+  console.log('收到消息:', msg.message);
+});
+
+eventSource.addEventListener('error', (e) => {
+  console.error('连接错误');
+});
+
+// 断开连接
+// eventSource.close();
+```
+
+### 模式五：SSE 断线重连
+
+```javascript
+class SSEClient {
+  constructor(channel) {
+    this.channel = channel;
+    this.eventSource = null;
+  }
+
+  connect() {
+    const lastEventId = localStorage.getItem(`lastEventId:${this.channel}`);
+    const url = lastEventId
+      ? `/api/subscribe?channel=${this.channel}&lastEventId=${lastEventId}`
+      : `/api/subscribe?channel=${this.channel}`;
+
+    this.eventSource = new EventSource(url);
+
+    this.eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (!data.system) {
+        localStorage.setItem(`lastEventId:${this.channel}`, event.id);
+      }
+      this.onMessage(data);
+    };
+  }
+
+  disconnect() {
+    if (this.eventSource) {
+      this.eventSource.close();
+    }
+  }
+}
+```
+
 ---
 
 ## 故障排除
@@ -348,6 +420,51 @@ redis-cli ping
 RATE_LIMIT_PUBLISH=200
 RATE_LIMIT_SUBSCRIBE=100
 ```
+
+### 问题：SSE 连接断开
+
+**检查网络连接和浏览器支持：**
+
+```javascript
+eventSource.addEventListener('error', (event) => {
+  console.error('SSE ReadyState:', eventSource.readyState);
+  // 0: 连接中, 1: 已连接, 2: 已关闭
+});
+```
+
+**常见原因：**
+- 频道 ID 错误
+- 网络问题
+- 浏览器不支持（需要 Chrome 6+/Firefox 6+/Safari 5+）
+
+### 问题：SSE 消息丢失
+
+**使用 Last-Event-ID 机制：**
+
+```javascript
+// 保存 lastEventId
+eventSource.addEventListener('message', (event) => {
+  const data = JSON.parse(event.data);
+  if (!data.system) {
+    localStorage.setItem('lastEventId:' + channel, event.id);
+  }
+});
+
+// 重连时带上 lastEventId
+const lastEventId = localStorage.getItem('lastEventId:' + channel);
+const url = lastEventId
+  ? `/api/subscribe?channel=${channel}&lastEventId=${lastEventId}`
+  : `/api/subscribe?channel=${channel}`;
+```
+
+### 问题：SSE 浏览器兼容性
+
+**支持的浏览器：**
+- ✅ Chrome 6+
+- ✅ Firefox 6+
+- ✅ Safari 5+
+- ✅ Edge (所有版本)
+- ❌ IE 11及以下
 
 ---
 

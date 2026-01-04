@@ -51,6 +51,12 @@ Thumbs.db
 *.sublime-project
 *.sublime-workspace
 
+# AI IDE
+.serena
+.claude
+CLAUDE.md
+IFLOW.md
+
 # Temporary files
 temp/
 tmp/

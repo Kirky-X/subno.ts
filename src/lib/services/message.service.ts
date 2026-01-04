@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: Apache-2.0 
-// Copyright (c) 2026 KirkyX. All rights reserved. 
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { RedisRepository, getRedisClient } from '@/lib/repositories/redis.repository';
 import { db, schema } from '@/lib/db';
@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import { env } from '@/config/env';
 import type { PublishMessageOptions, Message, PublishResult } from '@/lib/types/message.types';
 import { MessagePriority } from '@/lib/types/message.types';
+import { randomUUID } from 'crypto';
 
 /**
  * Message Service - Core message handling logic
@@ -216,12 +217,11 @@ export class MessageService {
 
   /**
    * Generate a unique message ID
-   * Format: msg_{timestamp}_{random}
+   * Uses crypto.randomUUID() for better security and collision resistance
+   * Format: UUID v4
    */
   private generateMessageId(): string {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 11);
-    return `msg_${timestamp}_${random}`;
+    return randomUUID();
   }
 
   /**

@@ -8,7 +8,12 @@ import {
   cleanupOrphanedRedisKeys,
   cleanupOldMessages,
 } from '@/lib/services/cleanup.service';
-import { createErrorResponse, getRateLimitKey } from '@/lib/utils/cors.util';
+import {
+  createErrorResponse,
+  getRateLimitKey,
+  getClientIP,
+  isCronIPAllowed,
+} from '@/lib/utils/cors.util';
 import { RateLimiterService } from '@/lib/services/rate-limiter.service';
 import { env } from '@/config/env';
 
@@ -26,6 +31,20 @@ const rateLimiter = new RateLimiterService();
  */
 export async function GET(request: NextRequest) {
   try {
+    // Get client IP for IP whitelist validation
+    const clientIP = getClientIP(request);
+
+    // Verify IP whitelist for cron endpoint (fail-closed security)
+    if (!isCronIPAllowed(clientIP)) {
+      console.warn(`Cron endpoint access denied for IP: ${clientIP}`);
+      return createErrorResponse(
+        request,
+        403,
+        'Access denied from this IP address',
+        'IP_NOT_ALLOWED'
+      );
+    }
+
     // Rate limiting for cron endpoint
     const rateLimitKey = getRateLimitKey(request);
     const allowed = await rateLimiter.checkLimit(rateLimitKey, 10, 60);

@@ -3,7 +3,7 @@
 
 import crypto from 'crypto';
 import { db, schema } from '@/lib/db';
-import { eq, and, isNotNull } from 'drizzle-orm';
+import { eq, and, isNotNull, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -245,24 +245,14 @@ export class ApiKeyService {
    * @returns Number of keys cleaned up
    */
   async cleanupExpiredKeys(): Promise<number> {
-    const result = await db
-      .update(schema.apiKeys)
-      .set({ isActive: false })
-      .where(
-        and(
-          eq(schema.apiKeys.isActive, true),
-          isNotNull(schema.apiKeys.expiresAt),
-          and(
-            // Drizzle ORM doesn't support direct comparison, use raw query
-            // This is a workaround
-          )
-        )
-      );
-
-    // For now, use a simpler approach
     const now = new Date();
-    const expiredKeys = await db
-      .select({ id: schema.apiKeys.id })
+
+    // First, get all active keys with expiration dates in a single query
+    const keysToCheck = await db
+      .select({
+        id: schema.apiKeys.id,
+        expiresAt: schema.apiKeys.expiresAt,
+      })
       .from(schema.apiKeys)
       .where(
         and(
@@ -271,24 +261,24 @@ export class ApiKeyService {
         )
       );
 
-    let cleaned = 0;
-    for (const key of expiredKeys) {
-      const keyData = await db
-        .select({ expiresAt: schema.apiKeys.expiresAt })
-        .from(schema.apiKeys)
-        .where(eq(schema.apiKeys.id, key.id))
-        .limit(1);
+    // Filter expired keys in application code
+    const expiredKeyIds = keysToCheck
+      .filter((key) => key.expiresAt !== null && new Date(key.expiresAt) < now)
+      .map((key) => key.id);
 
-      if (keyData.length > 0 && keyData[0].expiresAt && new Date(keyData[0].expiresAt) < now) {
-        await db
-          .update(schema.apiKeys)
-          .set({ isActive: false })
-          .where(eq(schema.apiKeys.id, key.id));
-        cleaned++;
-      }
+    // If no expired keys, return early
+    if (expiredKeyIds.length === 0) {
+      return 0;
     }
 
-    return cleaned;
+    // Update all expired keys in a single query
+    const result = await db
+      .update(schema.apiKeys)
+      .set({ isActive: false })
+      .where(inArray(schema.apiKeys.id, expiredKeyIds))
+      .returning({ id: schema.apiKeys.id });
+
+    return result.length;
   }
 }
 

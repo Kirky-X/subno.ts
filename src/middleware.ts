@@ -45,7 +45,14 @@ function isOriginAllowed(origin: string): boolean {
   }
 
   // In production, strict origin checking
-  if (ALLOWED_ORIGINS.includes('*')) return false; // Never allow wildcard in production
+  if (ALLOWED_ORIGINS.includes('*')) {
+    // Never allow wildcard in production
+    if (process.env.NODE_ENV === 'production') {
+      console.error('SECURITY ERROR: Wildcard origin (*) is not allowed in production!');
+      return false;
+    }
+    return false; // Never allow wildcard explicitly
+  }
   return ALLOWED_ORIGINS.some((allowed) => {
     if (allowed.endsWith('*')) {
       const base = allowed.slice(0, -1);
@@ -67,8 +74,9 @@ export function middleware(request: NextRequest) {
   const origin = request.headers.get('origin');
   if (origin && isOriginAllowed(origin)) {
     response.headers.set('Access-Control-Allow-Origin', origin);
-  } else if (ALLOWED_ORIGINS.includes('*')) {
-    response.headers.set('Access-Control-Allow-Origin', '*');
+  } else if (!origin) {
+    // No origin header (same origin request)
+    // Do nothing
   }
 
   response.headers.set(
@@ -89,7 +97,7 @@ export function middleware(request: NextRequest) {
     return new NextResponse(null, {
       status: 204,
       headers: {
-        'Access-Control-Allow-Origin': origin || '*',
+        'Access-Control-Allow-Origin': origin || '',
         'Access-Control-Allow-Methods': ALLOWED_METHODS.join(', '),
         'Access-Control-Allow-Headers': ALLOWED_HEADERS.join(', '),
         'Access-Control-Max-Age': '86400',

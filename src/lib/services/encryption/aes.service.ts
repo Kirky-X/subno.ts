@@ -1,22 +1,24 @@
-// SPDX-License-Identifier: Apache-2.0 
-// Copyright (c) 2026 KirkyX. All rights reserved. 
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
 
 import crypto from 'crypto';
+import { env } from '@/config/env';
 
 /**
  * AES Service - Handles AES-256-GCM symmetric encryption
  */
 export class AesService {
   private readonly algorithm = 'aes-256-gcm';
-  private readonly ivLength = 16; // 128 bits
-  private readonly authTagLength = 16; // 128 bits
+  private readonly ivLength = env.AES_IV_LENGTH; // 128 bits (configurable)
+  private readonly authTagLength = env.AES_AUTH_TAG_LENGTH; // 128 bits (configurable)
+  private readonly keyLength = env.AES_KEY_LENGTH; // 256 bits (configurable)
 
   /**
    * Generate a new AES key
    * @returns Object containing key and initialization vector
    */
   generateKey(): { key: string; iv: string } {
-    const key = crypto.randomBytes(32); // 256 bits
+    const key = crypto.randomBytes(this.keyLength); // 256 bits (configurable)
     const iv = crypto.randomBytes(this.ivLength);
     return {
       key: key.toString('base64'),

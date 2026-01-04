@@ -28,6 +28,7 @@ export interface Message {
   sender?: string;
   timestamp: number;
   encrypted: boolean;
+  system?: boolean; // For system-generated messages (SSE welcome, etc.)
 }
 
 export interface PublishResult {

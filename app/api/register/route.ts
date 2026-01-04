@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: Apache-2.0 
-// Copyright (c) 2026 KirkyX. All rights reserved. 
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { RateLimiterService } from '@/lib/services/rate-limiter.service';
@@ -12,9 +12,11 @@ import {
   withCors,
   createErrorResponse,
   getRateLimitKey,
-  withSecurityHeaders
+  withSecurityHeaders,
+  getClientIP
 } from '@/lib/utils/cors.util';
 import { getAuditService } from '@/lib/services/audit.service';
+import crypto from 'crypto';
 
 const rateLimiterService = new RateLimiterService();
 const auditService = getAuditService();
@@ -30,9 +32,7 @@ export async function POST(request: NextRequest) {
   try {
     // Get client identifier for rate limiting (with proper IP validation)
     const identifier = getRateLimitKey(request);
-    const clientIP = request.headers.get('x-forwarded-for') ||
-      request.headers.get('x-real-ip') ||
-      '127.0.0.1';
+    const clientIP = getClientIP(request);
 
     // Check rate limit
     const allowed = await rateLimiterService.checkRegisterLimit(identifier);
@@ -153,17 +153,41 @@ export async function POST(request: NextRequest) {
     // Handle duplicate key error
     if (error instanceof Error) {
       const postgresError = error as { code?: string; message?: string };
-      if (postgresError.code === '23505' || // PostgreSQL unique violation
-        (postgresError.message && postgresError.message.includes('duplicate key'))) {
+
+      // Check for unique constraint violation without exposing details
+      const isDuplicateKey =
+        postgresError.code === '23505' || // PostgreSQL unique violation
+        (postgresError.message && postgresError.message.includes('duplicate key'));
+
+      if (isDuplicateKey) {
         const response = NextResponse.json(
           {
             success: false,
             error: {
-              message: 'A key for this channel already exists',
+              message: 'Registration already exists for this channel',
               code: 'DUPLICATE_KEY',
             },
           },
           { status: 409 }
+        );
+        return withSecurityHeaders(withCors(request, response));
+      }
+
+      // Check for foreign key constraint violation
+      const isForeignKeyError =
+        postgresError.code === '23503' || // Foreign key violation
+        (postgresError.message && postgresError.message.includes('foreign key'));
+
+      if (isForeignKeyError) {
+        const response = NextResponse.json(
+          {
+            success: false,
+            error: {
+              message: 'Invalid reference in request',
+              code: 'INVALID_REFERENCE',
+            },
+          },
+          { status: 400 }
         );
         return withSecurityHeaders(withCors(request, response));
       }

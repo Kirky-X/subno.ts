@@ -257,6 +257,21 @@ export class RedisRepository {
   }
 
   /**
+   * Get the oldest request timestamp for retry after calculation
+   * @param key - Rate limit key
+   * @returns The oldest timestamp in milliseconds, or null if no entries
+   */
+  async getOldestRequestTimestamp(key: string): Promise<number | null> {
+    const rateLimitKey = `ratelimit:${key}`;
+    // Get the oldest entry (lowest score)
+    const oldest = await kv.zrange(rateLimitKey, 0, 0);
+    if (oldest.length === 0) return null;
+    // Extract timestamp from the entry format: "timestamp-random"
+    const match = oldest[0].match(/^(\d+)-/);
+    return match ? parseInt(match[1], 10) : null;
+  }
+
+  /**
    * Check if rate limit is exceeded
    * @param key - Rate limit key
    * @param limit - Maximum requests allowed

@@ -15,6 +15,14 @@ const envSchema = z.object({
   PUBLIC_MESSAGE_MAX_COUNT: z.coerce.number().default(1000),
   PRIVATE_MESSAGE_MAX_COUNT: z.coerce.number().default(100),
 
+  // Encryption Configuration
+  AES_KEY_LENGTH: z.coerce.number().default(32), // 256 bits
+  AES_IV_LENGTH: z.coerce.number().default(16), // 128 bits
+  AES_AUTH_TAG_LENGTH: z.coerce.number().default(16), // 128 bits
+  RSA_DEFAULT_KEY_SIZE: z.coerce.number().default(4096), // 4096 bits (upgraded for better security)
+  RSA_HASH_ALGORITHM: z.string().default('sha256'),
+  PUBLIC_KEY_CACHE_TTL: z.coerce.number().default(604800), // 7 days
+
   // Channel Configuration
   TEMPORARY_CHANNEL_TTL: z.coerce.number().default(1800), // 30 minutes for auto-created channels
   PERSISTENT_CHANNEL_DEFAULT_TTL: z.coerce.number().default(86400), // 24 hours default for manual channels
@@ -64,43 +72,56 @@ function generateSecureKey(): string {
 
 /**
  * Parse and validate environment variables with auto-generation for missing keys
+ * Note: In production, critical secrets must be configured explicitly
  */
 function parseEnv(): Env {
   const parsed = envSchema.parse(process.env);
 
-  // Auto-generate ADMIN_MASTER_KEY if not set
-  if (!parsed.ADMIN_MASTER_KEY) {
-    const generatedKey = generateSecureKey();
-    parsed.ADMIN_MASTER_KEY = generatedKey;
-
-    // Log warning with the generated key
-    console.warn('');
-    console.warn('⚠️  WARNING: ADMIN_MASTER_KEY not configured!');
-    console.warn('⚠️  Auto-generated master key for development:');
-    console.warn('');
-    console.warn(`   ${generatedKey}`);
-    console.warn('');
-    console.warn('⚠️  IMPORTANT: Add this to your .env file:');
-    console.warn('   ADMIN_MASTER_KEY=' + generatedKey);
-    console.warn('');
-    console.warn('⚠️  In production, always set a secure ADMIN_MASTER_KEY!');
-    console.warn('');
+  // Production environment requires explicit configuration
+  if (process.env.NODE_ENV === 'production') {
+    if (!parsed.ADMIN_MASTER_KEY) {
+      throw new Error(
+        'ADMIN_MASTER_KEY is required in production. ' +
+        'Please set it in your environment variables for security.'
+      );
+    }
+    if (!parsed.CRON_SECRET) {
+      throw new Error(
+        'CRON_SECRET is required in production. ' +
+        'Please set it in your environment variables for security.'
+      );
+    }
   }
 
-  // Auto-generate CRON_SECRET if not set
-  if (!parsed.CRON_SECRET) {
-    const generatedSecret = generateSecureKey();
-    parsed.CRON_SECRET = generatedSecret;
+  // Development environment: Auto-generate with clear warnings
+  if (process.env.NODE_ENV !== 'production') {
+    let hasWarnings = false;
 
-    console.warn('');
-    console.warn('⚠️  WARNING: CRON_SECRET not configured!');
-    console.warn('⚠️  Auto-generated cron secret for development:');
-    console.warn('');
-    console.warn(`   ${generatedSecret}`);
-    console.warn('');
-    console.warn('⚠️  IMPORTANT: Add this to your .env file:');
-    console.warn('   CRON_SECRET=' + generatedSecret);
-    console.warn('');
+    if (!parsed.ADMIN_MASTER_KEY) {
+      const generatedKey = generateSecureKey();
+      parsed.ADMIN_MASTER_KEY = generatedKey;
+      hasWarnings = true;
+
+      console.warn('');
+      console.warn('⚠️  WARNING: ADMIN_MASTER_KEY auto-generated for development');
+      console.warn('⚠️  Add this to your .env file:');
+      console.warn(`   ADMIN_MASTER_KEY=${generatedKey}`);
+      console.warn('');
+      console.warn('⚠️  IMPORTANT: In production, always set a secure ADMIN_MASTER_KEY!');
+      console.warn('');
+    }
+
+    if (!parsed.CRON_SECRET) {
+      const generatedSecret = generateSecureKey();
+      parsed.CRON_SECRET = generatedSecret;
+      hasWarnings = true;
+
+      if (!hasWarnings) console.warn('');
+      console.warn('⚠️  WARNING: CRON_SECRET auto-generated for development');
+      console.warn('⚠️  Add this to your .env file:');
+      console.warn(`   CRON_SECRET=${generatedSecret}`);
+      console.warn('');
+    }
   }
 
   return parsed;

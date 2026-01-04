@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: Apache-2.0 
-// Copyright (c) 2026 KirkyX. All rights reserved. 
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { MessageService } from '@/lib/services/message.service';
@@ -12,6 +12,7 @@ import {
   getRateLimitKey,
   withSecurityHeaders
 } from '@/lib/utils/cors.util';
+import crypto from 'crypto';
 
 const messageService = new MessageService();
 const rateLimiter = new RateLimiterService();

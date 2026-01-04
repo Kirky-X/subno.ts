@@ -18,7 +18,7 @@ function detectServerless(): boolean {
 
 /**
  * Get or create Redis client singleton
- * Handles serverless environment edge cases
+ * Handles serverless environment edge cases with connection pooling
  */
 export async function getRedisClient(): Promise<RedisClientType> {
   // Check for existing valid connection
@@ -28,7 +28,7 @@ export async function getRedisClient(): Promise<RedisClientType> {
 
   const isServerless = detectServerless();
 
-  // Create new client
+  // Create new client with connection pool configuration
   redisClient = createClient({
     url: env.REDIS_URL,
     socket: isServerless
@@ -36,7 +36,22 @@ export async function getRedisClient(): Promise<RedisClientType> {
         // Serverless-friendly socket options
         connectTimeout: 5000,
       }
-      : undefined,
+      : {
+        // Connection pool configuration for traditional deployments
+        connectTimeout: 10000,
+        lazyConnect: false,
+        // Keep-alive settings
+        keepAlive: 30000,
+        // Reconnection strategy with exponential backoff
+        reconnectStrategy: (retries) => {
+          if (retries > 10) {
+            console.error('Redis reconnection failed after 10 attempts');
+            return new Error('Redis reconnection failed');
+          }
+          // Exponential backoff: 50ms * 2^retries, max 2 seconds
+          return Math.min(50 * Math.pow(2, retries), 2000);
+        },
+      },
   });
 
   // Error handlers
