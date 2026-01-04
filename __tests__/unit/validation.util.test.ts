@@ -100,6 +100,7 @@ describe('Validation Utilities', () => {
     it('should validate valid public key', () => {
       const validData = {
         publicKey: '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----',
+        algorithm: 'RSA-2048',
         expiresIn: 604800,
         metadata: { deviceName: 'Test Device' },
       };
@@ -111,6 +112,7 @@ describe('Validation Utilities', () => {
     it('should require BEGIN PUBLIC KEY', () => {
       const invalidData = {
         publicKey: 'not-a-valid-key',
+        algorithm: 'RSA-2048',
       };
 
       const result = RegisterKeySchema.safeParse(invalidData);
@@ -120,6 +122,7 @@ describe('Validation Utilities', () => {
     it('should default expiresIn to 7 days', () => {
       const result = RegisterKeySchema.safeParse({
         publicKey: '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----',
+        algorithm: 'RSA-2048',
       });
 
       expect(result.success).toBe(true);
@@ -131,7 +134,8 @@ describe('Validation Utilities', () => {
     it('should reject expiresIn over 30 days', () => {
       const invalidData = {
         publicKey: '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----',
-        expiresIn: 3000000,
+        algorithm: 'RSA-2048',
+        expiresIn: 2592001, // 30 days + 1 second
       };
 
       const result = RegisterKeySchema.safeParse(invalidData);
@@ -273,15 +277,17 @@ describe('Validation Utilities', () => {
     it('should return parsed data on success', () => {
       const data = {
         publicKey: '-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----',
+        algorithm: 'RSA-2048',
       };
 
       const result = validateRegisterKey(data);
 
       expect(result.publicKey).toContain('BEGIN PUBLIC KEY');
+      expect(result.algorithm).toBe('RSA-2048');
     });
 
     it('should throw ValidationError on failure', () => {
-      const data = { publicKey: 'invalid' };
+      const data = { publicKey: 'invalid', algorithm: 'RSA-2048' };
 
       expect(() => {
         validateRegisterKey(data);
