@@ -5,18 +5,22 @@ import { defineConfig } from 'drizzle-kit';
 import dotenv from 'dotenv';
 
 // Load environment variables
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
+
+// Parse DATABASE_URL to extract connection details
+const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/securenotify';
+const url = new URL(databaseUrl);
 
 export default defineConfig({
   schema: './src/db/schema.ts',
   out: './src/db/migrations',
   dialect: 'postgresql',
   dbCredentials: {
-    host: process.env.PGHOST || 'localhost',
-    port: parseInt(process.env.PGPORT || '5432'),
-    user: process.env.PGUSER || 'postgres',
-    password: process.env.PGPASSWORD || 'postgres',
-    database: process.env.PGDATABASE || 'securenotify',
+    host: url.hostname,
+    port: parseInt(url.port) || 5432,
+    user: url.username,
+    password: url.password,
+    database: url.pathname.slice(1), // Remove leading '/'
     ssl: false,
   },
   // Connection pool configuration for optimal performance

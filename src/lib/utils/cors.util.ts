@@ -81,13 +81,7 @@ export function isPrivateIP(ip: string): boolean {
   // 192.168.0.0/16
   // 127.0.0.0/8 (loopback)
   // 169.254.0.0/16 (link-local)
-  const ipv4Private = /^(
-    10\.|
-    127\.|
-    169\.254\.|
-    192\.168\.|
-    172\.(1[6-9]|2[0-9]|3[0-1])\.
-  )/x;
+  const ipv4Private = /^(?:10\.|127\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2[0-9]|3[0-1])\.)/;
 
   if (ipv4Private.test(ip)) return true;
 
@@ -97,13 +91,7 @@ export function isPrivateIP(ip: string): boolean {
   // fe80::/10 - Link-local addresses
   // ::1/128 - Loopback address
   // ::/128 - Unspecified address
-  const ipv6Private = /^(
-    fc[0-9a-f]{2}:|
-    fd[0-9a-f]{2}:|
-    fe[89ab][0-9a-f]:|
-    ::1$|
-    ::$
-  )/xi;
+  const ipv6Private = /^(?:fc[0-9a-f]{2}:|fd[0-9a-f]{2}:|fe[89ab][0-9a-f]:|::1$|::$)/i;
 
   if (ipv6Private.test(ip)) return true;
 

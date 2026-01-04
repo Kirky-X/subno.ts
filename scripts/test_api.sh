@@ -3,7 +3,7 @@
 # SecureNotify API 测试脚本（改进版）
 # 减少外部依赖，使用Node.js处理JSON和加密
 
-set -e
+# 移除 set -e 以便在出错时继续运行所有测试
 
 BASE_URL="http://localhost:3000"
 CRON_SECRET="securenotify-cron-secret-key"

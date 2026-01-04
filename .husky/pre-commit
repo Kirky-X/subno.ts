@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+. "$(dirname "$0")/_/h"
+
+echo "Running pre-check..."
+
+npm run pre-check
+
+exitCode=$?
+
+if [ $exitCode -ne 0 ]; then
+    echo ""
+    echo "❌ Pre-check failed. Please fix the issues above before committing."
+    echo "   If you want to skip this check, use: git commit --no-verify"
+    echo "   (not recommended)"
+fi
+
+exit $exitCode

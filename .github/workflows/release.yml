@@ -1,0 +1,426 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  NODE_VERSION: "20"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ========== 验证阶段 ==========
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Verify version format
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Release version: $TAG_VERSION"
+          
+          # 验证版本号格式 (语义化版本)
+          SEMANTIC_VERSION_REGEX='^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$'
+          if ! echo "$TAG_VERSION" | grep -Eq "$SEMANTIC_VERSION_REGEX"; then
+            echo "Error: Version format is not valid semver: $TAG_VERSION"
+            exit 1
+          fi
+          
+          # 验证 package.json 版本是否匹配
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "Error: Tag version ($TAG_VERSION) does not match package.json version ($PACKAGE_VERSION)"
+            exit 1
+          fi
+
+  # ========== 构建阶段 ==========
+  build:
+    name: Build Release
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Generate database migration snapshot
+        run: npm run db:generate
+
+      # 缓存构建产物用于后续步骤
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            .next/
+            node_modules/
+            src/db/migrations/
+          key: build-${{ github.sha }}
+          restore-keys: |
+            build-
+
+  # ========== 打包阶段 ==========
+  package:
+    name: Package Distribution
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Restore cached build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            .next/
+            node_modules/
+            src/db/migrations/
+          key: build-${{ github.sha }}
+          fail-on-cache-miss: true
+
+      - name: Create release directory
+        run: mkdir -p release-package
+
+      - name: Copy project files
+        run: |
+          # 复制必要文件
+          cp -r .next release-package/
+          cp -r node_modules release-package/
+          cp -r src/db/migrations release-package/src/db/
+          cp package.json release-package/
+          cp package-lock.json release-package/
+          cp -r app release-package/
+          cp -r public release-package/
+          cp tsconfig.json release-package/
+          cp next.config.ts release-package/
+          cp drizzle.config.ts release-package/
+          cp -r __tests__ release-package/  # 保留测试文件便于用户运行测试
+          cp -r scripts release-package/
+
+      - name: Create environment example
+        run: |
+          cp .env.example release-package/.env.example
+          cat > release-package/.env.production << 'EOF'
+          # Production Environment Variables
+          # Copy this file to .env and fill in the values
+          
+          # Database
+          DATABASE_URL=postgresql://user:password@localhost:5432/securenotify
+          
+          # Redis
+          REDIS_URL=redis://localhost:6379
+          
+          # Application
+          NODE_ENV=production
+          
+          # Rate Limiting (requests per window)
+          RATE_LIMIT_PUBLISH=100
+          RATE_LIMIT_SUBSCRIBE=1000
+          RATE_LIMIT_REGISTER=10
+          
+          # Message TTL (seconds)
+          PUBLIC_MESSAGE_TTL=86400
+          PRIVATE_MESSAGE_TTL=604800
+          
+          # Message Limits
+          PUBLIC_MESSAGE_MAX_COUNT=1000
+          PRIVATE_MESSAGE_MAX_COUNT=10000
+          
+          # Features
+          AUTO_CREATE_CHANNELS_ENABLED=true
+          
+          # Security (generate strong random keys for production)
+          CRON_SECRET=your-cron-secret-here
+          EOF
+
+      - name: Create release manifest
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          
+          cat > release-package/RELEASE_NOTES.md << EOF
+          # Release $TAG_VERSION
+          
+          **Release Date:** $DATE
+          **Git Commit:** ${GITHUB_SHA:0:8}
+          
+          ## What's Included
+          
+          ### Features
+          - See CHANGELOG.md for details
+          
+          ### Bug Fixes
+          - See CHANGELOG.md for details
+          
+          ### Breaking Changes
+          - See CHANGELOG.md for details
+          
+          ## Installation
+          
+          1. Extract the release package
+          2. Copy \`.env.production\` to \`.env\` and configure your environment
+          3. Install dependencies: \`npm ci --production\`
+          4. Run database migrations: \`npm run db:migrate\`
+          5. Start the application: \`npm start\`
+          
+          ## Docker Deployment
+          
+          See \`Dockerfile\` and \`docker-compose.yml\` for containerized deployment.
+          
+          ## Requirements
+          
+          - Node.js 20+
+          - PostgreSQL 14+
+          - Redis 7+
+          
+          ## Upgrade Notes
+          
+          See UPGRADE.md for migration guides.
+          EOF
+
+      - name: Create checksums
+        run: |
+          cd release-package
+          find . -type f -not -path './node_modules/*' -not -path './.next/cache/*' -exec shasum -a 256 {} \; > checksums.txt
+          echo "Checksums generated:"
+          cat checksums.txt
+
+      - name: Package release
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          tar -czvf ../securenotify-$TAG_VERSION.tar.gz release-package/
+          ls -lh ../securenotify-$TAG_VERSION.tar.gz
+
+      - name: Upload release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          path: securenotify-${{ steps.version.outputs.VERSION }}.tar.gz
+          retention-days: 30
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums
+          path: release-package/checksums.txt
+          retention-days: 90
+
+  # ========== Docker镜像构建（可选） ==========
+  docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: package
+    if: github.event.repository.private != true  # 跳过私有仓库
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          tags: |
+            type=semver,pattern=v{{version}}
+            type=semver,pattern=v{{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ========== 发布GitHub Release ==========
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [validate, build, package]
+    permissions:
+      contents: write
+      attestations: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download release package
+        uses: actions/download-artifact@v4
+        with:
+          name: release-package
+          path: artifacts
+
+      - name: Download checksums
+        uses: actions/download-artifact@v4
+        with:
+          name: checksums
+          path: artifacts
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            const { data: commits } = await github.rest.repos.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              since: (new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).toISOString(),
+              per_page: 100
+            });
+            
+            const version = '${{ steps.version.outputs.VERSION }}';
+            const previousVersionTag = `v${parseInt(version.split('.')[0]) - 1}.${version.split('.')[1]}.${version.split('.')[2]}`;
+            
+            let changelog = `# Release ${version}\n\n`;
+            changelog += `**Release Date:** ${new Date().toISOString()}\n`;
+            changelog += `**Git Commit:** ${process.env.GITHUB_SHA?.substring(0, 8)}\n\n`;
+            
+            changelog += '## Commits\n\n';
+            for (const commit of commits) {
+              const message = commit.commit.message.split('\n')[0];
+              changelog += `- ${message} (@${commit.author?.login || 'unknown'})\n`;
+            }
+            
+            return changelog;
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/securenotify-${{ steps.version.outputs.VERSION }}.tar.gz
+            artifacts/checksums.txt
+          name: Release ${{ steps.version.outputs.VERSION }}
+          body: ${{ steps.changelog.outputs.result }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.VERSION, 'alpha') || contains(steps.version.outputs.VERSION, 'beta') || contains(steps.version.outputs.VERSION, 'rc') }}
+          generate_release_notes: false
+
+      - name: Attest release artifacts
+        uses: actions/attest-release-artifacts@v1
+        with:
+          subject-path: artifacts/securenotify-${{ steps.version.outputs.VERSION }}.tar.gz
+          subject-digest: sha256:$(sha256sum artifacts/securenotify-${{ steps.version.outputs.VERSION }}.tar.gz | cut -d' ' -f1)
+
+  # ========== 通知阶段 ==========
+  notify:
+    name: Notify Release
+    runs-on: ubuntu-latest
+    needs: release
+    if: always()
+
+    steps:
+      - name: Get release info
+        id: release_info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: release } = await github.rest.repos.getRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: context.payload.release.id
+            });
+            return {
+              html_url: release.html_url,
+              tag_name: release.tag_name,
+              name: release.name
+            };
+          result-encoding: json
+
+      - name: Print release summary
+        run: |
+          echo "✅ Release published successfully!"
+          echo ""
+          echo "Release URL: ${{ steps.release_info.outputs.html_url }}"
+          echo "Tag: ${{ steps.release_info.outputs.tag_name }}"
+          echo "Name: ${{ steps.release_info.outputs.name }}"
+          echo ""
+          echo "The release includes:"
+          echo "  - Source code archive (tar.gz)"
+          echo "  - SHA256 checksums"
+          echo "  - Docker images (if configured)"

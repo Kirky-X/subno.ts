@@ -382,4 +382,41 @@ export class RedisRepository {
       return false;
     }
   }
+
+  /**
+   * Simple GET operation for rate limiting
+   * @param key - Redis key
+   * @returns Value or null
+   */
+  async get(key: string): Promise<string | null> {
+    return kv.get<string>(key);
+  }
+
+  /**
+   * SET with expiration
+   * @param key - Redis key
+   * @param seconds - TTL in seconds
+   * @param value - Value to set
+   */
+  async setex(key: string, seconds: number, value: string | number): Promise<void> {
+    await kv.set(key, value, { ex: seconds });
+  }
+
+  /**
+   * INCR operation
+   * @param key - Redis key
+   * @returns New value
+   */
+  async incr(key: string): Promise<number> {
+    return kv.incr(key);
+  }
+
+  /**
+   * EXPIRE operation
+   * @param key - Redis key
+   * @param seconds - TTL in seconds
+   */
+  async expire(key: string, seconds: number): Promise<void> {
+    await kv.expire(key, seconds);
+  }
 }

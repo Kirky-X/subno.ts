@@ -125,6 +125,11 @@ export async function POST(request: NextRequest) {
     return withSecurityHeaders(withCors(request, response));
   } catch (error) {
     console.error('Key registration error:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
 
     if (error instanceof SyntaxError) {
       return withSecurityHeaders(withCors(request, createErrorResponse(

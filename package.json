@@ -14,7 +14,8 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
     "prepare": "husky",
-    "add-header": "node scripts/add-license-header.js"
+    "add-header": "node scripts/add-license-header.js",
+    "pre-check": "node scripts/pre-check.js"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
@@ -35,7 +36,7 @@
     "react-dom": "19.2.3",
     "redis": "^5.10.0",
     "uuid": "^13.0.0",
-    "zod": "^4.3.4"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
