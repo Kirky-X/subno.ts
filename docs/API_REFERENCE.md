@@ -1,1084 +1,604 @@
 <div align="center">
 
-# 📘 API Reference
+# 📘 API 参考
 
-### Complete API Documentation
+### subno.ts API 完整文档
 
-[🏠 Home](../README.md) • [📖 User Guide](USER_GUIDE.md) • [🏗️ Architecture](ARCHITECTURE.md)
+[🏠 首页](../README.md) • [📖 用户指南](USER_GUIDE.md) • [🏗️ 架构](ARCHITECTURE.md)
 
 ---
 
 </div>
 
-## 📋 Table of Contents
+## 📋 目录
 
-- [Overview](#overview)
-- [Core API](#core-api)
-  - [Initialization](#initialization)
-  - [Configuration](#configuration)
-  - [Cipher Operations](#cipher-operations)
-  - [Key Management](#key-management)
-- [Algorithms](#algorithms)
-- [Error Handling](#error-handling)
-- [Type Definitions](#type-definitions)
-- [Examples](#examples)
+- [概述](#概述)
+- [公钥注册](#公钥注册)
+- [频道管理](#频道管理)
+- [消息推送](#消息推送)
+- [实时订阅](#实时订阅)
+- [密钥管理](#密钥管理)
+- [定时任务](#定时任务)
+- [错误处理](#错误处理)
 
 ---
 
-## Overview
+## 概述
 
-<div align="center">
+### 基础 URL
 
-### 🎯 API Design Principles
+```
+http://localhost:3000/api
+```
 
-</div>
+### 内容类型
 
-<table>
-<tr>
-<td width="25%" align="center">
-<img src="https://img.icons8.com/fluency/96/000000/easy.png" width="64"><br>
-<b>Simple</b><br>
-Intuitive and easy to use
-</td>
-<td width="25%" align="center">
-<img src="https://img.icons8.com/fluency/96/000000/security-checked.png" width="64"><br>
-<b>Safe</b><br>
-Type-safe and secure by default
-</td>
-<td width="25%" align="center">
-<img src="https://img.icons8.com/fluency/96/000000/module.png" width="64"><br>
-<b>Composable</b><br>
-Build complex workflows easily
-</td>
-<td width="25%" align="center">
-<img src="https://img.icons8.com/fluency/96/000000/documentation.png" width="64"><br>
-<b>Well-documented</b><br>
-Comprehensive documentation
-</td>
-</tr>
-</table>
+所有请求和响应使用 JSON 格式：
+
+```
+Content-Type: application/json
+```
+
+### 认证方式
+
+- **公开端点**：无需认证
+- **敏感操作**：需要 `X-API-Key` 请求头
 
 ---
 
-## Core API
-
-### Initialization
-
-<div align="center">
-
-#### 🚀 Getting Started
-
-</div>
-
----
-
-#### `init()`
-
-Initialize the library with default configuration.
-
-<table>
-<tr>
-<td width="30%"><b>Signature</b></td>
-<td width="70%">
-
-```rust
-pub fn init() -> Result<(), Error>
-```
-
-</td>
-</tr>
-<tr>
-<td><b>Description</b></td>
-<td>Initializes the library with default settings. Must be called before using any other API.</td>
-</tr>
-<tr>
-<td><b>Returns</b></td>
-<td><code>Result&lt;(), Error&gt;</code> - Ok on success, Error on failure</td>
-</tr>
-<tr>
-<td><b>Errors</b></td>
-<td>
-
-- `Error::AlreadyInitialized` - Library already initialized
-- `Error::InitializationFailed` - Initialization failed
-
-</td>
-</tr>
-</table>
-
-**Example:**
-
-```rust
-use project_name::init;
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize the library
-    init()?;
-    
-    println!("✅ Library initialized successfully");
-    Ok(())
-}
-```
-
----
-
-#### `init_with_config()`
-
-Initialize the library with custom configuration.
-
-<table>
-<tr>
-<td width="30%"><b>Signature</b></td>
-<td width="70%">
-
-```rust
-pub fn init_with_config(config: Config) -> Result<(), Error>
-```
-
-</td>
-</tr>
-<tr>
-<td><b>Parameters</b></td>
-<td>
-
-- `config: Config` - Configuration options
-
-</td>
-</tr>
-<tr>
-<td><b>Returns</b></td>
-<td><code>Result&lt;(), Error&gt;</code></td>
-</tr>
-</table>
-
-**Example:**
-
-```rust
-use project_name::{init_with_config, Config};
-
-let config = Config::builder()
-    .thread_pool_size(8)
-    .cache_size(2048)
-    .build()?;
-
-init_with_config(config)?;
-```
-
----
-
-### Configuration
-
-<div align="center">
-
-#### ⚙️ Configuration Builder
-
-</div>
-
----
-
-#### `Config`
-
-Configuration struct for customizing library behavior.
-
-<table>
-<tr>
-<td width="30%"><b>Type</b></td>
-<td width="70%">
-
-```rust
-pub struct Config {
-    pub thread_pool_size: usize,
-    pub cache_size: usize,
-    pub log_level: LogLevel,
-    pub enable_metrics: bool,
-    // ... more fields
-}
-```
-
-</td>
-</tr>
-</table>
-
----
-
-#### `Config::builder()`
-
-Create a new configuration builder.
-
-<table>
-<tr>
-<td width="30%"><b>Signature</b></td>
-<td width="70%">
-
-```rust
-pub fn builder() -> ConfigBuilder
-```
-
-</td>
-</tr>
-<tr>
-<td><b>Returns</b></td>
-<td><code>ConfigBuilder</code> - Configuration builder instance</td>
-</tr>
-</table>
-
-**Builder Methods:**
-
-<details>
-<summary><b>View All Methods</b></summary>
-
-| Method | Type | Default | Description |
-|--------|------|---------|-------------|
-| `thread_pool_size(usize)` | usize | 4 | Number of worker threads |
-| `cache_size(usize)` | usize | 1024 | Cache size in MB |
-| `log_level(LogLevel)` | LogLevel | Info | Logging verbosity |
-| `enable_metrics(bool)` | bool | false | Enable metrics collection |
-| `enable_audit(bool)` | bool | true | Enable audit logging |
-| `build()` | - | - | Build the configuration |
-
-</details>
-
-**Example:**
-
-```rust
-use project_name::{Config, LogLevel};
-
-let config = Config::builder()
-    .thread_pool_size(8)
-    .cache_size(2048)
-    .log_level(LogLevel::Debug)
-    .enable_metrics(true)
-    .build()?;
-```
-
----
-
-### Cipher Operations
-
-<div align="center">
-
-#### 🔐 Encryption and Decryption
-
-</div>
-
----
-
-#### `Cipher`
-
-Main cipher struct for encryption/decryption operations.
-
-<table>
-<tr>
-<td width="30%"><b>Type</b></td>
-<td width="70%">
-
-```rust
-pub struct Cipher {
-    algorithm: Algorithm,
-    // internal fields
-}
-```
-
-</td>
-</tr>
-</table>
-
----
-
-#### `Cipher::new()`
-
-Create a new cipher instance.
-
-<table>
-<tr>
-<td width="30%"><b>Signature</b></td>
-<td width="70%">
-
-```rust
-pub fn new(algorithm: Algorithm) -> Result<Self, Error>
-```
-
-</td>
-</tr>
-<tr>
-<td><b>Parameters</b></td>
-<td>
-
-- `algorithm: Algorithm` - Cryptographic algorithm to use
-
-</td>
-</tr>
-<tr>
-<td><b>Returns</b></td>
-<td><code>Result&lt;Cipher, Error&gt;</code></td>
-</tr>
-<tr>
-<td><b>Errors</b></td>
-<td>
-
-- `Error::AlgorithmNotSupported` - Algorithm not available
-- `Error::InitializationFailed` - Failed to initialize cipher
-
-</td>
-</tr>
-</table>
-
-**Example:**
-
-```rust
-use project_name::{Cipher, Algorithm};
-
-let cipher = Cipher::new(Algorithm::AES256GCM)?;
-```
-
----
-
-#### `Cipher::encrypt()`
-
-Encrypt data using the specified key.
-
-<table>
-<tr>
-<td width="30%"><b>Signature</b></td>
-<td width="70%">
-
-```rust
-pub fn encrypt(
-    &self,
-    key_manager: &KeyManager,
-    key_id: &str,
-    plaintext: &[u8]
-) -> Result<Vec<u8>, Error>
-```
-
-</td>
-</tr>
-<tr>
-<td><b>Parameters</b></td>
-<td>
-
-- `key_manager: &KeyManager` - Key manager instance
-- `key_id: &str` - ID of the encryption key
-- `plaintext: &[u8]` - Data to encrypt
-
-</td>
-</tr>
-<tr>
-<td><b>Returns</b></td>
-<td><code>Result&lt;Vec&lt;u8&gt;, Error&gt;</code> - Encrypted ciphertext</td>
-</tr>
-<tr>
-<td><b>Errors</b></td>
-<td>
-
-- `Error::KeyNotFound` - Key ID not found
-- `Error::InvalidKeyState` - Key not in active state
-- `Error::EncryptionFailed` - Encryption operation failed
-
-</td>
-</tr>
-</table>
-
-**Example:**
-
-```rust
-use project_name::{Cipher, KeyManager, Algorithm};
-
-let km = KeyManager::new()?;
-let key_id = km.generate_key(Algorithm::AES256GCM)?;
-let cipher = Cipher::new(Algorithm::AES256GCM)?;
-
-let plaintext = b"Secret message";
-let ciphertext = cipher.encrypt(&km, &key_id, plaintext)?;
-```
-
-<details>
-<summary><b>📝 Notes</b></summary>
-
-- The returned ciphertext includes authentication tag
-- A random nonce/IV is generated for each encryption
-- The same plaintext will produce different ciphertexts (IND-CPA security)
-
-</details>
-
----
-
-#### `Cipher::decrypt()`
-
-Decrypt data using the specified key.
-
-<table>
-<tr>
-<td width="30%"><b>Signature</b></td>
-<td width="70%">
-
-```rust
-pub fn decrypt(
-    &self,
-    key_manager: &KeyManager,
-    key_id: &str,
-    ciphertext: &[u8]
-) -> Result<Vec<u8>, Error>
-```
-
-</td>
-</tr>
-<tr>
-<td><b>Parameters</b></td>
-<td>
-
-- `key_manager: &KeyManager` - Key manager instance
-- `key_id: &str` - ID of the decryption key
-- `ciphertext: &[u8]` - Data to decrypt
-
-</td>
-</tr>
-<tr>
-<td><b>Returns</b></td>
-<td><code>Result&lt;Vec&lt;u8&gt;, Error&gt;</code> - Decrypted plaintext</td>
-</tr>
-<tr>
-<td><b>Errors</b></td>
-<td>
-
-- `Error::KeyNotFound` - Key ID not found
-- `Error::DecryptionFailed` - Decryption or authentication failed
-- `Error::InvalidCiphertext` - Malformed ciphertext
-
-</td>
-</tr>
-</table>
-
-**Example:**
-
-```rust
-let plaintext = cipher.decrypt(&km, &key_id, &ciphertext)?;
-assert_eq!(plaintext, b"Secret message");
-```
-
----
-
-#### `Cipher::sign()`
-
-Create a digital signature.
-
-<table>
-<tr>
-<td width="30%"><b>Signature</b></td>
-<td width="70%">
-
-```rust
-pub fn sign(
-    &self,
-    key_manager: &KeyManager,
-    key_id: &str,
-    message: &[u8]
-) -> Result<Vec<u8>, Error>
-```
-
-</td>
-</tr>
-<tr>
-<td><b>Parameters</b></td>
-<td>
-
-- `key_manager: &KeyManager` - Key manager instance
-- `key_id: &str` - ID of the signing key
-- `message: &[u8]` - Data to sign
-
-</td>
-</tr>
-<tr>
-<td><b>Returns</b></td>
-<td><code>Result&lt;Vec&lt;u8&gt;, Error&gt;</code> - Digital signature</td>
-</tr>
-<tr>
-<td><b>Applicable Algorithms</b></td>
-<td>ECDSA, RSA, Ed25519, SM2</td>
-</tr>
-</table>
-
-**Example:**
-
-```rust
-use project_name::{Cipher, KeyManager, Algorithm};
-
-let km = KeyManager::new()?;
-let key_id = km.generate_key(Algorithm::ECDSAP256)?;
-let signer = Cipher::new(Algorithm::ECDSAP256)?;
-
-let message = b"Important message";
-let signature = signer.sign(&km, &key_id, message)?;
-```
-
----
-
-#### `Cipher::verify()`
-
-Verify a digital signature.
-
-<table>
-<tr>
-<td width="30%"><b>Signature</b></td>
-<td width="70%">
-
-```rust
-pub fn verify(
-    &self,
-    key_manager: &KeyManager,
-    key_id: &str,
-    message: &[u8],
-    signature: &[u8]
-) -> Result<bool, Error>
-```
-
-</td>
-</tr>
-<tr>
-<td><b>Parameters</b></td>
-<td>
-
-- `key_manager: &KeyManager` - Key manager instance
-- `key_id: &str` - ID of the verification key
-- `message: &[u8]` - Original message
-- `signature: &[u8]` - Signature to verify
-
-</td>
-</tr>
-<tr>
-<td><b>Returns</b></td>
-<td><code>Result&lt;bool, Error&gt;</code> - true if valid, false otherwise</td>
-</tr>
-</table>
-
-**Example:**
-
-```rust
-let is_valid = signer.verify(&km, &key_id, message, &signature)?;
-assert!(is_valid);
-```
-
----
-
-### Key Management
-
-<div align="center">
-
-#### 🔑 Key Lifecycle Operations
-
-</div>
-
----
-
-#### `KeyManager`
-
-Manages cryptographic keys throughout their lifecycle.
-
-<table>
-<tr>
-<td width="30%"><b>Type</b></td>
-<td width="70%">
-
-```rust
-pub struct KeyManager {
-    // internal fields
-}
-```
-
-</td>
-</tr>
-</table>
-
----
-
-#### `KeyManager::new()`
-
-Create a new key manager instance.
-
-<table>
-<tr>
-<td width="30%"><b>Signature</b></td>
-<td width="70%">
-
-```rust
-pub fn new() -> Result<Self, Error>
-```
-
-</td>
-</tr>
-<tr>
-<td><b>Returns</b></td>
-<td><code>Result&lt;KeyManager, Error&gt;</code></td>
-</tr>
-</table>
-
-**Example:**
-
-```rust
-use project_name::KeyManager;
-
-let km = KeyManager::new()?;
-```
-
----
-
-#### `KeyManager::generate_key()`
-
-Generate a new cryptographic key.
-
-<table>
-<tr>
-<td width="30%"><b>Signature</b></td>
-<td width="70%">
-
-```rust
-pub fn generate_key(&self, algorithm: Algorithm) -> Result<String, Error>
-```
-
-</td>
-</tr>
-<tr>
-<td><b>Parameters</b></td>
-<td>
-
-- `algorithm: Algorithm` - Algorithm for the key
-
-</td>
-</tr>
-<tr>
-<td><b>Returns</b></td>
-<td><code>Result&lt;String, Error&gt;</code> - Unique key ID</td>
-</tr>
-<tr>
-<td><b>Errors</b></td>
-<td>
-
-- `Error::AlgorithmNotSupported` - Algorithm not available
-- `Error::KeyGenerationFailed` - Failed to generate key
-
-</td>
-</tr>
-</table>
-
-**Example:**
-
-```rust
-use project_name::{KeyManager, Algorithm};
-
-let km = KeyManager::new()?;
-let key_id = km.generate_key(Algorithm::AES256GCM)?;
-println!("Generated key: {}", key_id);
-```
-
----
-
-#### `KeyManager::generate_key_with_alias()`
-
-Generate a key with a human-readable alias.
-
-<table>
-<tr>
-<td width="30%"><b>Signature</b></td>
-<td width="70%">
-
-```rust
-pub fn generate_key_with_alias(
-    &self,
-    algorithm: Algorithm,
-    alias: &str
-) -> Result<String, Error>
-```
-
-</td>
-</tr>
-<tr>
-<td><b>Parameters</b></td>
-<td>
-
-- `algorithm: Algorithm` - Algorithm for the key
-- `alias: &str` - Human-readable name
-
-</td>
-</tr>
-<tr>
-<td><b>Returns</b></td>
-<td><code>Result&lt;String, Error&gt;</code> - Key ID</td>
-</tr>
-</table>
-
-**Example:**
-
-```rust
-let key_id = km.generate_key_with_alias(
-    Algorithm::AES256GCM,
-    "database-encryption-key"
-)?;
-```
-
----
-
-## Algorithms
-
-<div align="center">
-
-#### 🔐 Supported Cryptographic Algorithms
-
-</div>
-
-### `Algorithm` Enum
-
-<table>
-<tr>
-<td width="30%"><b>Definition</b></td>
-<td width="70%">
-
-```rust
-pub enum Algorithm {
-    // Symmetric Encryption
-    AES128GCM,
-    AES192GCM,
-    AES256GCM,
-    SM4GCM,
-    
-    // Asymmetric Signatures
-    ECDSAP256,
-    ECDSAP384,
-    ECDSAP521,
-    RSA2048,
-    RSA3072,
-    RSA4096,
-    Ed25519,
-    SM2,
-}
-```
-
-</td>
-</tr>
-</table>
-
-### Algorithm Details
-
-<details open>
-<summary><b>🔐 Symmetric Encryption</b></summary>
-
-<table>
-<tr>
-<th>Algorithm</th>
-<th>Key Size</th>
-<th>Security Level</th>
-<th>Performance</th>
-<th>Use Case</th>
-</tr>
-<tr>
-<td><b>AES-128-GCM</b></td>
-<td>128-bit</td>
-<td>🟢 High</td>
-<td>⚡⚡⚡ Very Fast</td>
-<td>General purpose</td>
-</tr>
-<tr>
-<td><b>AES-192-GCM</b></td>
-<td>192-bit</td>
-<td>🟢 High</td>
-<td>⚡⚡ Fast</td>
-<td>Extra security</td>
-</tr>
-<tr>
-<td><b>AES-256-GCM</b></td>
-<td>256-bit</td>
-<td>🟢 Very High</td>
-<td>⚡⚡ Fast</td>
-<td>Maximum security</td>
-</tr>
-<tr>
-<td><b>SM4-GCM</b></td>
-<td>128-bit</td>
-<td>🟢 High</td>
-<td>⚡ Moderate</td>
-<td>Chinese standards</td>
-</tr>
-</table>
-
-</details>
-
-<details>
-<summary><b>✍️ Digital Signatures</b></summary>
-
-<table>
-<tr>
-<th>Algorithm</th>
-<th>Key Size</th>
-<th>Security Level</th>
-<th>Signature Size</th>
-<th>Use Case</th>
-</tr>
-<tr>
-<td><b>ECDSA-P256</b></td>
-<td>256-bit</td>
-<td>🟢 High</td>
-<td>~64 bytes</td>
-<td>Modern standard</td>
-</tr>
-<tr>
-<td><b>ECDSA-P384</b></td>
-<td>384-bit</td>
-<td>🟢 Very High</td>
-<td>~96 bytes</td>
-<td>High security</td>
-</tr>
-<tr>
-<td><b>RSA-2048</b></td>
-<td>2048-bit</td>
-<td>🟢 High</td>
-<td>256 bytes</td>
-<td>Legacy support</td>
-</tr>
-<tr>
-<td><b>Ed25519</b></td>
-<td>256-bit</td>
-<td>🟢 High</td>
-<td>64 bytes</td>
-<td>Fast verification</td>
-</tr>
-<tr>
-<td><b>SM2</b></td>
-<td>256-bit</td>
-<td>🟢 High</td>
-<td>~64 bytes</td>
-<td>Chinese standards</td>
-</tr>
-</table>
-
-</details>
-
----
-
-## Error Handling
-
-<div align="center">
-
-#### 🚨 Error Types and Handling
-
-</div>
-
-### `Error` Enum
-
-```rust
-pub enum Error {
-    // Initialization Errors
-    AlreadyInitialized,
-    NotInitialized,
-    InitializationFailed,
-    
-    // Key Errors
-    KeyNotFound,
-    KeyGenerationFailed,
-    InvalidKeyState,
-    
-    // Cryptographic Errors
-    EncryptionFailed,
-    DecryptionFailed,
-    SignatureFailed,
-    VerificationFailed,
-    
-    // Algorithm Errors
-    AlgorithmNotSupported,
-    AlgorithmNotFound,
-    
-    // I/O Errors
-    IoError(std::io::Error),
-    
-    // Custom errors
-    Custom(String),
-}
-```
-
-### Error Handling Pattern
-
-<table>
-<tr>
-<td width="50%">
-
-**Pattern Matching**
-```rust
-match operation() {
-    Ok(result) => {
-        println!("Success: {:?}", result);
+## 公钥注册
+
+### POST /api/register
+
+注册新的加密公钥，自动创建加密频道。
+
+**请求：**
+
+```bash
+curl -X POST http://localhost:3000/api/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "publicKey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
+    "algorithm": "RSA-4096",
+    "expiresIn": 604800,
+    "metadata": {
+      "deviceName": "My Device",
+      "appVersion": "1.0.0"
     }
-    Err(Error::KeyNotFound) => {
-        eprintln!("Key not found");
-    }
-    Err(Error::EncryptionFailed) => {
-        eprintln!("Encryption failed");
-    }
-    Err(e) => {
-        eprintln!("Error: {:?}", e);
-    }
-}
+  }'
 ```
 
-</td>
-<td width="50%">
+**请求参数：**
 
-**? Operator**
-```rust
-fn process_data() -> Result<(), Error> {
-    init()?;
-    
-    let km = KeyManager::new()?;
-    let key = km.generate_key(
-        Algorithm::AES256GCM
-    )?;
-    
-    let cipher = Cipher::new(
-        Algorithm::AES256GCM
-    )?;
-    
-    Ok(())
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `publicKey` | string | 是 | PEM 格式公钥 |
+| `algorithm` | string | 否 | 算法标识符（默认：RSA-2048） |
+| `expiresIn` | number | 否 | 有效期秒数（默认：604800=7天） |
+| `metadata` | object | 否 | 元数据（deviceName、appVersion） |
+
+**响应（201）：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "channelId": "enc_3b6bf5d599c844e3",
+    "publicKeyId": "uuid-string",
+    "algorithm": "RSA-4096",
+    "expiresAt": "2026-01-10T00:00:00.000Z",
+    "expiresIn": 604800
+  }
 }
 ```
-
-</td>
-</tr>
-</table>
 
 ---
 
-## Type Definitions
+### GET /api/register
 
-### Common Types
+查询已注册的公钥信息。
 
-<table>
-<tr>
-<td width="50%">
+**请求：**
 
-**Key ID**
-```rust
-pub type KeyId = String;
+```bash
+# 按频道 ID 查询
+curl "http://localhost:3000/api/register?channelId=enc_xxx"
+
+# 按密钥 ID 查询
+curl "http://localhost:3000/api/register?keyId=uuid-string"
 ```
 
-**Algorithm Type**
-```rust
-pub enum Algorithm { /* ... */ }
-```
+**查询参数：**
 
-</td>
-<td width="50%">
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `channelId` | string | 否* | 频道 ID |
+| `keyId` | string | 否* | 密钥 ID |
 
-**Result Type**
-```rust
-pub type Result<T> = 
-    std::result::Result<T, Error>;
-```
+**响应（200）：**
 
-**Log Level**
-```rust
-pub enum LogLevel {
-    Debug,
-    Info,
-    Warn,
-    Error,
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-string",
+    "channelId": "enc_xxx",
+    "algorithm": "RSA-4096",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "expiresAt": "2026-01-10T00:00:00.000Z",
+    "isExpired": false
+  }
 }
 ```
 
-</td>
-</tr>
-</table>
+---
+
+## 频道管理
+
+### POST /api/channels
+
+创建新频道。
+
+**请求：**
+
+```bash
+curl -X POST http://localhost:3000/api/channels \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "my-channel",
+    "name": "我的频道",
+    "description": "频道描述",
+    "type": "public",
+    "expiresIn": 86400
+  }'
+```
+
+**请求参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | string | 否 | 频道 ID（自动生成） |
+| `name` | string | 否 | 频道名称 |
+| `description` | string | 否 | 频道描述 |
+| `type` | string | 否 | 类型：public/encrypted（默认：public） |
+| `expiresIn` | number | 否 | 有效期秒数 |
+
+**响应（201）：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "my-channel",
+    "name": "我的频道",
+    "description": "频道描述",
+    "type": "public",
+    "creator": null,
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "expiresAt": "2026-01-04T00:00:00.000Z",
+    "isActive": true,
+    "metadata": null
+  }
+}
+```
 
 ---
 
-## Examples
+### GET /api/channels
+
+查询频道列表或获取特定频道。
+
+**请求：**
+
+```bash
+# 查询单个频道
+curl "http://localhost:3000/api/channels?id=my-channel"
+
+# 列出所有频道
+curl "http://localhost:3000/api/channels?limit=10&offset=0"
+
+# 按类型筛选
+curl "http://localhost:3000/api/channels?type=public"
+```
+
+**查询参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `id` | string | 频道 ID |
+| `type` | string | 筛选类型：public/private/encrypted |
+| `limit` | number | 返回数量（默认：50，最大：100） |
+| `offset` | number | 偏移量（默认：0） |
+
+**响应（200）：**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "my-channel",
+      "name": "我的频道",
+      "type": "public",
+      "creator": null,
+      "createdAt": "2026-01-03T00:00:00.000Z",
+      "expiresAt": "2026-01-04T00:00:00.000Z",
+      "isActive": true
+    }
+  ],
+  "pagination": {
+    "total": 100,
+    "limit": 10,
+    "offset": 0,
+    "hasMore": true
+  }
+}
+```
+
+---
+
+## 消息推送
+
+### POST /api/publish
+
+发布消息到频道。
+
+**请求：**
+
+```bash
+curl -X POST http://localhost:3000/api/publish \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "my-channel",
+    "message": "Hello, World!",
+    "priority": "normal",
+    "sender": "Server",
+    "cache": true,
+    "encrypted": false,
+    "autoCreate": true
+  }'
+```
+
+**请求参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `channel` | string | 是 | 频道 ID |
+| `message` | string | 是 | 消息内容 |
+| `priority` | string | 否 | 优先级：critical/high/normal/low/bulk |
+| `sender` | string | 否 | 发送者名称 |
+| `cache` | boolean | 否 | 是否缓存消息（默认：true） |
+| `encrypted` | boolean | 否 | 是否加密消息（默认：false） |
+| `autoCreate` | boolean | 否 | 自动创建临时频道（默认：true） |
+
+**响应（201）：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-string",
+    "channel": "my-channel",
+    "publishedAt": "2026-01-03T00:00:00.000Z"
+  }
+}
+```
+
+---
+
+### GET /api/publish
+
+获取频道消息队列状态。
+
+**请求：**
+
+```bash
+curl "http://localhost:3000/api/publish?channel=my-channel&count=10"
+```
+
+**查询参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `channel` | string | 频道 ID（必填） |
+| `count` | number | 获取消息数量（默认：10，最大：100） |
+
+**响应（200）：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "channel": "my-channel",
+    "messages": [
+      {
+        "id": "uuid",
+        "message": "Hello!",
+        "sender": "User1",
+        "timestamp": 1234567890
+      }
+    ],
+    "queueLength": 5
+  }
+}
+```
+
+---
+
+## 实时订阅
+
+### GET /api/subscribe
+
+通过 Server-Sent Events (SSE) 订阅频道实时消息。
+
+**请求：**
+
+```bash
+curl -N http://localhost:3000/api/subscribe?channel=my-channel
+```
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `channel` | string | 是 | 频道 ID |
+| `lastEventId` | string | 否 | 断线后恢复的 Event ID |
+
+**响应格式（Server-Sent Events）：**
+
+```
+# 连接确认
+event: connected
+data: {"channel":"my-channel","type":"channel","timestamp":1234567890,"message":"Connected"}
+
+# 消息事件
+event: message
+id: event-123
+data: {"id":"msg-uuid","channel":"my-channel","message":"Hello!","sender":"User1","timestamp":1234567890}
+
+# Keepalive（每 30 秒）
+: keepalive
+```
+
+**JavaScript 示例：**
+
+```javascript
+const eventSource = new EventSource('/api/subscribe?channel=my-channel');
+
+eventSource.addEventListener('connected', (event) => {
+  console.log('已连接:', JSON.parse(event.data));
+});
+
+eventSource.addEventListener('message', (event) => {
+  console.log('收到消息:', JSON.parse(event.data));
+});
+
+eventSource.onerror = (error) => {
+  console.log('连接断开，尝试重连...');
+};
+```
+
+---
+
+## 密钥管理
+
+### GET /api/keys/[id]
+
+获取公钥信息。
+
+**请求：**
+
+```bash
+curl http://localhost:3000/api/keys/enc_channel_id
+```
+
+**响应（200）：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-string",
+    "channelId": "enc_channel_id",
+    "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----",
+    "algorithm": "RSA-4096",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "expiresAt": "2026-01-10T00:00:00.000Z",
+    "lastUsedAt": "2026-01-03T12:00:00.000Z",
+    "metadata": {"deviceName": "My Device"}
+  }
+}
+```
+
+---
+
+### DELETE /api/keys/[id]
+
+撤销公钥（需要认证）。
+
+**请求：**
+
+```bash
+curl -X DELETE http://localhost:3000/api/keys/enc_channel_id \
+  -H "X-API-Key: sk_live_xxx..."
+```
+
+**响应（200）：**
+
+```json
+{
+  "success": true,
+  "message": "Public key revoked successfully",
+  "data": {
+    "deletedId": "uuid-string",
+    "channelId": "enc_channel_id"
+  }
+}
+```
+
+---
+
+### POST /api/keys
+
+创建 API 密钥。
+
+**请求：**
+
+```bash
+curl -X POST http://localhost:3000/api/keys \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "user-123",
+    "name": "My App API Key",
+    "permissions": ["read", "write"],
+    "expiresAt": "2026-12-31T23:59:59.000Z"
+  }'
+```
+
+**响应（201）：**
+
+```json
+{
+  "success": true,
+  "message": "API key created successfully. Store this key securely - it cannot be retrieved again.",
+  "data": {
+    "key": "***REMOVED***xxxxxxxx",
+    "info": {
+      "id": "uuid",
+      "keyPrefix": "sk_live",
+      "userId": "user-123",
+      "name": "My App API Key",
+      "permissions": ["read", "write"],
+      "isActive": true,
+      "createdAt": "2026-01-03T00:00:00.000Z",
+      "expiresAt": "2026-12-31T23:59:59.000Z"
+    }
+  }
+}
+```
+
+---
+
+## 定时任务
+
+### GET /api/cron/cleanup-channels
+
+清理过期频道（需要 cron secret）。
+
+**请求：**
+
+```bash
+curl "http://localhost:3000/api/cron/cleanup-channels?task=all" \
+  -H "X-Cron-Secret: your-cron-secret"
+```
+
+**任务类型：**
+
+| task | 说明 |
+|------|------|
+| `persistent` | 清理过期的持久化频道 |
+| `temporary` | 清理过期的临时频道 |
+| `all`（默认） | 执行所有清理任务 |
+
+**响应（200）：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "task": "all",
+    "persistentChannelsMarkedInactive": 10,
+    "temporaryChannelsDeleted": 5,
+    "errors": [],
+    "duration": "150ms",
+    "timestamp": "2026-01-03T00:00:00.000Z"
+  }
+}
+```
+
+---
+
+### GET /api/cron/cleanup-keys
+
+清理过期密钥和数据（需要 cron secret）。
+
+**请求：**
+
+```bash
+curl "http://localhost:3000/api/cron/cleanup-keys?task=all" \
+  -H "X-Cron-Secret: your-cron-secret"
+```
+
+**任务类型：**
+
+| task | 说明 |
+|------|------|
+| `expired-keys` | 清理过期公钥 |
+| `audit-logs` | 清理旧审计日志 |
+| `orphaned-keys` | 清理孤立 Redis 密钥 |
+| `messages` | 清理旧消息 |
+| `all`（默认） | 执行所有清理任务 |
+
+**响应（200）：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "task": "all",
+    "results": {
+      "expiredKeys": { "deleted": 15, "errors": [] },
+      "auditLogs": { "deleted": 100, "errors": [] },
+      "orphanedKeys": { "deleted": 8, "errors": [] },
+      "oldMessages": { "deleted": 50, "errors": [] }
+    },
+    "timestamp": "2026-01-03T00:00:00.000Z"
+  }
+}
+```
+
+---
+
+## 错误处理
+
+### 错误响应格式
+
+```json
+{
+  "success": false,
+  "error": {
+    "message": "错误描述",
+    "code": "ERROR_CODE",
+    "details": [] // 可选的详细错误信息
+  }
+}
+```
+
+### 常见错误码
+
+| 状态码 | 错误码 | 说明 |
+|--------|--------|------|
+| 400 | VALIDATION_ERROR | 请求参数验证失败 |
+| 400 | INVALID_JSON | JSON 解析失败 |
+| 400 | INVALID_CHANNEL_FORMAT | 频道 ID 格式无效 |
+| 401 | AUTH_REQUIRED | 需要认证 |
+| 401 | AUTH_FAILED | 认证失败 |
+| 401 | UNAUTHORIZED | Cron secret 无效 |
+| 404 | NOT_FOUND | 资源不存在 |
+| 404 | CHANNEL_NOT_FOUND | 频道不存在 |
+| 409 | CHANNEL_EXISTS | 频道已存在 |
+| 409 | DUPLICATE_KEY | 密钥已存在 |
+| 410 | KEY_EXPIRED | 密钥已过期 |
+| 413 | KEY_TOO_LARGE | 公钥太大 |
+| 413 | METADATA_TOO_LARGE | 元数据太大 |
+| 413 | MESSAGE_TOO_LARGE | 消息太大 |
+| 429 | RATE_LIMIT_EXCEEDED | 请求过于频繁 |
+| 500 | INTERNAL_ERROR | 服务器内部错误 |
+
+---
 
 <div align="center">
 
-### 💡 Common Usage Patterns
-
-</div>
-
-### Example 1: Basic Encryption
-
-```rust
-use project_name::{init, Cipher, KeyManager, Algorithm};
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize
-    init()?;
-    
-    // Setup
-    let km = KeyManager::new()?;
-    let key_id = km.generate_key(Algorithm::AES256GCM)?;
-    let cipher = Cipher::new(Algorithm::AES256GCM)?;
-    
-    // Encrypt
-    let plaintext = b"Hello, World!";
-    let ciphertext = cipher.encrypt(&km, &key_id, plaintext)?;
-    
-    // Decrypt
-    let decrypted = cipher.decrypt(&km, &key_id, &ciphertext)?;
-    
-    assert_eq!(plaintext, &decrypted[..]);
-    println!("✅ Success!");
-    
-    Ok(())
-}
-```
-
-### Example 2: Digital Signatures
-
-```rust
-use project_name::{init, Cipher, KeyManager, Algorithm};
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    init()?;
-    
-    let km = KeyManager::new()?;
-    let key_id = km.generate_key(Algorithm::ECDSAP256)?;
-    let signer = Cipher::new(Algorithm::ECDSAP256)?;
-    
-    // Sign
-    let message = b"Important document";
-    let signature = signer.sign(&km, &key_id, message)?;
-    
-    // Verify
-    let is_valid = signer.verify(&km, &key_id, message, &signature)?;
-    assert!(is_valid);
-    
-    println!("✅ Signature verified!");
-    
-    Ok(())
-}
-```
-
-### Example 3: Advanced Configuration
-
-```rust
-use project_name::{init_with_config, Config, LogLevel};
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = Config::builder()
-        .thread_pool_size(8)
-        .cache_size(2048)
-        .log_level(LogLevel::Debug)
-        .enable_metrics(true)
-        .enable_audit(true)
-        .build()?;
-    
-    init_with_config(config)?;
-    
-    // Use the library...
-    
-    Ok(())
-}
-```
-
----
-
-<div align="center">
-
-**[📖 User Guide](USER_GUIDE.md)** • **[🏗️ Architecture](ARCHITECTURE.md)** • **[🏠 Home](../README.md)**
-
-Made with ❤️ by the Documentation Team
-
-[⬆ Back to Top](#-api-reference)
+**[📖 用户指南](USER_GUIDE.md)** • **[🏗️ 架构设计](ARCHITECTURE.md)** • **[🏠 首页](../README.md)**
 
 </div>
