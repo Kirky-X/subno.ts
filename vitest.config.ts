@@ -27,11 +27,21 @@ export default defineConfig({
         name: 'unit',
         testMatch: ['**/__tests__/unit/**/*.test.ts'],
         setupFiles: ['./__tests__/setup.ts'],
+        resolve: {
+          alias: {
+            '@': path.resolve(__dirname, './src'),
+          },
+        },
       },
       {
         name: 'integration',
         testMatch: ['**/__tests__/integration/**/*.test.ts'],
         setupFiles: ['./__tests__/setup.ts'],
+        resolve: {
+          alias: {
+            '@': path.resolve(__dirname, './src'),
+          },
+        },
       },
       {
         name: 'e2e',
@@ -40,6 +50,11 @@ export default defineConfig({
         // E2E tests may need longer timeout
         testTimeout: 30000,
         hookTimeout: 30000,
+        resolve: {
+          alias: {
+            '@': path.resolve(__dirname, './src'),
+          },
+        },
       },
       {
         name: 'performance',
@@ -48,6 +63,11 @@ export default defineConfig({
         // Performance tests need longer timeout
         testTimeout: 60000,
         hookTimeout: 60000,
+        resolve: {
+          alias: {
+            '@': path.resolve(__dirname, './src'),
+          },
+        },
       },
     ],
   },
