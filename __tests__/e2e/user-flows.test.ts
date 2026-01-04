@@ -100,8 +100,8 @@ describe('E2E Tests - End-to-End User Flows', () => {
     }
   });
 
-  describe('E2E-001: 端到端加密通信', () => {
-    it('应该完成完整的加密消息发送和接收', async () => {
+  describe('E2E-001: End-to-End Encrypted Communication @security @critical @e2e', () => {
+    it('should complete full encryption workflow', async () => {
       let privateKey: string | null = null;
 
       try {
@@ -178,7 +178,7 @@ describe('E2E Tests - End-to-End User Flows', () => {
       }
     });
 
-    it('应该在密钥不匹配时无法解密', async () => {
+    it('should fail decryption with wrong key @security', async () => {
       let privateKey1: string | null = null;
       let privateKey2: string | null = null;
 
@@ -200,7 +200,7 @@ describe('E2E Tests - End-to-End User Flows', () => {
       }
     });
 
-    it('应该支持混合加密的大消息', async () => {
+    it('should support hybrid encryption for large messages @performance @e2e', async () => {
       let privateKey: string | null = null;
 
       try {
@@ -254,8 +254,8 @@ describe('E2E Tests - End-to-End User Flows', () => {
     });
   });
 
-  describe('E2E-002: 公开频道完整流程', () => {
-    it('应该完成公开频道的创建、发布和订阅', async () => {
+  describe('E2E-002: Public Channel Complete Flow @e2e', () => {
+    it('should complete public channel creation, publish, and subscribe', async () => {
       const channelName = TestDataFactory.generateChannelName('public');
 
       // 1. 创建公开频道
@@ -313,8 +313,8 @@ describe('E2E Tests - End-to-End User Flows', () => {
     });
   });
 
-  describe('E2E-003: 消息签名和验证', () => {
-    it('应该完成消息签名和验证流程', async () => {
+  describe('E2E-003: Message Signing and Verification @security @e2e', () => {
+    it('should complete message signing and verification workflow', async () => {
       let privateKey: string | null = null;
 
       try {
@@ -344,7 +344,7 @@ describe('E2E Tests - End-to-End User Flows', () => {
       }
     });
 
-    it('应该支持带签名的加密消息', async () => {
+    it('should support signed encrypted messages @security @e2e', async () => {
       let privateKey: string | null = null;
 
       try {
@@ -407,8 +407,8 @@ describe('E2E Tests - End-to-End User Flows', () => {
     });
   });
 
-  describe('E2E-004: 多接收端场景', () => {
-    it('应该支持多个接收端同时订阅', async () => {
+  describe('E2E-004: Multi-Receiver Scenarios @e2e @concurrency', () => {
+    it('should support multiple receivers subscribing simultaneously', async () => {
       const channelName = TestDataFactory.generateChannelName('multi-receiver');
 
       // 创建频道
@@ -445,7 +445,7 @@ describe('E2E Tests - End-to-End User Flows', () => {
       expect(messageData.message).toBe('Broadcast to all receivers');
     });
 
-    it('应该支持加密频道多接收端', async () => {
+    it('should support encrypted channels with multiple receivers @security @e2e', async () => {
       let privateKey1: string | null = null;
       let privateKey2: string | null = null;
 
@@ -527,8 +527,8 @@ describe('E2E Tests - End-to-End User Flows', () => {
     });
   });
 
-  describe('E2E-005: 消息持久化和 TTL', () => {
-    it('应该正确处理消息 TTL', async () => {
+  describe('E2E-005: Message Persistence and TTL @e2e', () => {
+    it('should handle message TTL correctly', async () => {
       const channelName = TestDataFactory.generateChannelName('ttl');
 
       // 发布消息
@@ -550,7 +550,7 @@ describe('E2E Tests - End-to-End User Flows', () => {
       expect(ttl).toBeGreaterThan(0);
     });
 
-    it('应该正确处理加密频道 TTL', async () => {
+    it('should handle encrypted channel TTL correctly @e2e', async () => {
       const { publicKey } = encryptionService.generateKeyPair();
 
       const registerRequest = new Request('http://localhost:3000/api/register', {
@@ -586,8 +586,8 @@ describe('E2E Tests - End-to-End User Flows', () => {
     });
   });
 
-  describe('E2E-006: 错误处理和恢复', () => {
-    it('应该在频道不存在时返回 404', async () => {
+  describe('E2E-006: Error Handling and Recovery @e2e', () => {
+    it('should return 404 when channel does not exist', async () => {
       const subscribeRequest = new Request(
         'http://localhost:3000/api/subscribe?channel=non-existent'
       );
@@ -597,7 +597,7 @@ describe('E2E Tests - End-to-End User Flows', () => {
       expect(subscribeResponse.status).toBe(404);
     });
 
-    it('应该在公钥不存在时返回 404', async () => {
+    it('should return 404 when public key does not exist', async () => {
       const getKeyRequest = new Request(
         'http://localhost:3000/api/keys/enc_nonexistent'
       );
@@ -609,7 +609,7 @@ describe('E2E Tests - End-to-End User Flows', () => {
       expect(getKeyResponse.status).toBe(404);
     });
 
-    it('应该在无效输入时返回 400', async () => {
+    it('should return 400 for invalid input', async () => {
       const publishRequest = new Request('http://localhost:3000/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -625,8 +625,8 @@ describe('E2E Tests - End-to-End User Flows', () => {
     });
   });
 
-  describe('E2E-007: 性能测试', () => {
-    it('应该快速处理大量消息', async () => {
+  describe('E2E-007: Performance Tests @performance @e2e', () => {
+    it('should process large number of messages quickly', async () => {
       const channelName = TestDataFactory.generateChannelName('performance');
 
       // 发布 PERFORMANCE_MESSAGE_COUNT 条消息
@@ -665,7 +665,7 @@ describe('E2E Tests - End-to-End User Flows', () => {
       console.log(`Performance: ${PERFORMANCE_MESSAGE_COUNT} messages in ${duration}ms`);
     });
 
-    it('应该支持并发加密操作', async () => {
+    it('should support concurrent encryption operations @performance @e2e', async () => {
       const { publicKey, privateKey } = encryptionService.generateKeyPair();
 
       // 并发加密 ENCRYPTION_ITERATION_COUNT 条消息
@@ -704,8 +704,8 @@ describe('E2E Tests - End-to-End User Flows', () => {
     });
   });
 
-  describe('E2E-008: 完整用户场景', () => {
-    it('应该模拟完整的用户注册、发布、订阅流程', async () => {
+  describe('E2E-008: Complete User Scenarios @e2e', () => {
+    it('should simulate complete user registration, publish, subscribe workflow', async () => {
       let privateKeyA: string | null = null;
 
       try {
@@ -789,8 +789,8 @@ describe('E2E Tests - End-to-End User Flows', () => {
     });
   });
 
-  describe('E2E-009: 数据一致性', () => {
-    it('应该保证消息在发布和接收间的一致性', async () => {
+  describe('E2E-009: Data Consistency @e2e', () => {
+    it('should guarantee message consistency between publish and receive', async () => {
       const channelName = TestDataFactory.generateChannelName('consistency');
 
       const originalMessages = [
@@ -830,7 +830,7 @@ describe('E2E Tests - End-to-End User Flows', () => {
       }
     });
 
-    it('应该保证加密消息的一致性', async () => {
+    it('should guarantee encrypted message consistency', async () => {
       const { publicKey, privateKey } = encryptionService.generateKeyPair();
 
       const originalMessage = 'Test consistency: 12345!@#\$%';
@@ -842,8 +842,8 @@ describe('E2E Tests - End-to-End User Flows', () => {
     });
   });
 
-  describe('E2E-010: 并发场景', () => {
-    it('应该处理多个用户同时注册', async () => {
+  describe('E2E-010: Concurrent Scenarios @concurrency @e2e', () => {
+    it('should handle multiple users registering simultaneously', async () => {
       const promises = [];
 
       for (let i = 0; i < CONCURRENT_USER_COUNT; i++) {
@@ -883,7 +883,7 @@ describe('E2E Tests - End-to-End User Flows', () => {
       expect(uniqueIds.size).toBe(CONCURRENT_USER_COUNT);
     });
 
-    it('应该处理多个用户同时发布', async () => {
+    it('should handle multiple users publishing simultaneously', async () => {
       const channelName = TestDataFactory.generateChannelName('concurrent-publish');
 
       const promises = [];
@@ -921,7 +921,7 @@ describe('E2E Tests - End-to-End User Flows', () => {
       expect(messages.length).toBe(CONCURRENT_PUBLISH_COUNT);
     });
 
-    it('应该处理并发发布而不丢失数据', async () => {
+    it('should handle concurrent publishes without data loss @concurrency @e2e', async () => {
       const channelName = TestDataFactory.generateChannelName('race-condition');
       const messageCount = 50;
 
@@ -949,6 +949,169 @@ describe('E2E Tests - End-to-End User Flows', () => {
       const messageContents = messages.map(m => JSON.parse(m).message);
       const uniqueMessages = new Set(messageContents);
       expect(uniqueMessages.size).toBe(messageCount);
+    });
+  });
+
+  describe('E2E-011: Edge Cases @e2e @boundary', () => {
+    it('should handle empty message @boundary', async () => {
+      const channelName = TestDataFactory.generateChannelName('empty');
+
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelName,
+          message: '',
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      expect(publishResponse.status).toBe(400);
+    });
+
+    it('should handle single character message @boundary', async () => {
+      const channelName = TestDataFactory.generateChannelName('single-char');
+
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelName,
+          message: 'a',
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      expect(publishResponse.status).toBe(200);
+
+      const messages = await redis.lRange(`channel:${channelName}:queue`, 0, -1);
+      const messageData = JSON.parse(messages[0]);
+      expect(messageData.message).toBe('a');
+    });
+
+    it('should handle very long channel name @boundary', async () => {
+      const longChannelName = 'a'.repeat(100);
+
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: longChannelName,
+          message: 'Long channel name test',
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      expect(publishResponse.status).toBe(200);
+
+      const messages = await redis.lRange(`channel:${longChannelName}:queue`, 0, -1);
+      expect(messages.length).toBe(1);
+    });
+
+    it('should handle special characters in message @boundary', async () => {
+      const channelName = TestDataFactory.generateChannelName('special-chars');
+
+      const specialMessage = 'Special chars: !@#$%^&*()_+-={}[]|\\:";\'<>?,./';
+
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelName,
+          message: specialMessage,
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      expect(publishResponse.status).toBe(200);
+
+      const messages = await redis.lRange(`channel:${channelName}:queue`, 0, -1);
+      const messageData = JSON.parse(messages[0]);
+      expect(messageData.message).toBe(specialMessage);
+    });
+
+    it('should handle Unicode in message @boundary', async () => {
+      const channelName = TestDataFactory.generateChannelName('unicode');
+
+      const unicodeMessage = 'Hello 世界 🌍 Ñoñoño 你好 مرحبا';
+
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelName,
+          message: unicodeMessage,
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      expect(publishResponse.status).toBe(200);
+
+      const messages = await redis.lRange(`channel:${channelName}:queue`, 0, -1);
+      const messageData = JSON.parse(messages[0]);
+      expect(messageData.message).toBe(unicodeMessage);
+    });
+
+    it('should handle newlines in message @boundary', async () => {
+      const channelName = TestDataFactory.generateChannelName('newlines');
+
+      const multilineMessage = 'Line 1\nLine 2\nLine 3';
+
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelName,
+          message: multilineMessage,
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      expect(publishResponse.status).toBe(200);
+
+      const messages = await redis.lRange(`channel:${channelName}:queue`, 0, -1);
+      const messageData = JSON.parse(messages[0]);
+      expect(messageData.message).toBe(multilineMessage);
+    });
+
+    it('should handle null values in optional fields @boundary', async () => {
+      const channelName = TestDataFactory.generateChannelName('null');
+
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelName,
+          message: 'Test message',
+          sender: null,
+          encrypted: false,
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      expect(publishResponse.status).toBe(200);
+    });
+
+    it('should handle message at max size @boundary', async () => {
+      const channelName = TestDataFactory.generateChannelName('max-size');
+
+      const maxSize = 4_718_592; // 4.5MB
+      const message = 'x'.repeat(maxSize);
+
+      const publishRequest = new Request('http://localhost:3000/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: channelName,
+          message,
+        }),
+      });
+
+      const publishResponse = await publishPOST(publishRequest);
+      expect(publishResponse.status).toBe(200);
+
+      const messages = await redis.lRange(`channel:${channelName}:queue`, 0, -1);
+      expect(messages.length).toBe(1);
     });
   });
 });
