@@ -205,14 +205,14 @@ export async function cleanupTempChannels(): Promise<CleanupResult> {
     const keysToDelete: string[] = [];
 
     do {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (client as any).scan(cursor, {
+      // Use proper TypeScript typing for scan command
+      const scanResult = await client.scan(String(cursor), {
         MATCH: 'channel:*',
         COUNT: BATCH_SIZE,
       });
-      cursor = Number(result.cursor);
+      cursor = Number(scanResult.cursor);
 
-      for (const key of result.keys) {
+      for (const key of scanResult.keys) {
         const ttl = await client.ttl(key);
         if (ttl === -2) {
           keysToDelete.push(key);

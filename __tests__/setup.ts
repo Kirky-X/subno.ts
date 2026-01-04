@@ -6,8 +6,8 @@
 import { env } from '@/config/env';
 
 // Set default test environment variables
-process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/securenotify';
-process.env.REDIS_URL = 'redis://localhost:6379';
+process.env.DATABASE_URL = 'postgresql://securenotify:securenotify_password@localhost:5435/securenotify';
+process.env.REDIS_URL = 'redis://localhost:6380';
 process.env.PUBLIC_MESSAGE_TTL = '43200';
 process.env.PRIVATE_MESSAGE_TTL = '86400';
 process.env.PUBLIC_MESSAGE_MAX_COUNT = '1000';

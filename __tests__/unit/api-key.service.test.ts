@@ -151,12 +151,12 @@ describe('ApiKeyService', () => {
     });
 
     it('should reject inactive key', async () => {
-      const { key } = await apiKeyService.createApiKey({
+      const { key, info } = await apiKeyService.createApiKey({
         userId: testUserId,
       });
 
-      // Revoke the key
-      await apiKeyService.revokeApiKey(key, testUserId);
+      // Revoke the key using keyId
+      await apiKeyService.revokeApiKey(info.id, testUserId);
 
       const result = await apiKeyService.validateKey(key);
 
@@ -199,11 +199,11 @@ describe('ApiKeyService', () => {
 
   describe('revokeApiKey', () => {
     it('should revoke an API key', async () => {
-      const { key } = await apiKeyService.createApiKey({
+      const { key, info } = await apiKeyService.createApiKey({
         userId: testUserId,
       });
 
-      const revoked = await apiKeyService.revokeApiKey(key, testUserId);
+      const revoked = await apiKeyService.revokeApiKey(info.id, testUserId);
 
       expect(revoked).toBe(true);
 
@@ -215,11 +215,11 @@ describe('ApiKeyService', () => {
 
     it('should not revoke key from different user', async () => {
       const otherUserId = `other-user-${Date.now()}`;
-      const { key } = await apiKeyService.createApiKey({
+      const { key, info } = await apiKeyService.createApiKey({
         userId: testUserId,
       });
 
-      const revoked = await apiKeyService.revokeApiKey(key, otherUserId);
+      const revoked = await apiKeyService.revokeApiKey(info.id, otherUserId);
 
       expect(revoked).toBe(false);
 
@@ -229,7 +229,7 @@ describe('ApiKeyService', () => {
     });
 
     it('should return false for non-existent key', async () => {
-      const revoked = await apiKeyService.revokeApiKey('non-existent-key', testUserId);
+      const revoked = await apiKeyService.revokeApiKey('00000000-0000-0000-0000-000000000000', testUserId);
 
       expect(revoked).toBe(false);
     });
@@ -332,12 +332,12 @@ describe('ApiKeyService', () => {
     });
 
     it('should deny permission for revoked key', async () => {
-      const { key } = await apiKeyService.createApiKey({
+      const { key, info } = await apiKeyService.createApiKey({
         userId: testUserId,
         permissions: ['read', 'write'],
       });
 
-      await apiKeyService.revokeApiKey(key, testUserId);
+      await apiKeyService.revokeApiKey(info.id, testUserId);
 
       const hasPermission = await apiKeyService.hasPermission(key, 'read');
 
