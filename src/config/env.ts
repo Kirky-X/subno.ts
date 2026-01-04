@@ -33,6 +33,9 @@ const envSchema = z.object({
   KEY_EXPIRY_DEFAULT: z.coerce.number().default(604800),
   KEY_EXPIRY_MAX: z.coerce.number().default(2592000),
 
+  // Admin Configuration
+  ADMIN_MASTER_KEY: z.string().optional(),
+
   // Cleanup Configuration
   CLEANUP_BATCH_SIZE: z.coerce.number().default(1000),
   AUDIT_LOG_RETENTION_DAYS: z.coerce.number().default(90),
