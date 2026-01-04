@@ -1,7 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0 
-// Copyright (c) 2026 KirkyX. All rights reserved. 
-
-version: '3.8'
+version: '3'
 
 services:
   postgres:
@@ -12,11 +9,11 @@ services:
       POSTGRES_PASSWORD: securenotify_password
       POSTGRES_DB: securenotify
     ports:
-      - "5432:5432"
+      - "5435:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U securenotify"]
+      test: ["CMD-SHELL", "pg_isready -U securenotify -p 5432"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,7 +24,7 @@ services:
     image: redis:7-alpine
     container_name: securenotify-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:

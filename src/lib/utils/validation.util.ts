@@ -42,6 +42,10 @@ export const RegisterKeySchema = z.object({
     .string()
     .min(1, 'Public key is required')
     .includes('BEGIN PUBLIC KEY', { message: 'Invalid public key format' }),
+  algorithm: z
+    .string()
+    .min(1, 'Algorithm is required')
+    .transform(s => s.toUpperCase()),
   expiresIn: z
     .number()
     .int()

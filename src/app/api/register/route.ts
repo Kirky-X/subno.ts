@@ -88,12 +88,12 @@ export async function POST(request: NextRequest) {
     // Calculate expiration time
     const expiresAt = new Date(Date.now() + validatedData.expiresIn * 1000);
 
-    // Store in database
+    // Store in database with client-specified algorithm
     const result = await db.insert(schema.publicKeys).values({
       id: uuidv4(),
       channelId,
       publicKey: validatedData.publicKey,
-      algorithm: 'RSA-2048',
+      algorithm: validatedData.algorithm,
       expiresAt,
       metadata: validatedData.metadata || null,
     }).returning();
@@ -109,6 +109,7 @@ export async function POST(request: NextRequest) {
         data: {
           channelId,
           publicKeyId: insertedKey.id,
+          algorithm: validatedData.algorithm,
           expiresAt: insertedKey.expiresAt.toISOString(),
           expiresIn: validatedData.expiresIn,
         },
