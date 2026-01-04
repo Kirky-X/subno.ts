@@ -2,9 +2,8 @@
 // Copyright (c) 2026 KirkyX. All rights reserved. 
 
 import { RedisRepository, getRedisClient } from '@/lib/repositories/redis.repository';
-import { kv } from '@/lib/redis';
 import { db, schema } from '@/lib/db';
-import { eq, and, isNotNull } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { env } from '@/config/env';
 import type { PublishMessageOptions, Message, PublishResult } from '@/lib/types/message.types';
 import { MessagePriority } from '@/lib/types/message.types';
@@ -89,13 +88,15 @@ export class MessageService {
       type: 'temporary',
     });
 
-    // SET with NX ensures atomic check-and-set
-    const exists = await client.set(channelKey, metadata, { NX: true, EX: channelTtl });
-    if (!exists) {
+    try {
+      // SET with NX ensures atomic check-and-set
+      // Returns 'OK' if set, null if key already exists
+      const result = await client.set(channelKey, metadata, { NX: true, EX: channelTtl });
+      return result === 'OK';
+    } catch (error) {
+      console.error('Error creating temporary channel:', error);
       return false;
     }
-
-    return true;
   }
 
   /**

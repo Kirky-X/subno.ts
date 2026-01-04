@@ -8,7 +8,6 @@ import { eq } from 'drizzle-orm';
 import {
   withCors,
   createErrorResponse,
-  getRateLimitKey,
   withSecurityHeaders
 } from '@/lib/utils/cors.util';
 import { getAuditService, AuditAction } from '@/lib/services/audit.service';

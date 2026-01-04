@@ -132,17 +132,21 @@ export async function cleanupOrphanedRedisKeys(): Promise<CleanupResult> {
     const keysToDelete: string[] = [];
 
     do {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (client as any).scan(cursor, {
+      // Use proper TypeScript typing for scan command
+      const scanResult = await client.scan(cursor, {
         MATCH: 'pubkey:*',
         COUNT: BATCH_SIZE,
       });
-      cursor = Number(result.cursor);
+      cursor = scanResult.cursor;
 
-      for (const key of result.keys) {
-        const channelId = key.replace('pubkey:', '');
-        if (!activeChannelIds.has(channelId)) {
-          keysToDelete.push(key);
+      for (const key of scanResult.keys) {
+        // Validate key format before processing
+        if (typeof key === 'string' && key.startsWith('pubkey:')) {
+          const channelId = key.replace('pubkey:', '');
+          // Only delete if channelId is not in active channels
+          if (!activeChannelIds.has(channelId)) {
+            keysToDelete.push(key);
+          }
         }
       }
     } while (cursor !== 0);

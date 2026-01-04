@@ -138,7 +138,6 @@ export async function POST(request: NextRequest) {
       )));
     }
 
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return withSecurityHeaders(withCors(request, createErrorResponse(
       request,
       500,

@@ -42,11 +42,16 @@ export class RedisRepository {
    * @returns Array of message JSON strings
    */
   async getFromQueue(channel: string, count: number = 10): Promise<string[]> {
-    const key = `channel:${channel}:queue`;
-    // Use ZREVRANGE to get highest scores first directly from Redis
-    // This is O(log N + M) instead of O(N)
-    const messages = await kv.zrange<string>(key, 0, count - 1);
-    return messages;
+    try {
+      const key = `channel:${channel}:queue`;
+      // Use ZREVRANGE to get highest scores first directly from Redis
+      // This is O(log N + M) instead of O(N)
+      const messages = await kv.zrange<string>(key, 0, count - 1);
+      return messages;
+    } catch (error) {
+      console.error(`Error getting messages from queue for channel ${channel}:`, error);
+      return [];
+    }
   }
 
   /**
@@ -285,7 +290,7 @@ export class RedisRepository {
    * @param channel - Channel ID
    * @param sessionId - Subscriber session ID
    */
-  async removeSubscriber(channel: string, sessionId: string): Promise<void> {
+  async removeSubscriber(channel: string, _sessionId: string): Promise<void> {
     const key = `channel:${channel}:subscribers`;
     await kv.zremrangebyscore(key, Date.now(), Date.now());
   }

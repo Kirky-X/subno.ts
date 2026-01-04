@@ -10,7 +10,6 @@ import {
   jsonb,
   boolean,
   index,
-  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 /**

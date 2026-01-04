@@ -193,11 +193,9 @@ export class KeyCacheService {
 
     const result = await db
       .delete(schema.publicKeys)
-      .where(gt(schema.publicKeys.expiresAt, now))
+      .where(lt(schema.publicKeys.expiresAt, now))
       .returning({ id: schema.publicKeys.id });
 
-    // Note: In production, you'd want to use a proper comparison
-    // This is simplified for demonstration
     return result.length;
   }
 }

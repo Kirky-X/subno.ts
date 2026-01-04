@@ -196,7 +196,7 @@ export class AuditService {
       conditions.push(lte(auditLogs.createdAt, filters.endDate));
     }
 
-    let query = db
+    const query = db
       .select()
       .from(auditLogs)
       .where(conditions.length > 0 ? and(...conditions) : undefined)

@@ -3,7 +3,7 @@
 
 import crypto from 'crypto';
 import { db, schema } from '@/lib/db';
-import { eq, and, isNotNull } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -185,7 +185,7 @@ export class ApiKeyService {
       )
       .returning({ id: schema.apiKeys.id });
 
-    return result.length > 0;
+    return (result?.length ?? 0) > 0;
   }
 
   /**

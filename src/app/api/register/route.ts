@@ -14,7 +14,7 @@ import {
   getRateLimitKey,
   withSecurityHeaders
 } from '@/lib/utils/cors.util';
-import { getAuditService, AuditAction } from '@/lib/services/audit.service';
+import { getAuditService } from '@/lib/services/audit.service';
 
 const rateLimiterService = new RateLimiterService();
 const auditService = getAuditService();
