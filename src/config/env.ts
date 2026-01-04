@@ -2,6 +2,7 @@
 // Copyright (c) 2026 KirkyX. All rights reserved. 
 
 import { z } from 'zod';
+import crypto from 'crypto';
 
 const envSchema = z.object({
   // Database
@@ -54,4 +55,55 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
-export const env = envSchema.parse(process.env);
+/**
+ * Generate a secure random key
+ */
+function generateSecureKey(): string {
+  return crypto.randomBytes(32).toString('base64');
+}
+
+/**
+ * Parse and validate environment variables with auto-generation for missing keys
+ */
+function parseEnv(): Env {
+  const parsed = envSchema.parse(process.env);
+
+  // Auto-generate ADMIN_MASTER_KEY if not set
+  if (!parsed.ADMIN_MASTER_KEY) {
+    const generatedKey = generateSecureKey();
+    parsed.ADMIN_MASTER_KEY = generatedKey;
+
+    // Log warning with the generated key
+    console.warn('');
+    console.warn('⚠️  WARNING: ADMIN_MASTER_KEY not configured!');
+    console.warn('⚠️  Auto-generated master key for development:');
+    console.warn('');
+    console.warn(`   ${generatedKey}`);
+    console.warn('');
+    console.warn('⚠️  IMPORTANT: Add this to your .env file:');
+    console.warn('   ADMIN_MASTER_KEY=' + generatedKey);
+    console.warn('');
+    console.warn('⚠️  In production, always set a secure ADMIN_MASTER_KEY!');
+    console.warn('');
+  }
+
+  // Auto-generate CRON_SECRET if not set
+  if (!parsed.CRON_SECRET) {
+    const generatedSecret = generateSecureKey();
+    parsed.CRON_SECRET = generatedSecret;
+
+    console.warn('');
+    console.warn('⚠️  WARNING: CRON_SECRET not configured!');
+    console.warn('⚠️  Auto-generated cron secret for development:');
+    console.warn('');
+    console.warn(`   ${generatedSecret}`);
+    console.warn('');
+    console.warn('⚠️  IMPORTANT: Add this to your .env file:');
+    console.warn('   CRON_SECRET=' + generatedSecret);
+    console.warn('');
+  }
+
+  return parsed;
+}
+
+export const env = parseEnv();
