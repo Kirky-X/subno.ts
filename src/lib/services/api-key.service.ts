@@ -3,7 +3,7 @@
 
 import crypto from 'crypto';
 import { db, schema } from '@/lib/db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNotNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 /**

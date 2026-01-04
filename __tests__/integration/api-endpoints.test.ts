@@ -2,9 +2,9 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { POST as publishPOST } from '@/src/app/api/publish/route';
-import { POST as registerPOST, GET as registerGET } from '@/src/app/api/register/route';
-import { GET as keysGET, DELETE as keysDELETE } from '@/src/app/api/keys/[id]/route';
+import { POST as publishPOST } from '@/app/api/publish/route';
+import { POST as registerPOST, GET as registerGET } from '@/app/api/register/route';
+import { GET as keysGET, DELETE as keysDELETE } from '@/app/api/keys/[id]/route';
 import { EncryptionService } from '@/lib/services/encryption.service';
 import { MessagePriority } from '@/lib/types/message.types';
 import { getRedisClient } from '@/lib/redis';

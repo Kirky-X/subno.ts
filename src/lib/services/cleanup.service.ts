@@ -133,11 +133,11 @@ export async function cleanupOrphanedRedisKeys(): Promise<CleanupResult> {
 
     do {
       // Use proper TypeScript typing for scan command
-      const scanResult = await client.scan(cursor, {
+      const scanResult = await client.scan(String(cursor), {
         MATCH: 'pubkey:*',
         COUNT: BATCH_SIZE,
       });
-      cursor = scanResult.cursor;
+      cursor = Number(scanResult.cursor);
 
       for (const key of scanResult.keys) {
         // Validate key format before processing

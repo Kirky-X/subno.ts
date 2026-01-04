@@ -2,7 +2,7 @@
 // Copyright (c) 2026 KirkyX. All rights reserved. 
 
 import { db, schema } from '@/lib/db';
-import { eq, and, isNull, gt, desc } from 'drizzle-orm';
+import { eq, and, isNull, gt, lt, desc } from 'drizzle-orm';
 import { getRsaService } from './rsa.service';
 import { RedisRepository } from '@/lib/repositories/redis.repository';
 
