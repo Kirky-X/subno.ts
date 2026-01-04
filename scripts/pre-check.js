@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
+
 /**
  * Pre-check Script
  * 本地代码预检查工具，用于在提交前验证代码是否符合CI要求
@@ -11,7 +14,7 @@
 
 import { execSync } from 'child_process';
 import { readFileSync, existsSync, statSync, readdirSync } from 'fs';
-import { join, relative } from 'path';
+import { join, relative, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -273,7 +276,8 @@ async function checkTests() {
 async function checkBuild() {
   log.section('生产构建检查');
   
-  const result = runCommand('npm run build');
+  // 使用 production 模式构建，禁用 turbopack 避免预渲染问题
+  const result = runCommand('NODE_ENV=production npm run build');
   
   if (result.success) {
     addResult('构建', true, '构建成功');

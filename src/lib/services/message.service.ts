@@ -110,6 +110,14 @@ export class MessageService {
     const messageId = this.generateMessageId();
     const timestamp = Date.now();
 
+    // Validate message size
+    const messageSize = Buffer.byteLength(options.message, 'utf8');
+    if (messageSize > env.MAX_MESSAGE_SIZE) {
+      throw new Error(
+        `Message size (${messageSize} bytes) exceeds maximum allowed size (${env.MAX_MESSAGE_SIZE} bytes)`
+      );
+    }
+
     // Auto-create temporary channel if enabled
     if (options.autoCreate !== false && env.AUTO_CREATE_CHANNELS_ENABLED) {
       const exists = await this.channelExists(options.channel);
@@ -197,7 +205,14 @@ export class MessageService {
   async getCachedMessage(messageId: string): Promise<Message | null> {
     const cached = await this.redis.getCachedMessage(messageId);
     if (!cached) return null;
-    return JSON.parse(cached) as Message;
+
+    // Handle both string and object returns from Redis
+    const cachedStr = typeof cached === 'string' ? cached : JSON.stringify(cached);
+    try {
+      return JSON.parse(cachedStr) as Message;
+    } catch {
+      return null;
+    }
   }
 
   /**

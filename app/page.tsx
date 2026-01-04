@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: Apache-2.0 
-// Copyright (c) 2026 KirkyX. All rights reserved. 
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
 
 import Image from "next/image";
 import styles from "./page.module.css";
@@ -56,7 +56,7 @@ export default function Home() {
           </a>
           <a
             className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
             target="_blank"
             rel="noopener noreferrer"
           >

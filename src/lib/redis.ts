@@ -39,9 +39,6 @@ export async function getRedisClient(): Promise<RedisClientType> {
       : {
         // Connection pool configuration for traditional deployments
         connectTimeout: 10000,
-        lazyConnect: false,
-        // Keep-alive settings
-        keepAlive: 30000,
         // Reconnection strategy with exponential backoff
         reconnectStrategy: (retries) => {
           if (retries > 10) {
@@ -134,7 +131,13 @@ export const kv = {
   get: async <T = string>(key: string): Promise<T | null> => {
     const client = await getRedisClient();
     const value = await client.get(key);
-    return value ? (JSON.parse(value) as T) : null;
+    if (value === null) return null;
+    // Try to parse as JSON, but return as-is if it's already a string
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return value as T;
+    }
   },
 
   /**

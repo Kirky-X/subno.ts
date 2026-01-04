@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
+
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createErrorResponse, withCors, withSecurityHeaders } from '@/lib/utils/cors.util';

@@ -23,13 +23,6 @@ export default defineConfig({
     database: url.pathname.slice(1), // Remove leading '/'
     ssl: false,
   },
-  // Connection pool configuration for optimal performance
-  pool: {
-    min: 2,                  // Minimum connections in pool
-    max: 20,                 // Maximum connections in pool (adjusted based on workload)
-    idleTimeoutMillis: 30000,   // Idle connections timeout after 30s
-    connectionTimeoutMillis: 2000, // Connection establishment timeout
-  },
   verbose: true,
   strict: true,
 });

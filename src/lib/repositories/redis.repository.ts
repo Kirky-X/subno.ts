@@ -44,8 +44,8 @@ export class RedisRepository {
   async getFromQueue(channel: string, count: number = 10): Promise<string[]> {
     try {
       const key = `channel:${channel}:queue`;
-      // Use ZREVRANGE to get highest scores first directly from Redis
-      // This is O(log N + M) instead of O(N)
+      // Use zrange from redis.ts which already has REV: true for highest scores first
+      // This returns elements in descending score order (highest priority first)
       const messages = await kv.zrange<string>(key, 0, count - 1);
       return messages;
     } catch (error) {
@@ -114,19 +114,10 @@ export class RedisRepository {
       // Calculate how many to remove
       const toRemove = total - maxCount;
 
-      // Use ZPOPMAX to remove highest priority messages (they're at the end in descending order)
-      // But we want to keep highest priority, so remove from the start (lowest priority)
-      const client = await getRedisClient();
-      const pipeline = client.multi();
-
-      // Remove 'toRemove' lowest priority items using ZRANGE and ZREM
-      const items = await kv.zrange<string>(key, 0, toRemove - 1);
-
-      if (items.length > 0) {
-        for (const item of items) {
-          pipeline.zRem(key, item);
-        }
-        await pipeline.exec();
+      // Use ZPOPMIN to remove lowest priority messages reliably
+      // ZPOPMIN atomically removes and returns the member(s) with the lowest score
+      for (let i = 0; i < toRemove; i++) {
+        await kv.zpopmin<string>(key);
       }
     }
   }
@@ -418,5 +409,13 @@ export class RedisRepository {
    */
   async expire(key: string, seconds: number): Promise<void> {
     await kv.expire(key, seconds);
+  }
+
+  /**
+   * DELETE operation
+   * @param key - Redis key
+   */
+  async del(key: string): Promise<void> {
+    await kv.del(key);
   }
 }

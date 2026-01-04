@@ -4,13 +4,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // ==================== 编译优化 ====================
-  // 启用 Turbopack 加速开发构建
-  turbopack: process.env.NODE_ENV === 'development' ? {
-    resolveAlias: {
-      '@/*': './src/*',
-    },
-  } : undefined,
+  // 禁用 Turbopack，使用传统 webpack 构建
+  // turbopack 存在一些预渲染兼容性问题
 
   // ==================== 图片优化 ====================
   images: {

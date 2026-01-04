@@ -1,6 +1,4 @@
 #!/usr/bin/env sh
-. "$(dirname "$0")/_/h"
-
 echo "Running pre-check..."
 
 npm run pre-check

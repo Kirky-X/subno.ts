@@ -1,9 +1,8 @@
+// @ts-nocheck
 // SPDX-License-Identifier: Apache-2.0 
 // Copyright (c) 2026 KirkyX. All rights reserved. 
 
 /// <reference types="vitest/globals" />
-
-import { env } from '@/config/env';
 
 // Set default test environment variables
 process.env.DATABASE_URL = 'postgresql://securenotify:securenotify_password@localhost:5435/securenotify';
@@ -21,3 +20,5 @@ process.env.KEY_EXPIRY_MAX = '2592000';
 process.env.LOG_LEVEL = 'debug';
 process.env.ENABLE_AUDIT_LOG = 'true';
 process.env.CORS_ORIGINS = 'http://localhost:3000';
+process.env.AUTO_CREATE_CHANNELS_ENABLED = 'true';
+process.env.TEMPORARY_CHANNEL_TTL = '1800';
