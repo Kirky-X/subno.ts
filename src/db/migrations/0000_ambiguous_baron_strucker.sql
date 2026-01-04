@@ -1,21 +1,41 @@
+CREATE TABLE "api_keys" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"key_hash" varchar(255) NOT NULL,
+	"key_prefix" varchar(8) NOT NULL,
+	"user_id" varchar(255) NOT NULL,
+	"name" varchar(255),
+	"permissions" jsonb DEFAULT '["read"]'::jsonb NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"last_used_at" timestamp with time zone,
+	"expires_at" timestamp with time zone,
+	CONSTRAINT "api_keys_key_hash_unique" UNIQUE("key_hash")
+);
+--> statement-breakpoint
 CREATE TABLE "audit_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"timestamp" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"action" varchar(50) NOT NULL,
 	"channel_id" varchar(255),
-	"ip_address" varchar(45),
+	"key_id" varchar(255),
+	"message_id" varchar(255),
+	"user_id" varchar(255),
+	"ip" varchar(45),
 	"user_agent" text,
-	"status" varchar(20),
-	"details" jsonb
+	"success" boolean DEFAULT true NOT NULL,
+	"error" text,
+	"metadata" jsonb
 );
 --> statement-breakpoint
 CREATE TABLE "channels" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"name" varchar(255),
 	"description" text,
-	"type" varchar(20) NOT NULL,
+	"type" varchar(20) DEFAULT 'public' NOT NULL,
 	"creator" varchar(255),
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone,
+	"is_active" boolean DEFAULT true NOT NULL,
 	"metadata" jsonb
 );
 --> statement-breakpoint
@@ -39,10 +59,16 @@ CREATE TABLE "public_keys" (
 	CONSTRAINT "public_keys_channel_id_unique" UNIQUE("channel_id")
 );
 --> statement-breakpoint
-CREATE INDEX "idx_audit_logs_timestamp" ON "audit_logs" USING btree ("timestamp");--> statement-breakpoint
+CREATE INDEX "idx_api_keys_user_id" ON "api_keys" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_api_keys_key_prefix" ON "api_keys" USING btree ("key_prefix");--> statement-breakpoint
+CREATE INDEX "idx_api_keys_is_active" ON "api_keys" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX "idx_audit_logs_created_at" ON "audit_logs" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "idx_audit_logs_channel_id" ON "audit_logs" USING btree ("channel_id");--> statement-breakpoint
 CREATE INDEX "idx_audit_logs_action" ON "audit_logs" USING btree ("action");--> statement-breakpoint
+CREATE INDEX "idx_audit_logs_key_id" ON "audit_logs" USING btree ("key_id");--> statement-breakpoint
 CREATE INDEX "idx_channels_type" ON "channels" USING btree ("type");--> statement-breakpoint
+CREATE INDEX "idx_channels_expires_at" ON "channels" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX "idx_channels_is_active" ON "channels" USING btree ("is_active");--> statement-breakpoint
 CREATE INDEX "idx_messages_channel" ON "messages" USING btree ("channel");--> statement-breakpoint
 CREATE INDEX "idx_messages_created_at" ON "messages" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "idx_public_keys_expires_at" ON "public_keys" USING btree ("expires_at");--> statement-breakpoint
