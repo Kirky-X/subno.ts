@@ -1,945 +1,358 @@
 <div align="center">
 
-# 📖 User Guide
+# 📖 subno.ts 用户指南
 
-### Complete Guide to Using Project Name
+### 加密推送通知服务使用指南
 
-[🏠 Home](../README.md) • [📚 Docs](README.md) • [🎯 Examples](../examples/) • [❓ FAQ](FAQ.md)
+[🏠 首页](../README.md) • [📚 文档](README.md) • [🔌 API 参考](API_REFERENCE.md) • [❓ FAQ](FAQ.md)
 
 ---
 
 </div>
 
-## 📋 Table of Contents
+## 📋 目录
 
-- [Introduction](#introduction)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [First Steps](#first-steps)
-- [Core Concepts](#core-concepts)
-- [Basic Usage](#basic-usage)
-  - [Initialization](#initialization)
-  - [Configuration](#configuration)
-  - [Basic Operations](#basic-operations)
-- [Advanced Usage](#advanced-usage)
-  - [Custom Configuration](#custom-configuration)
-  - [Performance Tuning](#performance-tuning)
-  - [Error Handling](#error-handling)
-- [Best Practices](#best-practices)
-- [Common Patterns](#common-patterns)
-- [Troubleshooting](#troubleshooting)
-- [Next Steps](#next-steps)
+- [简介](#简介)
+- [快速开始](#快速开始)
+  - [环境准备](#环境准备)
+  - [启动服务](#启动服务)
+- [核心概念](#核心概念)
+- [API 使用](#api-使用)
+  - [公钥注册](#公钥注册)
+  - [频道管理](#频道管理)
+  - [消息推送](#消息推送)
+  - [实时订阅](#实时订阅)
+- [常见模式](#常见模式)
+- [故障排除](#故障排除)
 
 ---
 
-## Introduction
+## 简介
 
-<div align="center">
+subno.ts 是一个加密推送通知服务，提供：
 
-### 🎯 What You'll Learn
+- **公钥存储与分发** - 注册和获取加密公钥
+- **消息路由** - 发布和订阅实时消息
+- **频道管理** - 创建和管理推送频道
 
-</div>
+### 典型工作流程
 
-<table>
-<tr>
-<td width="25%" align="center">
-<img src="https://img.icons8.com/fluency/96/000000/rocket.png" width="64"><br>
-<b>Quick Start</b><br>
-Get up and running in 5 minutes
-</td>
-<td width="25%" align="center">
-<img src="https://img.icons8.com/fluency/96/000000/settings.png" width="64"><br>
-<b>Configuration</b><br>
-Customize to your needs
-</td>
-<td width="25%" align="center">
-<img src="https://img.icons8.com/fluency/96/000000/code.png" width="64"><br>
-<b>Best Practices</b><br>
-Learn the right way
-</td>
-<td width="25%" align="center">
-<img src="https://img.icons8.com/fluency/96/000000/rocket-take-off.png" width="64"><br>
-<b>Advanced Topics</b><br>
-Master the details
-</td>
-</tr>
-</table>
-
-**Project Name** is designed to help you accomplish [primary goal]. This guide will walk you through everything from basic setup to advanced usage patterns.
-
-> 💡 **Tip**: This guide assumes basic knowledge of [prerequisite]. If you're new to [topic], check out our [Beginner's Tutorial](TUTORIALS.md) first.
+```
+1. 客户端 A 生成密钥对
+2. 客户端 A 注册公钥到服务端
+3. 客户端 B 获取客户端 A 的公钥
+4. 客户端 A 发送消息（用客户端 B 的公钥加密）
+5. 客户端 B 订阅频道接收消息
+```
 
 ---
 
-## Getting Started
+## 快速开始
 
-### Prerequisites
-
-Before you begin, ensure you have the following installed:
-
-<table>
-<tr>
-<td width="50%">
-
-**Required**
-- ✅ Rust 1.75+ (stable)
-- ✅ Cargo (comes with Rust)
-- ✅ Git
-
-</td>
-<td width="50%">
-
-**Optional**
-- 🔧 IDE with Rust support
-- 🔧 Docker (for containerized deployment)
-- 🔧 [Additional tool]
-
-</td>
-</tr>
-</table>
-
-<details>
-<summary><b>🔍 Verify Your Installation</b></summary>
+### 环境准备
 
 ```bash
-# Check Rust version
-rustc --version
-# Expected: rustc 1.75.0 (or higher)
+# 检查 Node.js 版本
+node -v  # 需要 18+
 
-# Check Cargo version
-cargo --version
-# Expected: cargo 1.75.0 (or higher)
+# 检查 PostgreSQL
+psql --version
 
-# Check Git version
-git --version
-# Expected: git version 2.x.x
+# 检查 Redis
+redis-cli --version
 ```
 
-</details>
+### 启动服务
 
-### Installation
-
-<div align="center">
-
-#### Choose Your Installation Method
-
-</div>
-
-<table>
-<tr>
-<td width="50%">
-
-**📦 Using Cargo (Recommended)**
+**使用 Docker Compose：**
 
 ```bash
-# Add to Cargo.toml
-[dependencies]
-project-name = "1.0"
+# 启动数据库和 Redis
+docker-compose up -d postgres redis
 
-# Or install via command
-cargo add project-name
+# 安装依赖
+npm install
+
+# 运行迁移
+npm run db:migrate
+
+# 启动开发服务器
+npm run dev
 ```
 
-</td>
-<td width="50%">
-
-**🐙 From Source**
+**验证服务：**
 
 ```bash
-git clone https://github.com/user/project-name
-cd project-name
-cargo build --release
+# 测试 API
+curl http://localhost:3000/api/channels
 ```
-
-</td>
-</tr>
-</table>
-
-<details>
-<summary><b>🌐 Other Installation Methods</b></summary>
-
-**Using Docker**
-```bash
-docker pull project-name:latest
-docker run -it project-name
-```
-
-**Using Homebrew (macOS)**
-```bash
-brew install project-name
-```
-
-**Using Chocolatey (Windows)**
-```powershell
-choco install project-name
-```
-
-</details>
-
-### First Steps
-
-Let's verify your installation with a simple "Hello World":
-
-```rust
-use project_name::*;
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize the library
-    init()?;
-    
-    println!("✅ Project Name is ready!");
-    
-    Ok(())
-}
-```
-
-<details>
-<summary><b>🎬 Run the Example</b></summary>
-
-```bash
-# Create a new project
-cargo new hello-project
-cd hello-project
-
-# Add dependency
-cargo add project-name
-
-# Copy the code above to src/main.rs
-
-# Run it!
-cargo run
-```
-
-**Expected Output:**
-```
-✅ Project Name is ready!
-```
-
-</details>
 
 ---
 
-## Core Concepts
+## 核心概念
 
-Understanding these core concepts will help you use the library effectively.
+### 频道 (Channel)
 
-<div align="center">
+频道是消息推送的逻辑分组：
 
-### 🧩 Key Components
+- **公共频道** - 任何人都可以发布和订阅
+- **加密频道** - 需要注册公钥才能发布
 
-</div>
+### 公钥 (Public Key)
 
-```mermaid
-graph TD
-    A[Your Application] --> B[Core API]
-    B --> C[Component 1]
-    B --> D[Component 2]
-    B --> E[Component 3]
-    C --> F[Backend]
-    D --> F
-    E --> F
-    
-    style A fill:#e1f5ff
-    style B fill:#81d4fa
-    style C fill:#4fc3f7
-    style D fill:#4fc3f7
-    style E fill:#4fc3f7
-    style F fill:#29b6f6
-```
+用于端到端加密的公钥：
 
-### 1️⃣ Concept One: [Name]
+- 格式：PEM 格式
+- 存储：服务端只存储，不解密
+- 算法：由客户端指定（RSA、EC 等）
 
-**What it is:** Brief description of the concept.
+### 消息 (Message)
 
-**Why it matters:** Explanation of importance.
+推送到频道的消息：
 
-**Example:**
-```rust
-// Demonstration code
-let example = ConceptOne::new();
-```
-
-<details>
-<summary><b>📚 Learn More</b></summary>
-
-Detailed explanation of the concept, including:
-- How it works internally
-- When to use it
-- Common pitfalls
-- Related concepts
-
-</details>
-
-### 2️⃣ Concept Two: [Name]
-
-**What it is:** Brief description.
-
-**Key Features:**
-- ✅ Feature A
-- ✅ Feature B
-- ✅ Feature C
-
-**Example:**
-```rust
-let concept = ConceptTwo::builder()
-    .option_a(value)
-    .option_b(value)
-    .build()?;
-```
-
-### 3️⃣ Concept Three: [Name]
-
-<table>
-<tr>
-<td width="50%">
-
-**Traditional Approach**
-```rust
-// Old way
-let result = old_method(data);
-```
-
-</td>
-<td width="50%">
-
-**Our Approach**
-```rust
-// Better way
-let result = new_method(data)?;
-```
-
-</td>
-</tr>
-</table>
+- 支持优先级（critical、high、normal、low、bulk）
+- 自动创建临时频道
+- 支持 SSE 实时推送
 
 ---
 
-## Basic Usage
+## API 使用
 
-### Initialization
+### 公钥注册
 
-Every application must initialize the library before use:
+**注册公钥获取频道 ID：**
 
-```rust
-use project_name::{init, Config};
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Simple initialization
-    init()?;
-    
-    // Or with custom config
-    let config = Config::default();
-    init_with_config(config)?;
-    
-    Ok(())
-}
+```bash
+curl -X POST http://localhost:3000/api/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----",
+    "algorithm": "RSA-4096",
+    "expiresIn": 604800
+  }'
 ```
 
-<div align="center">
+**响应：**
 
-| Method | Use Case | Performance | Complexity |
-|--------|----------|-------------|------------|
-| `init()` | Quick start, development | ⚡ Fast | 🟢 Simple |
-| `init_with_config()` | Production, custom needs | ⚡⚡ Optimized | 🟡 Moderate |
-
-</div>
-
-### Configuration
-
-<details open>
-<summary><b>⚙️ Configuration Options</b></summary>
-
-```rust
-use project_name::Config;
-
-let config = Config::builder()
-    // Feature toggles
-    .enable_feature_a(true)
-    .enable_feature_b(false)
-    
-    // Performance settings
-    .thread_pool_size(4)
-    .cache_size(1024)
-    
-    // Logging
-    .log_level("info")
-    .log_file("/var/log/app.log")
-    
-    .build()?;
-```
-
-</details>
-
-<table>
-<tr>
-<th>Option</th>
-<th>Type</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-<tr>
-<td><code>enable_feature_a</code></td>
-<td>bool</td>
-<td>true</td>
-<td>Enable feature A functionality</td>
-</tr>
-<tr>
-<td><code>thread_pool_size</code></td>
-<td>usize</td>
-<td>4</td>
-<td>Number of worker threads</td>
-</tr>
-<tr>
-<td><code>cache_size</code></td>
-<td>usize</td>
-<td>1024</td>
-<td>Cache size in MB</td>
-</tr>
-<tr>
-<td><code>log_level</code></td>
-<td>String</td>
-<td>"info"</td>
-<td>Logging verbosity (debug/info/warn/error)</td>
-</tr>
-</table>
-
-### Basic Operations
-
-<div align="center">
-
-#### 📝 CRUD Operations
-
-</div>
-
-<table>
-<tr>
-<td width="50%">
-
-**Create**
-```rust
-let item = Item::new("name", data)?;
-item.save()?;
-```
-
-**Read**
-```rust
-let item = Item::load("id")?;
-println!("Data: {:?}", item.data());
-```
-
-</td>
-<td width="50%">
-
-**Update**
-```rust
-item.set_data(new_data)?;
-item.save()?;
-```
-
-**Delete**
-```rust
-item.delete()?;
-```
-
-</td>
-</tr>
-</table>
-
-<details>
-<summary><b>🎯 Complete Example</b></summary>
-
-```rust
-use project_name::{init, Item};
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    init()?;
-    
-    // Create
-    let mut item = Item::new("user-123", b"user data")?;
-    item.save()?;
-    println!("✅ Created item: {}", item.id());
-    
-    // Read
-    let loaded = Item::load("user-123")?;
-    println!("📖 Loaded: {:?}", loaded.data());
-    
-    // Update
-    loaded.set_data(b"updated data")?;
-    loaded.save()?;
-    println!("✏️ Updated item");
-    
-    // Delete
-    loaded.delete()?;
-    println!("🗑️ Deleted item");
-    
-    Ok(())
-}
-```
-
-</details>
-
----
-
-## Advanced Usage
-
-### Custom Configuration
-
-For production environments, you'll want fine-grained control:
-
-```rust
-use project_name::{Config, PerformanceProfile};
-
-let config = Config::builder()
-    // Production settings
-    .environment("production")
-    .performance_profile(PerformanceProfile::HighThroughput)
-    
-    // Security
-    .enable_encryption(true)
-    .key_rotation_interval(Duration::from_secs(86400))
-    
-    // Monitoring
-    .enable_metrics(true)
-    .metrics_endpoint("http://metrics.example.com")
-    
-    // Resilience
-    .retry_policy(RetryPolicy::exponential_backoff())
-    .timeout(Duration::from_secs(30))
-    
-    .build()?;
-
-init_with_config(config)?;
-```
-
-<details>
-<summary><b>🎛️ Performance Profiles</b></summary>
-
-<table>
-<tr>
-<th>Profile</th>
-<th>Use Case</th>
-<th>Throughput</th>
-<th>Latency</th>
-<th>Memory</th>
-</tr>
-<tr>
-<td><b>LowLatency</b></td>
-<td>Real-time apps</td>
-<td>Medium</td>
-<td>⚡ Very Low</td>
-<td>High</td>
-</tr>
-<tr>
-<td><b>HighThroughput</b></td>
-<td>Batch processing</td>
-<td>⚡ Very High</td>
-<td>Medium</td>
-<td>Medium</td>
-</tr>
-<tr>
-<td><b>Balanced</b></td>
-<td>General purpose</td>
-<td>High</td>
-<td>Low</td>
-<td>Medium</td>
-</tr>
-<tr>
-<td><b>LowMemory</b></td>
-<td>Resource-constrained</td>
-<td>Low</td>
-<td>Medium</td>
-<td>⚡ Very Low</td>
-</tr>
-</table>
-
-</details>
-
-### Performance Tuning
-
-<div align="center">
-
-#### ⚡ Optimization Strategies
-
-</div>
-
-**1. Connection Pooling**
-
-```rust
-let config = Config::builder()
-    .connection_pool_size(20)
-    .connection_pool_timeout(Duration::from_secs(5))
-    .build()?;
-```
-
-**2. Batch Operations**
-
-<table>
-<tr>
-<td width="50%">
-
-❌ **Inefficient**
-```rust
-for item in items {
-    process_one(item)?;
-}
-```
-
-</td>
-<td width="50%">
-
-✅ **Efficient**
-```rust
-process_batch(&items)?;
-```
-
-</td>
-</tr>
-</table>
-
-**3. Caching**
-
-```rust
-use project_name::cache::Cache;
-
-let cache = Cache::builder()
-    .max_size(10_000)
-    .ttl(Duration::from_secs(3600))
-    .build()?;
-
-// Use cache
-if let Some(value) = cache.get("key")? {
-    return Ok(value);
-}
-
-let value = expensive_operation()?;
-cache.set("key", value.clone())?;
-```
-
-### Error Handling
-
-<div align="center">
-
-#### 🚨 Handling Errors Gracefully
-
-</div>
-
-```rust
-use project_name::{Error, ErrorKind};
-
-fn handle_operation() -> Result<(), Error> {
-    match risky_operation() {
-        Ok(result) => {
-            println!("Success: {:?}", result);
-            Ok(())
-        }
-        Err(e) => {
-            match e.kind() {
-                ErrorKind::NotFound => {
-                    println!("⚠️ Resource not found, creating new...");
-                    create_resource()?;
-                    Ok(())
-                }
-                ErrorKind::PermissionDenied => {
-                    eprintln!("❌ Access denied");
-                    Err(e)
-                }
-                ErrorKind::Timeout => {
-                    println!("⏱️ Timeout, retrying...");
-                    retry_operation()?;
-                    Ok(())
-                }
-                _ => {
-                    eprintln!("❌ Unexpected error: {}", e);
-                    Err(e)
-                }
-            }
-        }
-    }
-}
-```
-
-<details>
-<summary><b>📋 Error Types</b></summary>
-
-| Error Type | Description | Recovery Strategy |
-|------------|-------------|-------------------|
-| `NotFound` | Resource doesn't exist | Create or use default |
-| `AlreadyExists` | Duplicate resource | Use existing or update |
-| `PermissionDenied` | Access violation | Request permissions |
-| `Timeout` | Operation took too long | Retry with backoff |
-| `InvalidInput` | Bad parameters | Validate and retry |
-| `InternalError` | System failure | Log and alert |
-
-</details>
-
----
-
-## Best Practices
-
-<div align="center">
-
-### 🌟 Follow These Guidelines
-
-</div>
-
-### ✅ DO's
-
-<table>
-<tr>
-<td width="50%">
-
-**Initialize Early**
-```rust
-fn main() {
-    // Initialize at the start
-    project_name::init().unwrap();
-    
-    // Then use the library
-    do_work();
-}
-```
-
-</td>
-<td width="50%">
-
-**Use Builder Pattern**
-```rust
-let config = Config::builder()
-    .option_a(value)
-    .option_b(value)
-    .build()?;
-```
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**Handle Errors Properly**
-```rust
-match operation() {
-    Ok(result) => process(result),
-    Err(e) => handle_error(e),
-}
-```
-
-</td>
-<td width="50%">
-
-**Clean Up Resources**
-```rust
+```json
 {
-    let resource = acquire()?;
-    use_resource(&resource)?;
-    // Auto-cleanup on scope exit
+  "success": true,
+  "data": {
+    "channelId": "enc_3b6bf5d599c844e3",
+    "publicKeyId": "uuid",
+    "algorithm": "RSA-4096",
+    "expiresAt": "2026-01-10T00:00:00.000Z",
+    "expiresIn": 604800
+  }
 }
 ```
 
-</td>
-</tr>
-</table>
+**获取已注册的公钥：**
 
-### ❌ DON'Ts
-
-<table>
-<tr>
-<td width="50%">
-
-**Don't Ignore Errors**
-```rust
-// ❌ Bad
-let _ = operation();
-
-// ✅ Good
-operation()?;
+```bash
+curl "http://localhost:3000/api/register?channelId=enc_xxx"
 ```
 
-</td>
-<td width="50%">
+### 频道管理
 
-**Don't Block Async Context**
-```rust
-// ❌ Bad (in async fn)
-thread::sleep(duration);
+**创建频道：**
 
-// ✅ Good
-tokio::time::sleep(duration).await;
+```bash
+curl -X POST http://localhost:3000/api/channels \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "my-channel",
+    "name": "我的频道",
+    "type": "public",
+    "expiresIn": 86400
+  }'
 ```
 
-</td>
-</tr>
-</table>
+**查询频道列表：**
 
-### 💡 Tips and Tricks
-
-> **🔥 Performance Tip**: Enable release mode optimizations for production:
-> ```bash
-> cargo build --release
-> ```
-
-> **🔒 Security Tip**: Never hardcode sensitive data:
-> ```rust
-> // ❌ Bad
-> let api_key = "sk-1234567890";
-> 
-> // ✅ Good
-> let api_key = env::var("API_KEY")?;
-> ```
-
-> **📊 Monitoring Tip**: Enable metrics in production:
-> ```rust
-> Config::builder().enable_metrics(true).build()?
-> ```
-
----
-
-## Common Patterns
-
-### Pattern 1: Request-Response
-
-```rust
-use project_name::{Request, Response};
-
-fn handle_request(req: Request) -> Result<Response, Error> {
-    // Validate
-    req.validate()?;
-    
-    // Process
-    let data = process(req.data())?;
-    
-    // Respond
-    Ok(Response::success(data))
-}
+```bash
+curl "http://localhost:3000/api/channels?limit=10&offset=0"
 ```
 
-### Pattern 2: Worker Pool
+### 消息推送
 
-```rust
-use project_name::WorkerPool;
+**发布消息：**
 
-let pool = WorkerPool::new(4)?;
-
-for task in tasks {
-    pool.execute(move || {
-        process_task(task)
-    })?;
-}
-
-pool.wait_completion()?;
+```bash
+curl -X POST http://localhost:3000/api/publish \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "my-channel",
+    "message": "Hello, World!",
+    "priority": "normal",
+    "sender": "Server"
+  }'
 ```
 
-### Pattern 3: Pipeline
+**批量发布：**
 
-```rust
-use project_name::Pipeline;
+```bash
+# 发布多条消息
+for i in {1..10}; do
+  curl -X POST http://localhost:3000/api/publish \
+    -H "Content-Type: application/json" \
+    -d "{\"channel\": \"my-channel\", \"message\": \"Message $i\"}"
+done
+```
 
-let result = Pipeline::new()
-    .add_stage(validate)
-    .add_stage(transform)
-    .add_stage(process)
-    .add_stage(store)
-    .execute(input)?;
+### 实时订阅
+
+**SSE 订阅：**
+
+```bash
+curl -N http://localhost:3000/api/subscribe?channel=my-channel
+```
+
+**响应格式（Server-Sent Events）：**
+
+```
+event: connected
+data: {"channel": "my-channel", "timestamp": 1234567890}
+
+event: message
+data: {"id": "msg-1", "channel": "my-channel", "message": "Hello!"}
 ```
 
 ---
 
-## Troubleshooting
+## 常见模式
 
-<details>
-<summary><b>❓ Problem: Initialization fails with "already initialized"</b></summary>
+### 模式一：端到端加密通信
 
-**Solution:**
-```rust
-// Check if already initialized
-if !project_name::is_initialized() {
-    project_name::init()?;
+```javascript
+// 1. Alice 生成密钥对
+const { publicKey, privateKey } = generateKeyPair('RSA-4096');
+
+// 2. Alice 注册公钥
+const response = await fetch('/api/register', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    publicKey: publicKey,
+    algorithm: 'RSA-4096'
+  })
+});
+const { channelId } = await response.json();
+
+// 3. Alice 告知 Bob 她的 channelId
+// Bob 获取 Alice 的公钥
+const keyResponse = await fetch(`/api/keys/${channelId}`);
+const { publicKey: alicePublicKey } = await keyResponse.json();
+
+// 4. Bob 用 Alice 的公钥加密消息
+const encryptedMessage = encrypt(message, alicePublicKey);
+
+// 5. Bob 发布加密消息
+await fetch('/api/publish', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    channel: channelId,
+    message: encryptedMessage
+  })
+});
+
+// 6. Alice 订阅频道接收消息
+const eventSource = new EventSource(`/api/subscribe?channel=${channelId}`);
+eventSource.onmessage = (event) => {
+  const decrypted = decrypt(event.data, privateKey);
+  console.log(decrypted);
+};
+```
+
+### 模式二：实时通知系统
+
+```javascript
+// 服务端推送通知
+async function sendNotification(userId, notification) {
+  await fetch('/api/publish', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      channel: `user-${userId}`,
+      message: JSON.stringify(notification),
+      priority: 'high'
+    })
+  });
 }
+
+// 客户端接收通知
+const eventSource = new EventSource(`/api/subscribe?channel=user-${userId}`);
+eventSource.addEventListener('message', (event) => {
+  const notification = JSON.parse(event.data);
+  showNotification(notification);
+});
 ```
 
-</details>
+### 模式三：API 密钥认证
 
-<details>
-<summary><b>❓ Problem: Performance is slower than expected</b></summary>
+```bash
+# 创建 API 密钥
+curl -X POST http://localhost:3000/api/keys \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "user-123", "name": "My App"}'
 
-**Diagnosis:**
-1. Enable debug logging
-2. Check configuration settings
-3. Profile your application
-
-**Solution:**
-```rust
-// Use performance profile
-let config = Config::builder()
-    .performance_profile(PerformanceProfile::HighThroughput)
-    .build()?;
+# 使用 API 密钥
+curl -X DELETE http://localhost:3000/api/keys/channel-123 \
+  -H "X-API-Key: sk_live_xxx..."
 ```
 
-</details>
+---
 
-<details>
-<summary><b>❓ Problem: Memory usage is high</b></summary>
+## 故障排除
 
-**Solution:**
-```rust
-// Reduce cache size
-let config = Config::builder()
-    .cache_size(512)  // Reduce from default
-    .build()?;
+### 问题：连接被拒绝
+
+**检查服务是否运行：**
+
+```bash
+curl http://localhost:3000
 ```
 
-</details>
+**检查 Docker 服务：**
+
+```bash
+docker-compose ps
+docker-compose logs postgres
+```
+
+### 问题：数据库连接失败
+
+**检查数据库连接字符串：**
+
+```bash
+# 测试 PostgreSQL 连接
+psql postgresql://securenotify:securenotify@localhost:5432/securenotify
+
+# 检查环境变量
+cat .env | grep DATABASE
+```
+
+### 问题：Redis 连接失败
+
+```bash
+# 测试 Redis 连接
+redis-cli ping
+```
+
+### 问题：API 返回 429（限流）
+
+**减少请求频率，或配置更高的限流值：**
+
+```env
+RATE_LIMIT_PUBLISH=200
+RATE_LIMIT_SUBSCRIBE=100
+```
+
+---
 
 <div align="center">
 
-**💬 Still need help?** [Open an issue](../../issues) or [join our Discord](https://discord.gg/project)
-
-</div>
-
----
-
-## Next Steps
-
-<div align="center">
-
-### 🎯 Continue Your Journey
-
-</div>
-
-<table>
-<tr>
-<td width="33%" align="center">
-<a href="TUTORIALS.md">
-<img src="https://img.icons8.com/fluency/96/000000/graduation-cap.png" width="64"><br>
-<b>📚 Tutorials</b>
-</a><br>
-Step-by-step learning
-</td>
-<td width="33%" align="center">
-<a href="ADVANCED.md">
-<img src="https://img.icons8.com/fluency/96/000000/settings.png" width="64"><br>
-<b>🔧 Advanced Topics</b>
-</a><br>
-Deep dive into features
-</td>
-<td width="33%" align="center">
-<a href="../examples/">
-<img src="https://img.icons8.com/fluency/96/000000/code.png" width="64"><br>
-<b>💻 Examples</b>
-</a><br>
-Real-world code samples
-</td>
-</tr>
-</table>
-
----
-
-<div align="center">
-
-**[📖 API Reference](https://docs.rs/project-name)** • **[❓ FAQ](FAQ.md)** • **[🐛 Report Issue](../../issues)**
-
-Made with ❤️ by the Project Team
-
-[⬆ Back to Top](#-user-guide)
+**[📖 API 参考](API_REFERENCE.md)** • **[❓ FAQ](FAQ.md)** • **[🏠 首页](../README.md)**
 
 </div>

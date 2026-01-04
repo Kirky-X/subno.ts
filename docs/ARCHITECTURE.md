@@ -1,35 +1,35 @@
 <div align="center">
 
-# 🏗️ Architecture Design
+# 🏗️ 架构设计
 
-### Technical Architecture & Design Decisions
+### subno.ts 技术架构与设计决策
 
-[🏠 Home](../README.md) • [📖 User Guide](USER_GUIDE.md) • [🔧 API Docs](https://docs.rs/project-name)
+[🏠 首页](../README.md) • [📖 用户指南](USER_GUIDE.md) • [📝 API 参考](API_REFERENCE.md)
 
 ---
 
 </div>
 
-## 📋 Table of Contents
+## 📋 目录
 
-- [Overview](#overview)
-- [System Architecture](#system-architecture)
-- [Component Design](#component-design)
-- [Data Flow](#data-flow)
-- [Design Decisions](#design-decisions)
-- [Technology Stack](#technology-stack)
-- [Performance Considerations](#performance-considerations)
-- [Security Architecture](#security-architecture)
-- [Scalability](#scalability)
-- [Future Improvements](#future-improvements)
+- [概述](#概述)
+- [系统架构](#系统架构)
+- [组件设计](#组件设计)
+- [数据流](#数据流)
+- [设计决策](#设计决策)
+- [技术栈](#技术栈)
+- [性能优化](#性能优化)
+- [安全架构](#安全架构)
+- [可扩展性](#可扩展性)
+- [未来改进](#未来改进)
 
 ---
 
-## Overview
+## 概述
 
 <div align="center">
 
-### 🎯 Architecture Goals
+### 🎯 架构目标
 
 </div>
 
@@ -37,790 +37,707 @@
 <tr>
 <td width="25%" align="center">
 <img src="https://img.icons8.com/fluency/96/000000/speed.png" width="64"><br>
-<b>Performance</b><br>
-Low latency, high throughput
+<b>高性能</b><br>
+低延迟、高吞吐量
 </td>
 <td width="25%" align="center">
 <img src="https://img.icons8.com/fluency/96/000000/security-checked.png" width="64"><br>
-<b>Security</b><br>
-Defense in depth
+<b>安全</b><br>
+端到端加密、密钥管理
 </td>
 <td width="25%" align="center">
 <img src="https://img.icons8.com/fluency/96/000000/module.png" width="64"><br>
-<b>Modularity</b><br>
-Loose coupling
+<b>模块化</b><br>
+松耦合设计
 </td>
 <td width="25%" align="center">
 <img src="https://img.icons8.com/fluency/96/000000/maintenance.png" width="64"><br>
-<b>Maintainability</b><br>
-Clean, documented code
+<b>可维护</b><br>
+清晰代码、完善文档
 </td>
 </tr>
 </table>
 
-### Design Principles
+### 设计原则
 
-> 🎯 **Simplicity First**: Keep the API simple and intuitive
+> 🎯 **简单优先**：保持 API 简洁直观
 > 
-> 🔒 **Security by Design**: Build security into every layer
+> 🔒 **安全设计**：将安全融入每一层
 > 
-> ⚡ **Performance by Default**: Optimize for the common case
+> ⚡ **性能优先**：针对常见情况进行优化
 > 
-> 🧩 **Modularity**: Components should be independent and composable
+> 🧩 **模块化**：组件独立且可组合
 
 ---
 
-## System Architecture
+## 系统架构
 
 <div align="center">
 
-### 🏛️ High-Level Architecture
+### 🏛️ 高层架构
 
 </div>
 
 ```mermaid
 graph TB
-    subgraph "Application Layer"
-        A[User Application]
+    subgraph "客户端层"
+        A[移动端 App]
+        B[Web 应用]
+        C[服务端]
     end
     
-    subgraph "API Layer"
-        B[Public API]
-        C[Builder API]
-        D[FFI Layer]
+    subgraph "Next.js 应用层"
+        D[API Routes]
+        E[Middleware]
+        F[SSE 实时推送]
     end
     
-    subgraph "Core Layer"
-        E[Core Engine]
-        F[Algorithm Manager]
-        G[Key Manager]
-        H[Policy Engine]
+    subgraph "业务逻辑层"
+        G[密钥服务]
+        H[频道服务]
+        I[消息服务]
+        J[订阅服务]
     end
     
-    subgraph "Provider Layer"
-        I[Crypto Provider]
-        J[Storage Provider]
-        K[Audit Provider]
+    subgraph "数据层"
+        K[(PostgreSQL)]
+        L[(Redis)]
     end
     
-    subgraph "Infrastructure"
-        L[(Database)]
-        M[File System]
-        N[Audit Log]
+    subgraph "外部服务"
+        M[Cron 调度器]
+        N[监控系统]
     end
     
-    A --> B
-    A --> C
     A --> D
+    B --> D
+    C --> D
     
-    B --> E
-    C --> E
     D --> E
-    
     E --> F
-    E --> G
-    E --> H
     
+    F --> G
+    F --> H
     F --> I
-    G --> J
-    H --> K
+    F --> J
     
+    G --> K
+    H --> K
     I --> L
-    J --> M
-    K --> N
+    J --> L
+    
+    M --> K
+    M --> L
     
     style A fill:#e1f5ff
-    style B fill:#b3e5fc
-    style C fill:#b3e5fc
+    style B fill:#e1f5ff
+    style C fill:#e1f5ff
     style D fill:#b3e5fc
-    style E fill:#81d4fa
-    style F fill:#4fc3f7
+    style E fill:#b3e5fc
+    style F fill:#81d4fa
     style G fill:#4fc3f7
     style H fill:#4fc3f7
-    style I fill:#29b6f6
-    style J fill:#29b6f6
+    style I fill:#4fc3f7
+    style J fill:#4fc3f7
     style K fill:#29b6f6
+    style L fill:#29b6f6
 ```
 
-### Layer Responsibilities
+### 技术选型
 
 <table>
 <tr>
-<th>Layer</th>
-<th>Purpose</th>
-<th>Key Components</th>
-<th>Dependencies</th>
+<th>层级</th>
+<th>技术</th>
+<th>说明</th>
 </tr>
 <tr>
-<td><b>Application</b></td>
-<td>User-facing code</td>
-<td>Business logic, workflows</td>
-<td>API Layer</td>
+<td><b>运行时</b></td>
+<td>Node.js 18+</td>
+<td>Next.js 运行时环境</td>
 </tr>
 <tr>
-<td><b>API</b></td>
-<td>Public interface</td>
-<td>API handlers, validators</td>
-<td>Core Layer</td>
+<td><b>框架</b></td>
+<td>Next.js 16</td>
+<td>React 框架，App Router</td>
 </tr>
 <tr>
-<td><b>Core</b></td>
-<td>Business logic</td>
-<td>Engine, managers, policies</td>
-<td>Provider Layer</td>
+<td><b>数据库</b></td>
+<td>PostgreSQL 14+</td>
+<td>主数据存储</td>
 </tr>
 <tr>
-<td><b>Provider</b></td>
-<td>Implementation adapters</td>
-<td>Crypto, storage, audit</td>
-<td>Infrastructure</td>
+<td><b>缓存</b></td>
+<td>Redis 7+</td>
+<td>消息队列、会话缓存</td>
 </tr>
 <tr>
-<td><b>Infrastructure</b></td>
-<td>Low-level resources</td>
-<td>DB, filesystem, logs</td>
-<td>None</td>
+<td><b>ORM</b></td>
+<td>Drizzle ORM</td>
+<td>类型安全数据库访问</td>
+</tr>
+<tr>
+<td><b>验证</b></td>
+<td>Zod</td>
+<td>运行时数据验证</td>
+</tr>
+<tr>
+<td><b>实时通信</b></td>
+<td>Server-Sent Events</td>
+<td>实时消息推送</td>
 </tr>
 </table>
 
 ---
 
-## Component Design
+## 组件设计
 
-### 1️⃣ Core Engine
+### 1️⃣ 密钥管理服务
 
 <details open>
-<summary><b>🔧 Component Overview</b></summary>
+<summary><b>🔧 组件概述</b></summary>
 
-The Core Engine is the heart of the system, coordinating all operations.
+密钥管理是 subno.ts 的核心组件，负责公钥的注册、存储、查询和撤销。
 
-```rust
-pub struct CoreEngine {
-    algorithm_manager: Arc<AlgorithmManager>,
-    key_manager: Arc<KeyManager>,
-    policy_engine: Arc<PolicyEngine>,
-    config: Config,
-}
+**核心职责：**
+- 📌 验证公钥格式
+- 📌 管理密钥生命周期
+- 📌 支持多种加密算法
+- 📌 处理密钥过期
 
-impl CoreEngine {
-    pub fn new(config: Config) -> Result<Self> {
-        // Initialize managers
-        let algorithm_manager = Arc::new(AlgorithmManager::new()?);
-        let key_manager = Arc::new(KeyManager::new()?);
-        let policy_engine = Arc::new(PolicyEngine::new()?);
-        
-        Ok(Self {
-            algorithm_manager,
-            key_manager,
-            policy_engine,
-            config,
-        })
-    }
-    
-    pub fn process(&self, request: Request) -> Result<Response> {
-        // 1. Validate request
-        self.policy_engine.validate(&request)?;
-        
-        // 2. Get algorithm
-        let algorithm = self.algorithm_manager.get(request.algorithm())?;
-        
-        // 3. Get key
-        let key = self.key_manager.get(request.key_id())?;
-        
-        // 4. Execute operation
-        let result = algorithm.execute(&key, request.data())?;
-        
-        Ok(Response::new(result))
-    }
-}
+**密钥类型：**
+
+| 类型 | 说明 | 使用场景 |
+|------|------|---------|
+| `RSA-2048` | RSA 2048 位密钥 | 通用加密 |
+| `RSA-4096` | RSA 4096 位密钥 | 高安全需求 |
+| `ECC-SECP256K1` | 椭圆曲线密钥 | 轻量级场景 |
+
+**代码结构：**
+
+```
+src/lib/services/
+├── key.service.ts      # 密钥注册与查询
+├── channel.service.ts  # 频道管理
+├── message.service.ts  # 消息处理
+└── subscription.service.ts  # 订阅管理
 ```
 
 </details>
 
-**Responsibilities:**
-- 📌 Request orchestration
-- 📌 Component coordination
-- 📌 Error handling
-- 📌 Resource management
-
-**Design Patterns:**
-- 🎨 **Facade Pattern**: Simplified interface to complex subsystems
-- 🎨 **Strategy Pattern**: Pluggable algorithms
-- 🎨 **Builder Pattern**: Flexible configuration
-
-### 2️⃣ Algorithm Manager
-
-```mermaid
-classDiagram
-    class AlgorithmManager {
-        -HashMap algorithms
-        +register(Algorithm)
-        +get(AlgorithmType) Algorithm
-        +list() Vec~AlgorithmType~
-    }
-    
-    class Algorithm {
-        <<interface>>
-        +execute(key, data) Result
-        +verify() bool
-    }
-    
-    class AesGcm {
-        +execute(key, data) Result
-        +verify() bool
-    }
-    
-    class RsaOaep {
-        +execute(key, data) Result
-        +verify() bool
-    }
-    
-    AlgorithmManager --> Algorithm
-    Algorithm <|-- AesGcm
-    Algorithm <|-- RsaOaep
-```
-
-<details>
-<summary><b>🔍 Implementation Details</b></summary>
-
-```rust
-pub trait Algorithm: Send + Sync {
-    fn execute(&self, key: &Key, data: &[u8]) -> Result<Vec<u8>>;
-    fn verify(&self) -> bool;
-    fn metadata(&self) -> AlgorithmMetadata;
-}
-
-pub struct AlgorithmManager {
-    algorithms: RwLock<HashMap<AlgorithmType, Box<dyn Algorithm>>>,
-}
-
-impl AlgorithmManager {
-    pub fn register<A: Algorithm + 'static>(&self, algo: A) -> Result<()> {
-        let metadata = algo.metadata();
-        let mut algorithms = self.algorithms.write().unwrap();
-        algorithms.insert(metadata.algorithm_type, Box::new(algo));
-        Ok(())
-    }
-    
-    pub fn get(&self, algo_type: AlgorithmType) -> Result<&dyn Algorithm> {
-        self.algorithms
-            .read()
-            .unwrap()
-            .get(&algo_type)
-            .ok_or(Error::AlgorithmNotFound)
-    }
-}
-```
-
-</details>
-
-### 3️⃣ Key Manager
+### 2️⃣ 频道管理
 
 <div align="center">
 
-#### 🔐 Key Lifecycle Management
+#### 📡 频道类型
 
 </div>
 
 ```mermaid
-stateDiagram-v2
-    [*] --> PreActive: Generate
-    PreActive --> Active: Activate
-    Active --> Deactivated: Deactivate
-    Active --> Compromised: Compromise Detected
-    Deactivated --> Destroyed: Destroy
-    Compromised --> Destroyed: Destroy
-    Destroyed --> [*]
+graph LR
+    A[发布者] -->|加密消息| B[加密频道]
+    A -->|普通消息| C[公开频道]
     
-    Active --> Active: Use
+    B -->|SSE| D[订阅者]
+    C -->|SSE| D
+    
+    subgraph "加密频道"
+        B1[公钥注册]
+        B2[消息加密]
+        B3[密钥验证]
+    end
 ```
 
 <table>
 <tr>
-<th>State</th>
-<th>Operations Allowed</th>
-<th>Transitions</th>
+<th>频道类型</th>
+<th>加密</th>
+<th>访问控制</th>
+<th>有效期</th>
 </tr>
 <tr>
-<td><b>PreActive</b></td>
-<td>None</td>
-<td>→ Active</td>
+<td><b>公开频道</b></td>
+<td>❌</td>
+<td>公开</td>
+<td>可配置</td>
 </tr>
 <tr>
-<td><b>Active</b></td>
-<td>Encrypt, Decrypt, Sign, Verify</td>
-<td>→ Deactivated, → Compromised</td>
+<td><b>加密频道</b></td>
+<td>✅</td>
+<td>需密钥</td>
+<td>固定 7 天</td>
 </tr>
 <tr>
-<td><b>Deactivated</b></td>
-<td>Decrypt, Verify (read-only)</td>
-<td>→ Destroyed</td>
-</tr>
-<tr>
-<td><b>Compromised</b></td>
-<td>None</td>
-<td>→ Destroyed</td>
-</tr>
-<tr>
-<td><b>Destroyed</b></td>
-<td>None</td>
-<td>(Terminal state)</td>
+<td><b>临时频道</b></td>
+<td>❌</td>
+<td>创建者</td>
+<td>24 小时</td>
 </tr>
 </table>
 
+### 3️⃣ 实时推送系统
+
+```mermaid
+sequenceDiagram
+    participant Sub as 订阅者
+    participant SSE as SSE Handler
+    participant Redis as Redis Pub/Sub
+    participant Pub as 发布者
+    
+    Sub->>SSE: GET /api/subscribe?channel=xxx
+    SSE->>Sub: Event: connected
+    
+    Pub->>Redis: PUBLISH channel "message"
+    Redis->>SSE: Message received
+    SSE->>Sub: Event: message
+    
+    Note over Sub,SSE: 每 30 秒发送 keepalive
+```
+
+**SSE 事件类型：**
+
+| 事件类型 | 说明 | 数据格式 |
+|---------|------|---------|
+| `connected` | 连接确认 | 频道信息 |
+| `message` | 消息推送 | 消息内容 |
+| `error` | 错误通知 | 错误详情 |
+| `keepalive` | 保活心跳 | 空数据 |
+
+### 4️⃣ 数据访问层
+
+```
+src/lib/repositories/
+├── key.repository.ts      # 密钥数据访问
+├── channel.repository.ts  # 频道数据访问
+├── message.repository.ts  # 消息数据访问
+└── api-key.repository.ts  # API 密钥数据访问
+```
+
+**职责：**
+- 📌 封装数据库操作
+- 📌 实现缓存策略
+- 📌 处理数据转换
+
 ---
 
-## Data Flow
+## 数据流
 
 <div align="center">
 
-### 🔄 Request Processing Flow
+### 🔄 公钥注册流程
 
 </div>
 
 ```mermaid
 sequenceDiagram
-    participant App as Application
-    participant API as API Layer
-    participant Core as Core Engine
-    participant Algo as Algorithm
-    participant Key as Key Manager
-    participant Audit as Audit Logger
+    participant Client as 客户端
+    participant API as API Route
+    participant Val as Validator
+    participant Svc as Key Service
+    participant DB as PostgreSQL
+    participant Cache as Redis
     
-    App->>API: Request (encrypt, data)
-    API->>API: Validate input
-    API->>Core: Process request
+    Client->>API: POST /api/register
+    API->>Val: 验证请求参数
+    Val-->>API: 验证通过
     
-    Core->>Key: Get key
-    Key-->>Core: Key material
+    API->>Svc: 注册公钥
+    Svc->>DB: 插入密钥记录
+    DB-->>Svc: 返回密钥 ID
     
-    Core->>Algo: Execute algorithm
-    Algo->>Algo: Encrypt data
-    Algo-->>Core: Ciphertext
+    Svc->>Cache: 缓存密钥信息
+    Cache-->>Svc: 缓存成功
     
-    Core->>Audit: Log operation
-    Core-->>API: Response
-    API-->>App: Result
+    Svc-->>API: 返回 channelId, algorithm
+    API-->>Client: 201 Created
 ```
-
-### Encryption Flow
-
-<table>
-<tr>
-<td width="50%">
-
-**Step-by-Step**
-
-1. 📥 **Input Validation**
-   - Check data format
-   - Validate algorithm type
-   - Verify key ID exists
-
-2. 🔐 **Key Retrieval**
-   - Load key from storage
-   - Verify key state (Active)
-   - Check permissions
-
-3. ⚙️ **Algorithm Execution**
-   - Initialize algorithm
-   - Generate nonce/IV
-   - Encrypt data
-
-4. 📤 **Output Construction**
-   - Package ciphertext
-   - Add metadata
-   - Return result
-
-5. 📝 **Audit Logging**
-   - Record operation
-   - Log timestamp
-   - Store metadata
-
-</td>
-<td width="50%">
-
-**Code Flow**
-
-```rust
-// 1. Validate
-request.validate()?;
-
-// 2. Get key
-let key = key_manager
-    .get(request.key_id)?;
-
-// 3. Execute
-let ciphertext = algorithm
-    .encrypt(&key, request.data)?;
-
-// 4. Package
-let response = Response {
-    data: ciphertext,
-    metadata: Metadata {
-        algorithm: algo_type,
-        key_id: key.id(),
-        timestamp: now(),
-    },
-};
-
-// 5. Audit
-audit_logger.log(&response)?;
-
-Ok(response)
-```
-
-</td>
-</tr>
-</table>
-
----
-
-## Design Decisions
 
 <div align="center">
 
-### 🤔 Why We Made These Choices
+### 📤 消息发布流程
 
 </div>
 
-### Decision 1: Pure Rust Implementation
+```mermaid
+sequenceDiagram
+    participant Pub as 发布者
+    participant API as API Route
+    participant Svc as Message Service
+    participant Redis as Redis
+    participant SSE as SSE Handler
+    
+    Pub->>API: POST /api/publish
+    API->>Svc: 发布消息
+    
+    alt 加密频道
+        Svc->>Svc: 验证公钥
+    end
+    
+    Svc->>Redis: 缓存消息
+    Redis-->>Svc: 缓存成功
+    
+    Svc->>Redis: 发布到频道
+    Redis->>SSE: 推送消息
+    
+    SSE-->>Pub: 201 Created
+```
+
+---
+
+## 设计决策
+
+<div align="center">
+
+### 🤔 决策背景与理由
+
+</div>
+
+### 决策 1：选择 Next.js + TypeScript
 
 <table>
 <tr>
 <td width="50%">
 
-**✅ Pros**
-- Memory safety guarantees
-- Zero-cost abstractions
-- Excellent performance
-- No C dependencies
-- Modern tooling
+**✅ 优势**
+- 全栈能力
+- 类型安全
+- 丰富的生态系统
+- SSR/SSG 支持
+- Vercel 部署优化
 
 </td>
 <td width="50%">
 
-**❌ Cons**
-- Steeper learning curve
-- Fewer libraries initially
-- Compilation time
+**❌ 考量**
+- 非纯后端框架
+- 冷启动延迟
 
 </td>
 </tr>
 </table>
 
-**Verdict:** ✅ **Chosen** - Safety and performance benefits outweigh cons
+**结论：** ✅ **选择 Next.js** - 适合快速开发全栈应用
 
 ---
 
-### Decision 2: Pluggable Algorithm Architecture
+### 决策 2：PostgreSQL + Redis 数据分层
 
-```rust
-// Before: Hardcoded algorithms
-match algo_type {
-    AlgorithmType::AES => aes_encrypt(data),
-    AlgorithmType::RSA => rsa_encrypt(data),
-    // Must modify code for new algorithms
-}
-
-// After: Plugin system
-let algorithm = algorithm_manager.get(algo_type)?;
-algorithm.execute(key, data)?;
-// New algorithms can be added without code changes
-```
-
-**Rationale:**
-- 🎯 Extensibility: Easy to add new algorithms
-- 🎯 Testability: Mock algorithms for testing
-- 🎯 Maintainability: Algorithms are independent
-
----
-
-### Decision 3: Arc + RwLock for Concurrency
-
-<table>
-<tr>
-<td width="33%" align="center">
-
-**Option 1: Mutex**
-```rust
-Arc<Mutex<Data>>
-```
-Simple but locks readers
-
-</td>
-<td width="33%" align="center">
-
-**Option 2: RwLock** ✅
-```rust
-Arc<RwLock<Data>>
-```
-Multiple readers, one writer
-
-</td>
-<td width="33%" align="center">
-
-**Option 3: Channels**
-```rust
-mpsc::channel()
-```
-Complex for simple cases
-
-</td>
-</tr>
-</table>
-
-**Chosen:** RwLock - Optimized for read-heavy workloads
-
----
-
-### Decision 4: Builder Pattern for Configuration
-
-<table>
-<tr>
-<td width="50%">
-
-**❌ Direct Construction**
-```rust
-let config = Config {
-    option_a: value_a,
-    option_b: value_b,
-    option_c: value_c,
-    // Many fields...
+```typescript
+// 数据访问策略
+const dataStrategy = {
+  // 频繁读写，使用 Redis 缓存
+  messages: {
+    storage: 'redis',
+    ttl: 86400,  // 24 小时
+  },
+  
+  // 核心数据，使用 PostgreSQL
+  keys: {
+    storage: 'postgres',
+    backup: true,
+  },
+  
+  // 配置数据，PostgreSQL 存储
+  channels: {
+    storage: 'postgres',
+    indexes: ['id', 'type', 'creator'],
+  },
 };
 ```
 
+**分层策略：**
+
+| 数据类型 | 存储 | 原因 |
+|---------|------|------|
+| 消息缓存 | Redis | 高频读写、低延迟 |
+| 密钥记录 | PostgreSQL | 持久化、事务安全 |
+| 审计日志 | PostgreSQL | 长期存储、查询 |
+| 会话状态 | Redis | 快速访问 |
+
+---
+
+### 决策 3：使用 Zod 进行请求验证
+
+<table>
+<tr>
+<td width="50%">
+
+**❌ 传统方式**
+```typescript
+if (!data.publicKey) {
+  throw new Error('publicKey required');
+}
+if (typeof data.expiresIn !== 'number') {
+  throw new Error('expiresIn must be number');
+}
+```
+
 </td>
 <td width="50%">
 
-**✅ Builder Pattern**
-```rust
-let config = Config::builder()
-    .option_a(value_a)
-    .option_b(value_b)
-    .build()?;
+**✅ Zod 方式**
+```typescript
+const schema = z.object({
+  publicKey: z.string().min(1),
+  algorithm: z.string().optional(),
+  expiresIn: z.number().optional(),
+});
+
+const data = schema.parse(req.body);
 ```
 
 </td>
 </tr>
 </table>
 
-**Benefits:**
-- 📌 Fluent API
-- 📌 Optional parameters
-- 📌 Validation on build
-- 📌 Better error messages
+**优势：**
+- 📌 类型推断
+- 📌 可复用模式
+- 📌 清晰的错误信息
+- 📌 易于测试
 
 ---
 
-## Technology Stack
+### 决策 4：Server-Sent Events 实时推送
+
+<table>
+<tr>
+<td width="33%" align="center">
+
+**WebSocket**
+- 双向通信
+- 更复杂
+- 需要额外服务
+
+</td>
+<td width="33%" align="center">
+
+**SSE** ✅
+- 单向推送
+- 简单可靠
+- 内置重连支持
+- HTTP 兼容
+
+</td>
+<td width="33%" align="center">
+
+**WebRTC**
+- 点对点
+- 最复杂
+- 适合媒体流
+
+</td>
+</tr>
+</table>
+
+**选择 SSE 的理由：**
+- 🔹 只需要服务器向客户端推送
+- 🔹 使用标准 HTTP 协议
+- 🔹 自动重连机制
+- 🔹 浏览器原生支持
+
+---
+
+## 技术栈
 
 <div align="center">
 
-### 🛠️ Core Technologies
+### 🛠️ 核心技术
 
 </div>
 
 <table>
 <tr>
-<th>Category</th>
-<th>Technology</th>
-<th>Version</th>
-<th>Purpose</th>
+<th>类别</th>
+<th>技术</th>
+<th>版本</th>
+<th>用途</th>
 </tr>
 <tr>
-<td rowspan="2"><b>Language</b></td>
-<td>Rust</td>
-<td>1.75+</td>
-<td>Primary language</td>
+<td rowspan="2"><b>运行时</b></td>
+<td>Node.js</td>
+<td>18+</td>
+<td>JavaScript 运行时</td>
 </tr>
 <tr>
-<td>C (FFI)</td>
-<td>C11</td>
-<td>Foreign function interface</td>
+<td>TypeScript</td>
+<td>5.x</td>
+<td>类型安全</td>
 </tr>
 <tr>
-<td rowspan="3"><b>Cryptography</b></td>
-<td>ring</td>
-<td>0.17</td>
-<td>Modern crypto primitives</td>
+<td><b>框架</b></td>
+<td>Next.js</td>
+<td>16.1.1</td>
+<td>React 全栈框架</td>
 </tr>
 <tr>
-<td>libsm</td>
-<td>0.6</td>
-<td>Chinese national standards</td>
+<td rowspan="2"><b>数据库</b></td>
+<td>PostgreSQL</td>
+<td>14+</td>
+<td>主数据库</td>
 </tr>
 <tr>
-<td>aes-gcm</td>
-<td>0.10</td>
-<td>AES-GCM implementation</td>
+<td>Redis</td>
+<td>7+</td>
+<td>缓存、消息队列</td>
 </tr>
 <tr>
-<td rowspan="2"><b>Security</b></td>
-<td>zeroize</td>
-<td>1.7</td>
-<td>Secure memory cleanup</td>
+<td><b>ORM</b></td>
+<td>Drizzle ORM</td>
+<td>最新</td>
+<td>数据库访问层</td>
 </tr>
 <tr>
-<td>argon2</td>
-<td>0.5</td>
-<td>Password hashing</td>
+<td><b>验证</b></td>
+<td>Zod</td>
+<td>最新</td>
+<td>运行时验证</td>
 </tr>
 <tr>
-<td><b>Serialization</b></td>
-<td>serde</td>
-<td>1.0</td>
-<td>Data serialization</td>
+<td><b>测试</b></td>
+<td>Vitest</td>
+<td>最新</td>
+<td>单元/集成测试</td>
 </tr>
 <tr>
-<td><b>Error Handling</b></td>
-<td>thiserror</td>
-<td>1.0</td>
-<td>Error types</td>
-</tr>
-<tr>
-<td><b>Testing</b></td>
-<td>criterion</td>
-<td>0.5</td>
-<td>Benchmarking</td>
+<td><b>容器</b></td>
+<td>Docker</td>
+<td>最新</td>
+<td>服务容器化</td>
 </tr>
 </table>
 
-### Dependency Graph
+### 依赖关系
 
 ```mermaid
 graph LR
-    A[project-name] --> B[ring]
-    A --> C[libsm]
-    A --> D[aes-gcm]
-    A --> E[zeroize]
-    A --> F[serde]
+    A[Next.js] --> B[React]
+    A --> C[TypeScript]
     
-    D --> G[aes]
-    D --> H[ghash]
+    D[Drizzle ORM] --> E[PostgreSQL]
     
-    style A fill:#81d4fa
-    style B fill:#4fc3f7
-    style C fill:#4fc3f7
-    style D fill:#4fc3f7
-    style E fill:#4fc3f7
-    style F fill:#4fc3f7
+    F[Redis] --> G[ioredis]
+    
+    H[Vitest] --> I[@testing-library]
+    
+    J[Zod] --> K[TypeScript]
 ```
 
 ---
 
-## Performance Considerations
+## 性能优化
 
 <div align="center">
 
-### ⚡ Performance Optimizations
+### ⚡ 性能优化策略
 
 </div>
 
-### 1️⃣ Zero-Copy Design
+### 1️⃣ 数据库查询优化
 
-```rust
-// ❌ Copying data
-pub fn process(data: Vec<u8>) -> Vec<u8> {
-    let copied = data.clone();  // Unnecessary copy
-    transform(copied)
+```typescript
+// ❌ N+1 查询问题
+const channels = await db.query.channels.findMany();
+for (const ch of channels) {
+  const keys = await db.query.keys.findMany({
+    where: eq(keys.channelId, ch.id),
+  }); // 每条记录都会执行查询
 }
 
-// ✅ Zero-copy with slices
-pub fn process(data: &[u8]) -> Vec<u8> {
-    transform(data)  // No copy needed
+// ✅ 使用关联查询
+const channelsWithKeys = await db.query.channels.findMany({
+  with: {
+    keys: true,  // Drizzle 关联查询
+  },
+});
+```
+
+### 2️⃣ Redis 缓存策略
+
+```typescript
+// 缓存消息，减少数据库压力
+async function getCachedMessages(channelId: string) {
+  const cacheKey = `messages:${channelId}`;
+  
+  // 先查缓存
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+  
+  // 缓存未命中，查数据库
+  const messages = await db.query.messages.findMany({
+    where: eq(messages.channelId, channelId),
+    limit: 50,
+  });
+  
+  // 写入缓存，10 分钟过期
+  await redis.setex(cacheKey, 600, JSON.stringify(messages));
+  
+  return messages;
 }
 ```
 
-### 2️⃣ Memory Pooling
+### 3️⃣ 连接池配置
+
+```typescript
+// drizzle.config.ts
+export default {
+  dialect: 'postgresql',
+  dbCredentials: {
+    url: process.env.DATABASE_URL,
+  },
+  pool: {
+    min: 2,      // 最小连接数
+    max: 10,     // 最大连接数
+    idleTimeout: 30000,
+  },
+} satisfies Config;
+```
+
+### 性能指标
 
 <table>
 <tr>
-<td width="50%">
-
-**Without Pooling**
-```rust
-// Allocate for every operation
-let buffer = vec![0u8; size];
-process(&buffer);
-// Buffer dropped
-```
-
-</td>
-<td width="50%">
-
-**With Pooling**
-```rust
-// Reuse buffers
-let buffer = pool.acquire();
-process(&buffer);
-pool.release(buffer);
-```
-
-</td>
-</tr>
-</table>
-
-### 3️⃣ Caching Strategy
-
-```mermaid
-graph LR
-    A[Request] --> B{Cache Hit?}
-    B -->|Yes| C[Return Cached]
-    B -->|No| D[Compute]
-    D --> E[Store in Cache]
-    E --> F[Return Result]
-    
-    style C fill:#4caf50
-    style D fill:#ff9800
-```
-
-### Performance Metrics
-
-<table>
-<tr>
-<th>Operation</th>
-<th>Throughput</th>
-<th>Latency (P50)</th>
-<th>Latency (P99)</th>
+<th>操作</th>
+<th>目标延迟</th>
+<th>目标吞吐量</th>
 </tr>
 <tr>
-<td>AES-256-GCM Encrypt</td>
-<td>500 MB/s</td>
-<td>0.5 ms</td>
-<td>2 ms</td>
+<td>公钥注册</td>
+<td>&lt; 100ms</td>
+<td>&gt; 1000 QPS</td>
 </tr>
 <tr>
-<td>ECDSA-P256 Sign</td>
-<td>10K ops/s</td>
-<td>0.1 ms</td>
-<td>0.5 ms</td>
+<td>消息发布</td>
+<td>&lt; 50ms</td>
+<td>&gt; 5000 QPS</td>
 </tr>
 <tr>
-<td>SHA-256 Hash</td>
-<td>1 GB/s</td>
-<td>0.05 ms</td>
-<td>0.2 ms</td>
+<td>SSE 连接</td>
+<td>&lt; 10ms</td>
+<td>&gt; 10000 并发</td>
 </tr>
 </table>
 
 ---
 
-## Security Architecture
+## 安全架构
 
 <div align="center">
 
-### 🔒 Defense in Depth
+### 🔒 深度防御策略
 
 </div>
 
 ```mermaid
 graph TB
-    A[Application Layer] --> B[Input Validation]
-    B --> C[Authentication]
-    C --> D[Authorization]
-    D --> E[Encryption]
-    E --> F[Audit Logging]
-    F --> G[Secure Storage]
+    A[请求入口] --> B[输入验证]
+    B --> C[频率限制]
+    C --> D[认证授权]
+    D --> E[数据加密]
+    E --> F[审计日志]
+    F --> G[安全存储]
     
     style A fill:#e1f5ff
     style B fill:#b3e5fc
@@ -831,179 +748,179 @@ graph TB
     style G fill:#01579b
 ```
 
-### Security Layers
+### 安全控制层
 
 <table>
 <tr>
-<th>Layer</th>
-<th>Controls</th>
-<th>Purpose</th>
+<th>层级</th>
+<th>控制措施</th>
+<th>目的</th>
 </tr>
 <tr>
-<td><b>1. Input Validation</b></td>
-<td>Type checking, sanitization</td>
-<td>Prevent injection attacks</td>
+<td><b>1. 输入验证</b></td>
+<td>Zod 模式验证</td>
+<td>防止注入攻击</td>
 </tr>
 <tr>
-<td><b>2. Authentication</b></td>
-<td>Identity verification</td>
-<td>Verify user identity</td>
+<td><b>2. 频率限制</b></td>
+<td>Redis 计数器</td>
+<td>防止 DoS 攻击</td>
 </tr>
 <tr>
-<td><b>3. Authorization</b></td>
-<td>Permission checks</td>
-<td>Control access to resources</td>
+<td><b>3. 认证授权</b></td>
+<td>API Key 验证</td>
+<td>控制资源访问</td>
 </tr>
 <tr>
-<td><b>4. Encryption</b></td>
-<td>Data encryption, TLS</td>
-<td>Protect data confidentiality</td>
+<td><b>4. 数据加密</b></td>
+<td>公钥加密</td>
+<td>保护消息机密性</td>
 </tr>
 <tr>
-<td><b>5. Audit Logging</b></td>
-<td>Activity logging</td>
-<td>Detection and forensics</td>
+<td><b>5. 审计日志</b></td>
+<td>操作记录</td>
+<td>安全审计追溯</td>
 </tr>
 <tr>
-<td><b>6. Secure Storage</b></td>
-<td>Encryption at rest</td>
-<td>Protect stored data</td>
+<td><b>6. 安全存储</b></td>
+<td>PostgreSQL 加密</td>
+<td>保护存储数据</td>
 </tr>
 </table>
 
-### Threat Model
+### 威胁模型
 
 <details>
-<summary><b>🎯 Threats and Mitigations</b></summary>
+<summary><b>🎯 威胁与缓解措施</b></summary>
 
-| Threat | Impact | Mitigation | Status |
-|--------|--------|------------|--------|
-| Memory disclosure | High | Zeroize on drop | ✅ |
-| Timing attacks | Medium | Constant-time ops | ✅ |
-| Key extraction | High | Memory locking | ✅ |
-| Algorithm substitution | Medium | Algorithm validation | ✅ |
-| Unauthorized access | High | RBAC + audit | ✅ |
+| 威胁 | 影响 | 缓解措施 | 状态 |
+|------|------|---------|------|
+| API Key 泄露 | 高 | 轮换机制、范围限制 | ✅ |
+| 频率滥用 | 中 | 请求限流 | ✅ |
+| 公钥伪造 | 高 | 格式验证 | ✅ |
+| 消息篡改 | 高 | 签名验证 | 规划中 |
+| 数据泄露 | 高 | 加密存储 | 规划中 |
 
 </details>
 
+### 加密流程
+
+```mermaid
+graph LR
+    A[明文消息] --> B[RSA 公钥加密]
+    B --> C[加密数据]
+    C --> D[AES 会话密钥]
+    D --> E[对称加密]
+    E --> F[最终密文]
+    
+    style A fill:#e1f5ff
+    style F fill:#81d4fa
+```
+
 ---
 
-## Scalability
+## 可扩展性
 
 <div align="center">
 
-### 📈 Scaling Strategies
+### 📈 扩展策略
 
 </div>
 
-### Horizontal Scaling
+### 水平扩展
 
 ```mermaid
 graph TB
-    LB[Load Balancer]
-    LB --> A[Instance 1]
-    LB --> B[Instance 2]
-    LB --> C[Instance 3]
+    LB[负载均衡器]
+    LB --> A[Next.js Instance 1]
+    LB --> B[Next.js Instance 2]
+    LB --> C[Next.js Instance 3]
     
-    A --> DB[(Shared Database)]
+    A --> DB[(PostgreSQL)]
     B --> DB
     C --> DB
+    
+    A --> R[(Redis Cluster)]
+    B --> R
+    C --> R
     
     style LB fill:#81d4fa
     style A fill:#4fc3f7
     style B fill:#4fc3f7
     style C fill:#4fc3f7
     style DB fill:#29b6f6
+    style R fill:#29b6f6
 ```
 
-**Key Points:**
-- 🔹 Stateless design enables easy scaling
-- 🔹 Shared key storage for consistency
-- 🔹 No session affinity required
+**关键点：**
+- 🔹 无状态设计，易于横向扩展
+- 🔹 共享数据库保证数据一致性
+- 🔹 Redis 集群支持高可用
 
-### Vertical Scaling
+### 容量规划
 
 <table>
 <tr>
-<th>Resource</th>
-<th>Scaling Strategy</th>
-<th>Impact</th>
+<th>资源</th>
+<th>扩展策略</th>
+<th>影响</th>
 </tr>
 <tr>
-<td>CPU</td>
-<td>Increase cores, use parallelism</td>
-<td>⬆️ Throughput</td>
+<td><b>应用实例</b></td>
+<td>增加 Pod/Container</td>
+<td>⬆️ 并发处理能力</td>
 </tr>
 <tr>
-<td>Memory</td>
-<td>Increase RAM, larger caches</td>
-<td>⬆️ Performance</td>
+<td><b>数据库</b></td>
+<td>读写分离、分库分表</td>
+<td>⬆️ 查询性能</td>
 </tr>
 <tr>
-<td>Storage</td>
-<td>Use SSD, increase IOPS</td>
-<td>⬇️ Latency</td>
+<td><b>Redis</b></td>
+<td>集群模式</td>
+<td>⬆️ 缓存容量</td>
 </tr>
 </table>
 
-### Capacity Planning
-
-```rust
-// Calculate capacity requirements
-pub fn calculate_capacity(requirements: Requirements) -> Capacity {
-    let ops_per_second = requirements.expected_load;
-    let latency_budget = requirements.max_latency;
-    
-    let instances = (ops_per_second * latency_budget / 1000.0).ceil() as usize;
-    let memory_per_instance = requirements.cache_size + OVERHEAD;
-    
-    Capacity {
-        instances,
-        memory_per_instance,
-        total_memory: instances * memory_per_instance,
-    }
-}
-```
-
 ---
 
-## Future Improvements
+## 未来改进
 
 <div align="center">
 
-### 🚀 Planned Enhancements
+### 🚀 规划中的功能
 
 </div>
 
-### Short Term (3-6 months)
+### 短期（1-3 个月）
 
-- [ ] **SIMD Optimization** - Vectorized crypto operations
-- [ ] **Hardware Acceleration** - AES-NI, SHA extensions
-- [ ] **Async Runtime** - Tokio integration for async operations
-- [ ] **Metrics System** - Prometheus-compatible metrics
+- [ ] **消息签名**：使用私钥签名消息
+- [ ] **密钥轮换**：自动轮换过期密钥
+- [ ] **Webhook 通知**：HTTP 回调通知
+- [ ] **消息加密**：端到端加密支持
 
-### Medium Term (6-12 months)
+### 中期（3-6 个月）
 
-- [ ] **HSM Integration** - PKCS#11 support
-- [ ] **Key Rotation** - Automatic key lifecycle management
-- [ ] **Multi-region Support** - Geographic distribution
-- [ ] **Plugin Marketplace** - Third-party algorithm plugins
+- [ ] **多租户支持**：隔离不同组织数据
+- [ ] **数据分析**：消息统计与可视化
+- [ ] **告警系统**：异常行为检测
+- [ ] **性能监控**：Prometheus 指标
 
-### Long Term (12+ months)
+### 长期（6+ 个月）
 
-- [ ] **Post-Quantum Crypto** - PQC algorithm support
-- [ ] **TEE Support** - SGX/TrustZone integration
-- [ ] **Formal Verification** - Mathematical proof of security properties
-- [ ] **Cloud-Native Features** - Kubernetes operators, service mesh
+- [ ] **WebSocket 支持**：双向实时通信
+- [ **移动端 SDK**：iOS/Android 库
+- [ ] **合规认证**：SOC2、ISO 27001
+- [ ] **混合部署**：支持私有化部署
 
 ---
 
 <div align="center">
 
-**[📖 User Guide](USER_GUIDE.md)** • **[🔧 API Docs](https://docs.rs/project-name)** • **[🏠 Home](../README.md)**
+**[📖 用户指南](USER_GUIDE.md)** • **[📝 API 参考](API_REFERENCE.md)** • **[🏠 首页](../README.md)**
 
-Made with ❤️ by the Architecture Team
+由 Kirky.X 用 ❤️ 制作
 
-[⬆ Back to Top](#️-architecture-design)
+[⬆ 返回顶部](#️-架构设计)
 
 </div>

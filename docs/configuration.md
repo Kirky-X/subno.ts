@@ -1,6 +1,6 @@
-# SecureNotify 配置参考
+# subno.ts 配置参考
 
-本文档列出了 SecureNotify 的所有可配置项，通过环境变量或 `.env.local` 文件设置。
+本文档列出了 subno.ts 的所有可配置项，通过环境变量或 `.env.local` 文件设置。
 
 ## 快速配置示例
 

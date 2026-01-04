@@ -1,834 +1,353 @@
 <div align="center">
 
-# 🤝 Contributing Guide
+# 🤝 贡献指南
 
-### Join Us in Building Something Great!
+### subno.ts 项目贡献指南
 
-[🏠 Home](README.md) • [📖 Docs](docs/USER_GUIDE.md) • [💬 Discussions](../../discussions)
+[🏠 首页](../README.md) • [📖 文档](README.md) • [📝 Issues](https://github.com/Kirky-X/subno.ts/issues)
 
 ---
 
 </div>
 
-## 🎯 Welcome Contributors!
+## 欢迎贡献者
 
-Thank you for your interest in contributing to **Project Name**! We're excited to have you here. Whether you're fixing a bug, adding a feature, improving documentation, or helping others, your contributions are valuable and appreciated.
+感谢您对 subno.ts 项目的兴趣！我们欢迎各种形式的贡献：
 
-<div align="center">
-
-### 🌟 Ways to Contribute
-
-<table>
-<tr>
-<td width="25%" align="center">
-<img src="https://img.icons8.com/fluency/96/000000/code.png" width="64"><br>
-<b>Code</b><br>
-Fix bugs & add features
-</td>
-<td width="25%" align="center">
-<img src="https://img.icons8.com/fluency/96/000000/documentation.png" width="64"><br>
-<b>Documentation</b><br>
-Improve docs & guides
-</td>
-<td width="25%" align="center">
-<img src="https://img.icons8.com/fluency/96/000000/test-tube.png" width="64"><br>
-<b>Testing</b><br>
-Write tests & find bugs
-</td>
-<td width="25%" align="center">
-<img src="https://img.icons8.com/fluency/96/000000/chat.png" width="64"><br>
-<b>Community</b><br>
-Help & support others
-</td>
-</tr>
-</table>
-
-</div>
+- 🐛 修复 Bug
+- ✨ 添加新功能
+- 📝 改进文档
+- ✅ 编写测试
+- 💡 提出建议
 
 ---
 
-## 📋 Table of Contents
+## 📋 目录
 
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Workflow](#development-workflow)
-- [Coding Standards](#coding-standards)
-- [Testing Guidelines](#testing-guidelines)
-- [Documentation](#documentation)
-- [Submitting Changes](#submitting-changes)
-- [Review Process](#review-process)
-- [Community](#community)
+- [开发环境](#开发环境)
+- [项目结构](#项目结构)
+- [开发流程](#开发流程)
+- [代码规范](#代码规范)
+- [测试要求](#测试要求)
+- [提交规范](#提交规范)
 
 ---
 
-## Code of Conduct
+## 开发环境
 
-<div align="center">
+### 环境要求
 
-### 🤗 Be Kind and Respectful
+- Node.js 18+
+- PostgreSQL 14+
+- Redis 7+
+- Docker & Docker Compose
 
-</div>
+### 安装依赖
 
-We are committed to providing a welcoming and inclusive environment. By participating, you agree to:
+```bash
+# 安装 Node.js 依赖
+npm install
 
-<table>
-<tr>
-<td width="50%">
+# 安装 uv（Python 包管理，用于数据库迁移）
+pip install uv
+```
 
-**✅ DO**
-- Be respectful and considerate
-- Welcome newcomers
-- Accept constructive criticism
-- Focus on what's best for the community
-- Show empathy towards others
+### 启动服务
 
-</td>
-<td width="50%">
+```bash
+# 启动数据库和 Redis
+docker-compose up -d postgres redis
 
-**❌ DON'T**
-- Use offensive language
-- Harass or insult others
-- Publish private information
-- Make personal attacks
-- Disrupt discussions
+# 运行数据库迁移
+npm run db:migrate
 
-</td>
-</tr>
-</table>
+# 启动开发服务器
+npm run dev
+```
 
-> 📜 **Full Code of Conduct:** [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+### 验证安装
+
+```bash
+# 运行测试
+npm test
+
+# 运行类型检查
+npm run type-check
+
+# 运行代码检查
+npm run lint
+```
 
 ---
 
-## Getting Started
+## 项目结构
 
-### Prerequisites
-
-Before you begin, ensure you have:
-
-- ✅ **Git** - Version control
-- ✅ **Rust 1.75+** - Programming language
-- ✅ **Cargo** - Rust package manager
-- ✅ **IDE** - VS Code, IntelliJ, or similar
-
-<details>
-<summary><b>🔧 Setting Up Your Environment</b></summary>
-
-**1. Install Rust:**
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
-
-**2. Install additional tools:**
-```bash
-# Code formatter
-rustup component add rustfmt
-
-# Linter
-rustup component add clippy
-
-# Code coverage (optional)
-cargo install cargo-tarpaulin
+subno.ts/
+├── app/                    # Next.js App Router 路由
+│   └── api/               # API 路由
+├── src/
+│   ├── app/               # 源代码 API 路由
+│   ├── config/            # 配置
+│   ├── db/                # 数据库
+│   │   ├── migrations/   # 数据库迁移
+│   │   └── schema.ts     # 表结构定义
+│   ├── lib/
+│   │   ├── db.ts         # 数据库连接
+│   │   ├── redis.ts      # Redis 连接
+│   │   ├── repositories/ # 数据访问层
+│   │   ├── services/     # 业务逻辑
+│   │   ├── types/        # 类型定义
+│   │   └── utils/        # 工具函数
+│   └── middleware.ts     # 中间件
+├── docs/                  # 文档
+├── __tests__/             # 测试文件
+├── docker-compose.yml     # Docker 配置
+└── drizzle.config.ts      # Drizzle 配置
 ```
-
-**3. Verify installation:**
-```bash
-rustc --version
-cargo --version
-```
-
-</details>
-
-### Fork and Clone
-
-<table>
-<tr>
-<td width="50%">
-
-**1. Fork the Repository**
-
-Click the "Fork" button on GitHub
-
-</td>
-<td width="50%">
-
-**2. Clone Your Fork**
-
-```bash
-git clone https://github.com/YOUR_USERNAME/project-name
-cd project-name
-```
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**3. Add Upstream Remote**
-
-```bash
-git remote add upstream \
-  https://github.com/ORIGINAL/project-name
-```
-
-</td>
-<td width="50%">
-
-**4. Verify Remotes**
-
-```bash
-git remote -v
-# origin    your-fork
-# upstream  original-repo
-```
-
-</td>
-</tr>
-</table>
-
-### Build and Test
-
-```bash
-# Build the project
-cargo build
-
-# Run tests
-cargo test
-
-# Run with examples
-cargo run --example basic
-```
-
-✅ **Success!** You're ready to contribute!
 
 ---
 
-## Development Workflow
+## 开发流程
 
-<div align="center">
+### 1. Fork 项目
 
-### 🔄 Standard Contribution Flow
+点击 GitHub 页面右上角的 Fork 按钮。
 
-</div>
+### 2. 克隆仓库
 
-```mermaid
-graph LR
-    A[Fork Repo] --> B[Create Branch]
-    B --> C[Make Changes]
-    C --> D[Write Tests]
-    D --> E[Run Tests]
-    E --> F{Tests Pass?}
-    F -->|No| C
-    F -->|Yes| G[Commit]
-    G --> H[Push to Fork]
-    H --> I[Create PR]
-    I --> J[Code Review]
-    J --> K{Approved?}
-    K -->|Changes| C
-    K -->|Yes| L[Merge!]
+```bash
+git clone https://github.com/YOUR_USERNAME/subno.ts.git
+cd subno.ts
+```
+
+### 3. 创建分支
+
+```bash
+# 创建功能分支
+git checkout -b feature/new-feature
+
+# 或创建修复分支
+git checkout -b fix/issue-description
+```
+
+### 4. 开发与测试
+
+```bash
+# 启动开发服务器
+npm run dev
+
+# 运行测试
+npm test
+
+# 运行特定测试
+npm test -- --testNamePattern="register"
+
+# 运行 lint
+npm run lint
+
+# 自动修复 lint 问题
+npm run lint -- --fix
+```
+
+### 5. 提交代码
+
+```bash
+# 查看更改
+git status
+
+# 添加更改
+git add .
+
+# 提交
+git commit -m "feat(api): add new feature"
+```
+
+### 6. 提交 PR
+
+1. 推送分支到你的 fork
+2. 在 GitHub 上创建 Pull Request
+3. 填写 PR 模板
+4. 等待代码审查
+
+---
+
+## 代码规范
+
+### TypeScript
+
+- 使用 TypeScript 严格模式
+- 避免使用 `any`
+- 使用接口定义类型
+
+**推荐：**
+
+```typescript
+interface RegisterKeyInput {
+  publicKey: string;
+  algorithm: string;
+  expiresIn?: number;
+}
+```
+
+**不推荐：**
+
+```typescript
+const func = (data: any) => {
+  // ...
+};
+```
+
+### 命名规范
+
+- 变量/函数：camelCase
+- 类/接口：PascalCase
+- 常量：UPPER_SNAKE_CASE
+- 文件：kebab-case
+
+### 错误处理
+
+- 使用 try-catch 处理异步操作
+- 返回结构化的错误响应
+- 记录错误日志
+
+### 代码格式
+
+项目使用 Prettier 和 ESLint：
+
+```bash
+# 格式化代码
+npm run format
+
+# 检查格式
+npm run format:check
+```
+
+---
+
+## 测试要求
+
+### 测试类型
+
+| 类型 | 位置 | 说明 |
+|------|------|------|
+| 单元测试 | `__tests__/unit/` | 测试单个函数/类 |
+| 集成测试 | `__tests__/integration/` | 测试 API 端点 |
+| E2E 测试 | `__tests__/e2e/` | 端到端测试 |
+
+### 运行测试
+
+```bash
+# 运行所有测试
+npm test
+
+# 运行单元测试
+npm run test:unit
+
+# 运行集成测试
+npm run test:integration
+
+# 生成覆盖率报告
+npm run test:coverage
+```
+
+### 编写测试
+
+```typescript
+import { describe, it, expect } from 'vitest';
+
+describe('Register API', () => {
+  it('should register a public key', async () => {
+    const response = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        publicKey: '-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----',
+        algorithm: 'RSA-2048'
+      })
+    });
     
-    style A fill:#e1f5ff
-    style L fill:#4caf50
+    expect(response.ok).toBe(true);
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.data.channelId).toBeDefined();
+  });
+});
 ```
 
-### Step-by-Step Guide
+---
 
-#### 1️⃣ Create a Branch
+## 提交规范
 
-```bash
-# Update your fork
-git fetch upstream
-git checkout main
-git merge upstream/main
+### 提交类型
 
-# Create feature branch
-git checkout -b feature/your-feature-name
+| 类型 | 说明 |
+|------|------|
+| `feat` | 新功能 |
+| `fix` | Bug 修复 |
+| `docs` | 文档更新 |
+| `style` | 代码格式（不影响功能） |
+| `refactor` | 重构代码 |
+| `test` | 测试相关 |
+| `chore` | 构建/工具/依赖更新 |
 
-# Or for bug fixes
-git checkout -b fix/issue-123
-```
-
-**Branch Naming:**
-- `feature/` - New features
-- `fix/` - Bug fixes
-- `docs/` - Documentation
-- `test/` - Test improvements
-- `refactor/` - Code refactoring
-
-#### 2️⃣ Make Your Changes
-
-<table>
-<tr>
-<td width="50%">
-
-**Writing Code:**
-```rust
-// Add your implementation
-pub fn new_feature() -> Result<()> {
-    // Your code here
-    Ok(())
-}
-```
-
-</td>
-<td width="50%">
-
-**Adding Tests:**
-```rust
-#[test]
-fn test_new_feature() {
-    let result = new_feature();
-    assert!(result.is_ok());
-}
-```
-
-</td>
-</tr>
-</table>
-
-#### 3️⃣ Test Your Changes
-
-```bash
-# Format code
-cargo fmt
-
-# Run linter
-cargo clippy -- -D warnings
-
-# Run all tests
-cargo test --all-features
-
-# Run specific test
-cargo test test_new_feature
-
-# Check coverage (optional)
-cargo tarpaulin --out Html
-```
-
-#### 4️⃣ Commit Your Changes
-
-**Good Commit Messages:**
-
-```bash
-# Format: <type>(<scope>): <description>
-
-git commit -m "feat(encryption): add AES-256 support"
-git commit -m "fix(key-manager): resolve memory leak"
-git commit -m "docs(readme): update installation instructions"
-git commit -m "test(cipher): add edge case tests"
-```
-
-**Commit Types:**
-- `feat` - New feature
-- `fix` - Bug fix
-- `docs` - Documentation
-- `style` - Formatting
-- `refactor` - Code restructuring
-- `test` - Adding tests
-- `chore` - Maintenance
-
-<details>
-<summary><b>📝 Commit Message Template</b></summary>
+### 提交格式
 
 ```
-<type>(<scope>): <short summary>
+<type>(<scope>): <subject>
 
-<detailed description>
+<body>
 
 <footer>
 ```
 
-**Example:**
-```
-feat(api): add batch encryption support
+**示例：**
 
-Implement batch processing for multiple encryption operations.
-This improves performance by 40% for bulk operations.
+```
+feat(api): add algorithm field to key registration
+
+- Allow clients to specify encryption algorithm
+- Store algorithm in database
+- Return algorithm in response
 
 Closes #123
 ```
 
-</details>
+---
 
-#### 5️⃣ Push to Your Fork
+## 常见问题
+
+### 如何添加新的 API 路由？
+
+1. 在 `app/api/` 目录下创建新文件夹
+2. 添加 `route.ts` 文件
+3. 实现 GET/POST/PUT/DELETE 处理器
+4. 添加类型定义
+5. 编写测试
+
+### 如何修改数据库 schema？
+
+1. 修改 `src/db/schema.ts`
+2. 创建新迁移：`npm run db:generate migration_name`
+3. 运行迁移：`npm run db:migrate`
+4. 更新类型定义
+
+### 如何配置环境变量？
 
 ```bash
-git push origin feature/your-feature-name
+# 复制示例配置
+cp .env.example .env
+
+# 编辑配置
+vim .env
 ```
-
-#### 6️⃣ Create Pull Request
-
-1. Go to your fork on GitHub
-2. Click "Compare & pull request"
-3. Fill in the PR template
-4. Link related issues
-5. Submit!
-
----
-
-## Coding Standards
-
-<div align="center">
-
-### ✨ Write Clean, Maintainable Code
-
-</div>
-
-### Rust Style Guide
-
-Follow the [Rust Style Guide](https://rust-lang.github.io/api-guidelines/):
-
-<table>
-<tr>
-<td width="50%">
-
-**✅ Good**
-
-```rust
-// Descriptive names
-pub fn encrypt_data(
-    plaintext: &[u8],
-    key: &Key,
-) -> Result<Vec<u8>> {
-    // Implementation
-}
-
-// Proper error handling
-match operation() {
-    Ok(result) => result,
-    Err(e) => return Err(e),
-}
-```
-
-</td>
-<td width="50%">
-
-**❌ Bad**
-
-```rust
-// Vague names
-pub fn enc(d: &[u8], k: &Key) 
-    -> Result<Vec<u8>> {
-    // Implementation
-}
-
-// Ignoring errors
-let result = operation().unwrap();
-```
-
-</td>
-</tr>
-</table>
-
-### Code Organization
-
-```
-src/
-├── lib.rs           # Public API
-├── core/            # Core functionality
-│   ├── mod.rs
-│   ├── engine.rs
-│   └── manager.rs
-├── algorithms/      # Algorithm implementations
-│   ├── mod.rs
-│   ├── aes.rs
-│   └── ecdsa.rs
-├── error.rs         # Error types
-└── utils/           # Utilities
-    ├── mod.rs
-    └── helpers.rs
-```
-
-### Documentation
-
-<details>
-<summary><b>📖 Documentation Standards</b></summary>
-
-**Every public item must have documentation:**
-
-```rust
-/// Encrypts data using the specified algorithm.
-///
-/// # Arguments
-///
-/// * `data` - The plaintext data to encrypt
-/// * `key` - The encryption key
-///
-/// # Returns
-///
-/// Returns the encrypted ciphertext on success.
-///
-/// # Errors
-///
-/// Returns `Error::EncryptionFailed` if encryption fails.
-///
-/// # Examples
-///
-/// ```
-/// use project_name::{encrypt, Key};
-///
-/// let key = Key::generate()?;
-/// let ciphertext = encrypt(b"secret", &key)?;
-/// ```
-pub fn encrypt(data: &[u8], key: &Key) -> Result<Vec<u8>> {
-    // Implementation
-}
-```
-
-</details>
-
-### Error Handling
-
-```rust
-// ✅ Use Result types
-pub fn fallible_operation() -> Result<Value, Error> {
-    // Implementation
-}
-
-// ✅ Provide context
-Err(Error::EncryptionFailed {
-    reason: "Invalid key size",
-    context: format!("Expected {}, got {}", expected, actual),
-})
-
-// ❌ Don't panic in library code
-// panic!("Something went wrong");  // Bad!
-```
-
----
-
-## Testing Guidelines
-
-<div align="center">
-
-### 🧪 Test Everything!
-
-</div>
-
-### Test Categories
-
-<table>
-<tr>
-<th>Type</th>
-<th>Purpose</th>
-<th>Location</th>
-</tr>
-<tr>
-<td><b>Unit Tests</b></td>
-<td>Test individual functions</td>
-<td><code>src/*.rs</code> (inline)</td>
-</tr>
-<tr>
-<td><b>Integration Tests</b></td>
-<td>Test public API</td>
-<td><code>tests/</code></td>
-</tr>
-<tr>
-<td><b>Doc Tests</b></td>
-<td>Test examples in docs</td>
-<td>Doc comments</td>
-</tr>
-<tr>
-<td><b>Benchmarks</b></td>
-<td>Performance tests</td>
-<td><code>benches/</code></td>
-</tr>
-</table>
-
-### Writing Tests
-
-**Unit Test Example:**
-
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_encrypt_decrypt() {
-        let key = Key::generate().unwrap();
-        let plaintext = b"Hello, World!";
-        
-        let ciphertext = encrypt(plaintext, &key).unwrap();
-        let decrypted = decrypt(&ciphertext, &key).unwrap();
-        
-        assert_eq!(plaintext, &decrypted[..]);
-    }
-
-    #[test]
-    fn test_invalid_key() {
-        let result = encrypt(b"data", &InvalidKey);
-        assert!(result.is_err());
-    }
-}
-```
-
-**Integration Test Example:**
-
-```rust
-// tests/integration_test.rs
-use project_name::{init, Cipher, KeyManager, Algorithm};
-
-#[test]
-fn test_full_workflow() {
-    init().unwrap();
-    
-    let km = KeyManager::new().unwrap();
-    let key_id = km.generate_key(Algorithm::AES256GCM).unwrap();
-    let cipher = Cipher::new(Algorithm::AES256GCM).unwrap();
-    
-    let plaintext = b"Integration test";
-    let ciphertext = cipher.encrypt(&km, &key_id, plaintext).unwrap();
-    let decrypted = cipher.decrypt(&km, &key_id, &ciphertext).unwrap();
-    
-    assert_eq!(plaintext, &decrypted[..]);
-}
-```
-
-### Test Coverage
-
-**Aim for ≥90% coverage:**
-
-```bash
-# Generate coverage report
-cargo tarpaulin --out Html --output-dir coverage
-
-# View report
-open coverage/index.html
-```
-
----
-
-## Documentation
-
-<div align="center">
-
-### 📚 Documentation Matters!
-
-</div>
-
-### What to Document
-
-<table>
-<tr>
-<td width="50%">
-
-**Code Documentation:**
-- ✅ Public functions
-- ✅ Public types
-- ✅ Complex algorithms
-- ✅ Non-obvious behavior
-
-</td>
-<td width="50%">
-
-**User Documentation:**
-- ✅ README updates
-- ✅ User guide changes
-- ✅ API reference
-- ✅ Examples
-
-</td>
-</tr>
-</table>
-
-### Documentation Checklist
-
-- [ ] All public items have doc comments
-- [ ] Examples compile and run
-- [ ] README is updated (if needed)
-- [ ] CHANGELOG is updated
-- [ ] User guide reflects changes
-- [ ] Migration guide (for breaking changes)
-
----
-
-## Submitting Changes
-
-<div align="center">
-
-### 📤 Pull Request Process
-
-</div>
-
-### PR Template
-
-<details>
-<summary><b>📋 Pull Request Template</b></summary>
-
-```markdown
-## Description
-Brief description of changes
-
-## Type of Change
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Documentation update
-- [ ] Performance improvement
-- [ ] Code refactoring
-
-## Changes Made
-- Change 1
-- Change 2
-- Change 3
-
-## Testing
-- [ ] Unit tests pass
-- [ ] Integration tests pass
-- [ ] Manual testing completed
-
-## Checklist
-- [ ] Code follows style guidelines
-- [ ] Self-review completed
-- [ ] Comments added for complex code
-- [ ] Documentation updated
-- [ ] No new warnings
-- [ ] Tests added/updated
-
-## Related Issues
-Closes #123
-```
-
-</details>
-
-### PR Best Practices
-
-<table>
-<tr>
-<td width="50%">
-
-**✅ Good PRs:**
-- Focused on single issue
-- Small, reviewable size
-- Clear description
-- Tests included
-- Documentation updated
-
-</td>
-<td width="50%">
-
-**❌ Avoid:**
-- Multiple unrelated changes
-- Huge diffs (>500 lines)
-- Missing context
-- No tests
-- Undocumented changes
-
-</td>
-</tr>
-</table>
-
----
-
-## Review Process
-
-<div align="center">
-
-### 👀 What to Expect
-
-</div>
-
-### Timeline
-
-```mermaid
-gantt
-    title PR Review Timeline
-    dateFormat  YYYY-MM-DD
-    section Review
-    Initial Review       :a1, 2024-01-01, 2d
-    Feedback Round 1     :a2, after a1, 3d
-    Feedback Round 2     :a3, after a2, 2d
-    Final Approval       :a4, after a3, 1d
-    Merge                :milestone, after a4, 0d
-```
-
-**Typical Timeline:**
-- 📧 Initial review: 1-3 days
-- 💬 Feedback rounds: 2-5 days each
-- ✅ Approval & merge: 1-2 days
-
-### Review Criteria
-
-Reviewers will check:
-
-- ✅ **Functionality**: Does it work as intended?
-- ✅ **Code Quality**: Is it clean and maintainable?
-- ✅ **Tests**: Are there adequate tests?
-- ✅ **Documentation**: Is it well documented?
-- ✅ **Performance**: Any performance impact?
-- ✅ **Security**: Any security concerns?
-
-### Responding to Feedback
-
-```bash
-# Address feedback
-git add .
-git commit -m "Address review comments"
-git push origin feature/your-feature
-
-# PR automatically updates!
-```
-
----
-
-## Community
-
-<div align="center">
-
-### 💬 Connect With Us
-
-</div>
-
-<table>
-<tr>
-<td width="33%" align="center">
-<a href="../../discussions">
-<img src="https://img.icons8.com/fluency/96/000000/chat.png" width="64"><br>
-<b>Discussions</b>
-</a><br>
-Q&A and ideas
-</td>
-<td width="33%" align="center">
-<a href="https://discord.gg/project">
-<img src="https://img.icons8.com/fluency/96/000000/discord-logo.png" width="64"><br>
-<b>Discord</b>
-</a><br>
-Live chat
-</td>
-<td width="33%" align="center">
-<a href="https://twitter.com/project">
-<img src="https://img.icons8.com/fluency/96/000000/twitter.png" width="64"><br>
-<b>Twitter</b>
-</a><br>
-Updates & news
-</td>
-</tr>
-</table>
-
-### Recognition
-
-We value all contributions! Contributors will be:
-
-- 🎖️ Listed in [CONTRIBUTORS.md](CONTRIBUTORS.md)
-- 🌟 Shown in README contributors section
-- 💝 Mentioned in release notes
 
 ---
 
 <div align="center">
 
-## 🎉 Thank You!
+### 💝 感谢您的贡献！
 
-Your contributions make this project better for everyone.
-
-**Ready to contribute?** [Open your first issue](../../issues/new) or [start a discussion](../../discussions/new)!
-
----
-
-**[🏠 Home](README.md)** • **[📖 Docs](docs/USER_GUIDE.md)** • **[💬 Chat](https://discord.gg/project)**
-
-Made with ❤️ by our amazing community
-
-[⬆ Back to Top](#-contributing-guide)
+**[📝 创建 Issue](https://github.com/Kirky-X/subno.ts/issues/new)** • **[📖 文档](README.md)** • **[🏠 首页](../README.md)**
 
 </div>
