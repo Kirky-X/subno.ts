@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0 
+// Copyright (c) 2026 KirkyX. All rights reserved. 
+
 import Image from "next/image";
 import styles from "./page.module.css";
 
