@@ -68,3 +68,10 @@ tmp/
 
 # TypeScript
 next-env.d.ts
+
+# Development docs
+docs/prd.md
+docs/task.md
+docs/tdd.md
+docs/test.md
+docs/uat.md
