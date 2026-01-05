@@ -24,6 +24,8 @@ export default defineConfig({
     // E2E tests may need longer timeout
     testTimeout: 30000,
     hookTimeout: 30000,
+    // Disable parallel execution to avoid shared state issues (Redis/DB)
+    fileParallelism: false,
   },
   resolve: {
     alias: {

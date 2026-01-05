@@ -51,15 +51,13 @@ describe('EncryptionService', () => {
 
     // RSA has a message length limit (~190 bytes for RSA-2048 OAEP).
     // Long messages should use hybrid encryption (tested below).
-    // This test is skipped to avoid confusion.
-    it.skip('should handle long messages', () => {
-      const { publicKey, privateKey } = encryptionService.generateKeyPair();
+    it('should throw error for long messages with direct RSA', () => {
+      const { publicKey } = encryptionService.generateKeyPair();
       const longMessage = 'A'.repeat(10000);
 
-      const encrypted = encryptionService.encrypt(longMessage, publicKey);
-      const decrypted = encryptionService.decrypt(encrypted, privateKey);
-
-      expect(decrypted).toBe(longMessage);
+      expect(() => {
+        encryptionService.encrypt(longMessage, publicKey);
+      }).toThrow();
     });
 
     it('should throw error with wrong private key', () => {

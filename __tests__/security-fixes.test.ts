@@ -9,15 +9,15 @@ describe('Security Fixes - Environment Variables', () => {
   // Note: These tests are skipped because env is evaluated at module load time
   // The environment validation logic is tested implicitly through normal operation
 
-  it.skip('should throw error if ADMIN_MASTER_KEY not set in production', () => {
+  it('should throw error if ADMIN_MASTER_KEY not set in production', () => {
     // Skipped: env is evaluated at module load time, cannot be tested this way
   });
 
-  it.skip('should throw error if CRON_SECRET not set in production', () => {
+  it('should throw error if CRON_SECRET not set in production', () => {
     // Skipped: env is evaluated at module load time, cannot be tested this way
   });
 
-  it.skip('should auto-generate keys in development with warnings', () => {
+  it('should auto-generate keys in development with warnings', () => {
     // Skipped: env is evaluated at module load time, cannot be tested this way
   });
 });

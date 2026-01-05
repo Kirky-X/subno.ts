@@ -29,6 +29,7 @@ export const PublishMessageSchema = z.object({
   encrypted: z.boolean().optional().default(false),
   // 自动创建临时 channel (默认 true)
   autoCreate: z.boolean().optional().default(true),
+  signature: z.string().optional(),
 });
 
 export type PublishMessageInput = z.infer<typeof PublishMessageSchema>;

@@ -110,6 +110,16 @@ export class MessageService {
     const messageId = this.generateMessageId();
     const timestamp = Date.now();
 
+    // Validate message content
+    if (options.message === undefined || options.message === null || options.message === '') {
+      throw new Error('Message is required');
+    }
+    
+    // Validate sender type (runtime check for consumers bypassing Typescript)
+    if (options.sender === null) {
+      throw new Error('Sender cannot be null');
+    }
+
     // Validate message size
     const messageSize = Buffer.byteLength(options.message, 'utf8');
     if (messageSize > env.MAX_MESSAGE_SIZE) {
@@ -139,6 +149,7 @@ export class MessageService {
       sender: options.sender,
       timestamp,
       encrypted: options.encrypted ?? false,
+      signature: options.signature,
     };
 
     // Determine TTL based on channel type

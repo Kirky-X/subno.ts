@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 
 // Copyright (c) 2026 KirkyX. All rights reserved. 
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { MessageService } from '@/lib/services/message.service';
 import { RateLimiterService } from '@/lib/services/rate-limiter.service';
 import { EncryptionService } from '@/lib/services/encryption.service';
@@ -12,7 +12,7 @@ import { getRedisClient } from '@/lib/redis';
 
 // Note: These integration tests have isolation issues and may fail due to test execution order
 // Skipping the problematic Message Flow and Rate Limiting tests
-describe.skip('Integration Tests', () => {
+describe('Integration Tests', () => {
   let messageService: MessageService;
   let rateLimiter: RateLimiterService;
   let encryptionService: EncryptionService;
@@ -26,6 +26,12 @@ describe.skip('Integration Tests', () => {
 
     const redis = await getRedisClient();
     expect(redis.isOpen).toBe(true);
+    await redis.flushDb();
+  });
+
+  afterAll(async () => {
+    const redis = await getRedisClient();
+    await redis.flushDb();
   });
 
   describe('Message Flow', () => {

@@ -107,7 +107,7 @@ describe('MessageService', () => {
   });
 
   describe('priority queue', () => {
-    it.skip('should order messages by priority (highest first)', async () => {
+    it('should order messages by priority (highest first)', async () => {
       const channel = 'test-priority-order';
 
       // Publish messages in different order
@@ -199,7 +199,7 @@ describe('MessageService', () => {
   });
 
   describe('message caching', () => {
-    it.skip('should cache message when cache is enabled', async () => {
+    it('should cache message when cache is enabled', async () => {
       const channel = 'test-cache-enabled';
 
       const result = await messageService.publish({
@@ -249,7 +249,7 @@ describe('MessageService', () => {
   });
 
   describe('popMessage', () => {
-    it.skip('should pop highest priority message', async () => {
+    it('should pop highest priority message', async () => {
       const channel = 'test-pop';
 
       await messageService.publish({
@@ -305,7 +305,7 @@ describe('MessageService', () => {
   });
 
   describe('queue management', () => {
-    it.skip('should return correct queue length', async () => {
+    it('should return correct queue length', async () => {
       const channel = 'test-queue-length';
 
       const lengthBefore = await messageService.getQueueLength(channel);
@@ -357,7 +357,7 @@ describe('MessageService', () => {
   });
 
   describe('message stats', () => {
-    it.skip('should return message statistics', async () => {
+    it('should return message statistics', async () => {
       const channel = 'test-stats';
 
       await messageService.publish({
@@ -415,7 +415,7 @@ describe('MessageService', () => {
   });
 
   describe('message metadata', () => {
-    it.skip('should include all required message fields', async () => {
+    it('should include all required message fields', async () => {
       const channel = 'test-metadata';
 
       const result = await messageService.publish({

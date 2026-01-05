@@ -18,6 +18,7 @@ export interface PublishMessageOptions {
   encrypted?: boolean;
   // 是否自动创建临时 channel (默认 true)
   autoCreate?: boolean;
+  signature?: string;
 }
 
 export interface Message {
@@ -28,6 +29,7 @@ export interface Message {
   sender?: string;
   timestamp: number;
   encrypted: boolean;
+  signature?: string;
   system?: boolean; // For system-generated messages (SSE welcome, etc.)
 }
 
