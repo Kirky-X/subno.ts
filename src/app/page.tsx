@@ -1,69 +1,61 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 
 export default function Home() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div style={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      flexDirection: 'column',
+      alignItems: 'center', 
+      justifyContent: 'center',
+      padding: '2rem',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      color: 'white'
+    }}>
+      <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>subno.ts</h1>
+      <p style={{ fontSize: '1.25rem', opacity: 0.9, marginBottom: '2rem' }}>
+        Encrypted Push Notification Service
+      </p>
+      <div style={{ 
+        display: 'flex', 
+        gap: '1rem',
+        flexWrap: 'wrap',
+        justifyContent: 'center'
+      }}>
+        <div style={cardStyle}>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>🔐 End-to-End Encryption</h3>
+          <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>RSA & ECC encryption</p>
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div style={cardStyle}>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>📡 Real-time SSE</h3>
+          <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>Server-Sent Events</p>
         </div>
-      </main>
+        <div style={cardStyle}>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>🔑 Key Management</h3>
+          <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>Secure key registration</p>
+        </div>
+      </div>
+      <div style={{ marginTop: '3rem', textAlign: 'center' }}>
+        <p style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '1rem' }}>
+          Service Status: <span style={{ color: '#4ade80', fontWeight: 'bold' }}>● Running</span>
+        </p>
+        <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+          Version 0.1.0 | Next.js 16.1.1
+        </p>
+      </div>
     </div>
   );
 }
+
+const cardStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.15)',
+  backdropFilter: 'blur(10px)',
+  borderRadius: '12px',
+  padding: '1.5rem',
+  minWidth: '200px',
+  border: '1px solid rgba(255,255,255,0.2)'
+};
