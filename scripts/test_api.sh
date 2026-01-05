@@ -5,7 +5,7 @@
 
 # 移除 set -e 以便在出错时继续运行所有测试
 
-BASE_URL="http://localhost:8080"
+BASE_URL="https://subno-ts.vercel.app"
 TEST_CHANNEL_ID="test-channel-$(date +%s)"
 CRON_SECRET="securenotify-cron-secret-key"
 ADMIN_MASTER_KEY="subno-admin-master-key-2024"

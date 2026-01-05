@@ -1,34 +1,25 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { sql } from '@vercel/postgres';
 import { drizzle as drizzleNode } from 'drizzle-orm/node-postgres';
-import { drizzle as drizzleVercel } from 'drizzle-orm/vercel-postgres';
 import pg from 'pg';
 import * as schema from '@/db/schema';
 import { env } from '@/config/env';
 
-const isVercel = process.env.VERCEL === '1';
-
-// Singleton connection for local development
+// Singleton connection
 let pool: pg.Pool | null = null;
 
 export function getDb() {
-  if (isVercel) {
-    // Vercel environment uses @vercel/postgres
-    return drizzleVercel(sql, { schema });
-  } else {
-    // Local development using pg - reuse connection
-    if (!pool) {
-      pool = new pg.Pool({
-        connectionString: env.DATABASE_URL,
-        max: 10,
-        idleTimeoutMillis: 20000,
-        connectionTimeoutMillis: 10000,
-      });
-    }
-    return drizzleNode(pool, { schema });
+  // Always use node-postgres for consistency
+  if (!pool) {
+    pool = new pg.Pool({
+      connectionString: env.DATABASE_URL,
+      max: 10,
+      idleTimeoutMillis: 20000,
+      connectionTimeoutMillis: 10000,
+    });
   }
+  return drizzleNode(pool, { schema });
 }
 
 // Export db for backward compatibility
@@ -54,7 +45,7 @@ export async function closeDb(): Promise<void> {
 /**
  * Handle process termination
  */
-if (typeof process !== 'undefined' && !isVercel) {
+if (typeof process !== 'undefined') {
   const gracefulShutdown = async (signal: string) => {
     console.log(`Received ${signal}, closing database connection...`);
     await closeDb();
