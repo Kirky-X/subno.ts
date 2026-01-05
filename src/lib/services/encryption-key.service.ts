@@ -14,16 +14,14 @@ const auditService = getAuditService();
 const MAX_PUBLIC_KEY_SIZE = env.MAX_PUBLIC_KEY_SIZE || 4 * 1024;
 
 export class EncryptionKeyService {
-  private redis?: RedisClientType;
-
-  constructor(redis?: RedisClientType) {
-    this.redis = redis;
+  constructor(_redis?: RedisClientType) {
+    // Redis client reserved for future use
   }
 
   /**
    * Register a new public key
    */
-  async registerKey(data: z.infer<typeof RegisterKeySchema>, ip: string = 'unknown') {
+  async registerKey(data: z.infer<typeof RegisterKeySchema>, _ip: string = 'unknown') {
     const validatedData = validateRegisterKey(data);
 
     if (validatedData.publicKey.length > MAX_PUBLIC_KEY_SIZE) {
@@ -94,7 +92,7 @@ export class EncryptionKeyService {
   /**
    * Revoke a public key
    */
-  async revokeKey(channelId: string, userId?: string, ip: string = 'unknown') {
+  async revokeKey(channelId: string, _userId?: string, _ip: string = 'unknown') {
     const result = await db
       .delete(schema.publicKeys)
       .where(eq(schema.publicKeys.channelId, channelId))

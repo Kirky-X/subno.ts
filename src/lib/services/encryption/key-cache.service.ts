@@ -2,7 +2,7 @@
 // Copyright (c) 2026 KirkyX. All rights reserved. 
 
 import { db, schema } from '@/lib/db';
-import { eq, and, isNull, gt, lt, desc } from 'drizzle-orm';
+import { eq, desc, lt } from 'drizzle-orm';
 import { getRsaService } from './rsa.service';
 import { RedisRepository } from '@/lib/repositories/redis.repository';
 
@@ -40,7 +40,7 @@ export class KeyCacheService {
    */
   async getPublicKey(channelId: string): Promise<PublicKeyInfo | null> {
     // Try cache first
-    const cacheKey = `pubkey:${channelId}`;
+    // const cacheKey = `pubkey:${channelId}`;
     const cached = await this.redisRepository.getPublicKey(channelId);
 
     if (cached) {
@@ -72,10 +72,8 @@ export class KeyCacheService {
     }
 
     const key = result[0];
-
-    // Check if expired
     if (new Date(key.expiresAt) < new Date()) {
-      return null;
+      return null; // Expired in DB but not caught by query?
     }
 
     const keyInfo: PublicKeyInfo = {
@@ -116,7 +114,7 @@ export class KeyCacheService {
       throw new KeyCacheError('Invalid public key format', 'INVALID_PUBLIC_KEY');
     }
 
-    const now = new Date();
+    // const now = new Date();
 
     // Insert new key (replacing existing if any)
     const result = await db

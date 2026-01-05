@@ -14,10 +14,8 @@ const auditService = getAuditService();
 const MAX_METADATA_SIZE = env.MAX_CHANNEL_METADATA_SIZE;
 
 export class ChannelService {
-  private redis?: RedisClientType;
-
-  constructor(redis?: RedisClientType) {
-    this.redis = redis;
+  constructor(_redis?: RedisClientType) {
+    // Redis client reserved for future use
   }
 
   /**

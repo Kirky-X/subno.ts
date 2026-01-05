@@ -10,7 +10,7 @@ import { env } from '@/config/env';
 export class AesService {
   private readonly algorithm = 'aes-256-gcm';
   private readonly ivLength = env.AES_IV_LENGTH; // 128 bits (configurable)
-  private readonly authTagLength = env.AES_AUTH_TAG_LENGTH; // 128 bits (configurable)
+  // private readonly authTagLength = env.AES_AUTH_TAG_LENGTH; // 128 bits (configurable) - Used by crypto internally
   private readonly keyLength = env.AES_KEY_LENGTH; // 256 bits (configurable)
 
   /**

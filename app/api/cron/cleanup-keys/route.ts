@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
         break;
 
       case 'all':
-      default:
+      default: {
         const [expiredKeys, auditLogs, orphanedKeys, oldMessages] =
           await Promise.all([
             cleanupExpiredKeys(),
@@ -117,6 +117,7 @@ export async function GET(request: NextRequest) {
 
         result = { expiredKeys, auditLogs, orphanedKeys, oldMessages };
         break;
+      }
     }
 
     return NextResponse.json({

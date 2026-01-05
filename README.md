@@ -378,7 +378,7 @@ publishMessage('my-channel', 'Hello, SSE!');
 curl -N http://localhost:3000/api/subscribe?channel=test
 
 # 终端 2: 发布消息
-curl -X POST http://localhost:3000/api/publish \
+curl -X POST http://localhost:8080/api/publish \
   -H "Content-Type: application/json" \
   -d '{"channel":"test","message":"Hello from curl!"}'
 ```

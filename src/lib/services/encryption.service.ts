@@ -40,10 +40,10 @@ export { getKeyCacheService } from './encryption/key-cache.service';
 
 // Legacy EncryptionService class for backward compatibility
 // Uses the new modular services internally
-import { getRsaService, RsaService } from './encryption/rsa.service';
-import { getAesService, AesService } from './encryption/aes.service';
-import { getHybridService, HybridService, HybridPackage } from './encryption/hybrid.service';
-import { getKeyCacheService, KeyCacheService, PublicKeyInfo, PUBLIC_KEY_CACHE_TTL } from './encryption/key-cache.service';
+import { getRsaService } from './encryption/rsa.service';
+import { getAesService } from './encryption/aes.service';
+import { getHybridService, HybridPackage } from './encryption/hybrid.service';
+import { getKeyCacheService, PUBLIC_KEY_CACHE_TTL } from './encryption/key-cache.service';
 
 /**
  * @deprecated Use individual services (RsaService, AesService, HybridService) instead

@@ -101,7 +101,7 @@ export class RateLimiterService {
 
     if (!allowed) {
       // Track failed attempts
-      const newFailCount = await this.redis.incr(`register:fail:${identifier}`);
+      await this.redis.incr(`register:fail:${identifier}`);
       await this.redis.expire(`register:fail:${identifier}`, 3600); // Track for 1 hour
     }
 

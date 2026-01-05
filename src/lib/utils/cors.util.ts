@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // CORS configuration (kept for backward compatibility)
 // Note: Actual CORS is now handled by middleware.ts
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',') || [
-  'http://localhost:3000',
+  'http://localhost:8080',
   'http://localhost:3001',
 ];
 
@@ -134,7 +134,7 @@ export function isCronIPAllowed(ip: string): boolean {
  * Note: CORS headers are now handled by middleware
  */
 export function createErrorResponse(
-  request: NextRequest,
+  _request: NextRequest,
   status: number,
   message: string,
   code?: string
@@ -181,7 +181,7 @@ export function withSecurityHeaders(response: NextResponse): NextResponse {
  * Kept for backward compatibility
  */
 export function withCors(
-  request: NextRequest,
+  _request: NextRequest,
   response: NextResponse
 ): NextResponse {
   return response;

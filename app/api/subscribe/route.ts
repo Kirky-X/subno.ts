@@ -231,7 +231,7 @@ export async function GET(request: NextRequest) {
           // Close stream
           try {
             controller.close();
-          } catch (error) {
+          } catch (_error) {
             // Stream already closed
           }
         };

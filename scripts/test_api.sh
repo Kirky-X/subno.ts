@@ -5,8 +5,10 @@
 
 # 移除 set -e 以便在出错时继续运行所有测试
 
-BASE_URL="http://localhost:3000"
+BASE_URL="http://localhost:8080"
+TEST_CHANNEL_ID="test-channel-$(date +%s)"
 CRON_SECRET="securenotify-cron-secret-key"
+ADMIN_MASTER_KEY="subno-admin-master-key-2024"
 
 # 检查Node.js是否可用
 if ! command -v node &> /dev/null; then
@@ -49,7 +51,7 @@ echo ""
 echo "【测试2】POST /api/channels - 创建频道"
 CHANNEL_RESPONSE=$(curl -s -X POST "$BASE_URL/api/channels" \
   -H "Content-Type: application/json" \
-  -d '{"name": "test-channel", "description": "测试频道", "type": "public"}')
+  -d "{\"id\": \"$TEST_CHANNEL_ID\", \"name\": \"Test Channel\", \"description\": \"测试频道\", \"type\": \"public\"}")
 echo "$CHANNEL_RESPONSE" | format_json
 CHANNEL_ID=$(extract_json_field "$CHANNEL_RESPONSE" "data.id")
 echo "创建频道ID: $CHANNEL_ID"
@@ -134,6 +136,7 @@ echo ""
 echo "【测试11】POST /api/keys - 创建API密钥"
 API_KEY_RESPONSE=$(curl -s -X POST "$BASE_URL/api/keys" \
   -H "Content-Type: application/json" \
+  -H "X-Admin-Key: $ADMIN_MASTER_KEY" \
   -d '{
     "userId": "test-user",
     "name": "Test API Key",
@@ -171,7 +174,7 @@ echo ""
 echo "【测试15】POST /api/channels - 重复创建频道 (预期409冲突)"
 curl -s -X POST "$BASE_URL/api/channels" \
   -H "Content-Type: application/json" \
-  -d "{\"id\": \"$CHANNEL_ID\", \"name\": \"duplicate-channel\"}" | format_json
+  -d "{\"id\": \"$TEST_CHANNEL_ID\", \"name\": \"duplicate-channel\"}" | format_json
 
 # 测试16: GET /api/channels - 获取不存在的频道
 echo ""

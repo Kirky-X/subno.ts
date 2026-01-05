@@ -4,7 +4,6 @@
 import crypto from 'crypto';
 import { db, schema } from '@/lib/db';
 import { eq, and, isNotNull, inArray } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * API Key permissions
@@ -110,7 +109,7 @@ export class ApiKeyService {
     }
 
     const keyHash = crypto.createHash('sha256').update(key).digest('hex');
-    const keyPrefix = key.substring(0, this.keyPrefixLength);
+    // const keyPrefix = key.substring(0, this.keyPrefixLength);
 
     // Look up key in database
     const result = await db

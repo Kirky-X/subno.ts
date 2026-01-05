@@ -96,7 +96,7 @@ export function createMockRequest(
   } = {}
 ): MockRequest {
   const { method = 'GET', body, headers = {} } = options;
-  const parsed = parse(url, true);
+  // const parsed = parse(url, true);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const req = new http.IncomingMessage(null as any);

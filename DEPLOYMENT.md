@@ -130,7 +130,7 @@ docker push [region].swr.myhuaweicloud.com/[org]/securenotify:v1
 2. 选择 "容器镜像" (Custom Container)。
 3. 选择刚才推送的镜像。
 4. **配置环境变量**: 添加 `DATABASE_URL`, `REDIS_URL`, `ADMIN_MASTER_KEY` 等。
-5. **配置端口**: 设置监听端口为 `3000` (与 Dockerfile 中一致)。
+5. **配置端口**: 设置监听端口为 `8080` (与 Dockerfile 中一致)。
 6. **配置执行超时**: 建议设置为 60秒 或更长 (SSE 需要)。
 
 **4. 配置触发器**

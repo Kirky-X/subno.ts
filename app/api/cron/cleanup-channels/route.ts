@@ -14,7 +14,7 @@ import {
 } from '@/lib/utils/cors.util';
 import { RateLimiterService } from '@/lib/services/rate-limiter.service';
 import { env } from '@/config/env';
-import crypto from 'crypto';
+// import crypto from 'crypto';
 
 const rateLimiter = new RateLimiterService();
 
@@ -79,20 +79,22 @@ export async function GET(request: NextRequest) {
     const task = searchParams.get('task') || 'all';
 
     switch (task) {
-      case 'persistent':
+      case 'persistent': {
         const persistentResult = await cleanupExpiredChannels();
         results.persistentChannelsMarkedInactive = persistentResult.deleted;
         results.errors.push(...persistentResult.errors);
         break;
+      }
 
-      case 'temporary':
+      case 'temporary': {
         const tempResult = await cleanupTempChannels();
         results.temporaryChannelsDeleted = tempResult.deleted;
         results.errors.push(...tempResult.errors);
         break;
+      }
 
       case 'all':
-      default:
+      default: {
         const [persistent, temp] = await Promise.all([
           cleanupExpiredChannels(),
           cleanupTempChannels(),
@@ -102,6 +104,7 @@ export async function GET(request: NextRequest) {
         results.temporaryChannelsDeleted = temp.deleted;
         results.errors.push(...persistent.errors, ...temp.errors);
         break;
+      }
     }
 
     const duration = Date.now() - startTime;

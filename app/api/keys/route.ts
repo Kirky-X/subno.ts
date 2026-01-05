@@ -4,7 +4,7 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createErrorResponse, withCors, withSecurityHeaders } from '@/lib/utils/cors.util';
-import { db, schema } from '@/lib/db';
+import { db } from '@/lib/db';
 import { getApiKeyService } from '@/lib/services/api-key.service';
 import { env } from '@/config/env';
 

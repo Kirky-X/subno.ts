@@ -13,9 +13,9 @@ import {
   getClientIP
 } from '@/lib/utils/cors.util';
 import { getAuditService, AuditAction } from '@/lib/services/audit.service';
-import { CreateChannelSchema, ValidationError, CHANNEL_ID_PATTERN } from '@/lib/utils/validation.util';
+import { CreateChannelSchema, CHANNEL_ID_PATTERN } from '@/lib/utils/validation.util';
 import { env } from '@/config/env';
-import crypto from 'crypto';
+// import crypto from 'crypto';
 
 const auditService = getAuditService();
 

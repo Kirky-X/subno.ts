@@ -60,6 +60,7 @@ type TableStatWithSize = TableStats & { totalSizeBytes: number; deadTuples: numb
  * Database Index Monitor - Monitors and analyzes PostgreSQL index health
  */
 export class IndexMonitorService {
+  /*
   private readonly tableNames = [
     'public_keys',
     'channels',
@@ -67,6 +68,7 @@ export class IndexMonitorService {
     'messages',
     'api_keys',
   ];
+  */
 
   /**
    * Get all index statistics for the database
