@@ -114,7 +114,7 @@ export class MessageService {
     if (options.message === undefined || options.message === null || options.message === '') {
       throw new Error('Message is required');
     }
-    
+
     // Validate sender type (runtime check for consumers bypassing Typescript)
     if (options.sender === null) {
       throw new Error('Sender cannot be null');
@@ -129,11 +129,18 @@ export class MessageService {
     }
 
     // Auto-create temporary channel if enabled
+    let channelExists = await this.channelExists(options.channel);
+
     if (options.autoCreate !== false && env.AUTO_CREATE_CHANNELS_ENABLED) {
-      const exists = await this.channelExists(options.channel);
-      if (!exists.exists) {
+      if (!channelExists.exists) {
         await this.createTemporaryChannel(options.channel, env.TEMPORARY_CHANNEL_TTL);
+        channelExists = { exists: true, type: 'temporary' };
       }
+    }
+
+    // Verify channel exists
+    if (!channelExists.exists) {
+      throw new Error(`Channel ${options.channel} does not exist`);
     }
 
     // Calculate priority score

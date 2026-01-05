@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     // Validate query parameters
     const validationResult = SubscribeQuerySchema.safeParse({
       channel: searchParams.get('channel'),
-      lastEventId: searchParams.get('lastEventId'),
+      lastEventId: searchParams.get('lastEventId') || undefined,
     });
 
     if (!validationResult.success) {

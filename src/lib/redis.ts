@@ -6,6 +6,7 @@ import { env } from '@/config/env';
 
 // Track client state
 let redisClient: RedisClientType | null = null;
+let connectionPromise: Promise<RedisClientType> | null = null;
 
 // Detect serverless environment
 function detectServerless(): boolean {

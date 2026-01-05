@@ -13,7 +13,7 @@ import {
   getClientIP
 } from '@/lib/utils/cors.util';
 import { getAuditService, AuditAction } from '@/lib/services/audit.service';
-import { CreateChannelSchema, ValidationError } from '@/lib/utils/validation.util';
+import { CreateChannelSchema, ValidationError, CHANNEL_ID_PATTERN } from '@/lib/utils/validation.util';
 import { env } from '@/config/env';
 import crypto from 'crypto';
 
@@ -21,7 +21,6 @@ const auditService = getAuditService();
 
 // Maximum metadata size from config
 const MAX_METADATA_SIZE = env.MAX_CHANNEL_METADATA_SIZE;
-const CHANNEL_ID_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
 
 /**
  * POST /api/channels

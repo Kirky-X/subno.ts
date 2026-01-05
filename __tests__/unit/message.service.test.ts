@@ -81,14 +81,12 @@ describe('MessageService', () => {
     });
 
     it('should not auto-create channel when disabled', async () => {
-      const result = await messageService.publish({
+      await expect(messageService.publish({
         channel: 'test-no-auto',
         message: 'No auto-create',
         priority: MessagePriority.NORMAL,
         autoCreate: false,
-      });
-
-      expect(result.autoCreated).toBe(false);
+      })).rejects.toThrow('Channel test-no-auto does not exist');
     });
 
     it('should use correct TTL for public channels', async () => {

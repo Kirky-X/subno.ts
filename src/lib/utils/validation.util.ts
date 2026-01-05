@@ -4,6 +4,10 @@
 import { z } from 'zod';
 import { MessagePriority } from '@/lib/types/message.types';
 
+export const CHANNEL_ID_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
+export const DEFAULT_CHANNEL_EXPIRY = 604800; // 7 days
+export const MAX_CHANNEL_EXPIRY = 2592000; // 30 days
+
 /**
  * Publish message schema
  * Validates message publishing requests
@@ -51,9 +55,9 @@ export const RegisterKeySchema = z.object({
     .number()
     .int()
     .positive('Expiry time must be positive')
-    .max(2592000, 'Maximum expiry is 30 days (2592000 seconds)')
+    .max(MAX_CHANNEL_EXPIRY, 'Maximum expiry is 30 days')
     .optional()
-    .default(604800), // 7 days default
+    .default(DEFAULT_CHANNEL_EXPIRY),
   metadata: z
     .object({
       deviceName: z.string().optional(),
@@ -73,7 +77,7 @@ export const CreateChannelSchema = z.object({
     .string()
     .min(1, 'Channel ID is required')
     .max(255, 'Channel ID too long')
-    .regex(/^[a-zA-Z0-9_-]+$/, 'Invalid channel ID format')
+    .regex(CHANNEL_ID_PATTERN, 'Invalid channel ID format')
     .optional(),
   name: z
     .string()

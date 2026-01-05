@@ -6,13 +6,12 @@ import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from '@/config/env';
 import { getAuditService, AuditAction } from '@/lib/services/audit.service';
-import { CreateChannelSchema } from '@/lib/utils/validation.util';
+import { CreateChannelSchema, CHANNEL_ID_PATTERN, DEFAULT_CHANNEL_EXPIRY } from '@/lib/utils/validation.util';
 import type { z } from 'zod';
 import type { RedisClientType } from 'redis';
 
 const auditService = getAuditService();
 const MAX_METADATA_SIZE = env.MAX_CHANNEL_METADATA_SIZE;
-const CHANNEL_ID_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
 
 export class ChannelService {
   private redis?: RedisClientType;
@@ -44,23 +43,13 @@ export class ChannelService {
       }
     }
 
-    const existing = await db
-      .select({ id: schema.channels.id })
-      .from(schema.channels)
-      .where(eq(schema.channels.id, channelId))
-      .limit(1);
-
-    if (existing.length > 0) {
-      throw new Error(`Channel '${channelId}' already exists`);
-    }
-
     let expiresAt: Date;
     if (validatedData.expiresIn !== undefined && validatedData.expiresIn !== null) {
       const maxExpiry = env.PERSISTENT_CHANNEL_MAX_TTL;
       const expirySeconds = Math.min(validatedData.expiresIn, maxExpiry);
       expiresAt = new Date(Date.now() + expirySeconds * 1000);
     } else {
-      expiresAt = new Date(Date.now() + env.PERSISTENT_CHANNEL_DEFAULT_TTL * 1000);
+      expiresAt = new Date(Date.now() + (env.PERSISTENT_CHANNEL_DEFAULT_TTL || DEFAULT_CHANNEL_EXPIRY) * 1000);
     }
 
     const result = await db.insert(schema.channels).values({
@@ -71,7 +60,13 @@ export class ChannelService {
       creator: validatedData.creator || null,
       expiresAt,
       metadata: validatedData.metadata || null,
-    }).returning();
+    })
+      .onConflictDoNothing()
+      .returning();
+
+    if (result.length === 0) {
+      throw new Error(`Channel '${channelId}' already exists`);
+    }
 
     const channel = result[0];
 
