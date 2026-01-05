@@ -243,13 +243,14 @@ jobs:
         run: |
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
           tar -czvf ../securenotify-$TAG_VERSION.tar.gz release-package/
+          echo "PACKAGE_NAME=securenotify-$TAG_VERSION.tar.gz" >> $GITHUB_OUTPUT
           ls -lh ../securenotify-$TAG_VERSION.tar.gz
 
       - name: Upload release package
         uses: actions/upload-artifact@v4
         with:
           name: release-package
-          path: securenotify-${{ steps.version.outputs.VERSION }}.tar.gz
+          path: securenotify-${{ env.PACKAGE_NAME || 'securenotify' }}.tar.gz
           retention-days: 30
 
       - name: Upload checksums
@@ -373,7 +374,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/securenotify-${{ steps.version.outputs.VERSION }}.tar.gz
+            artifacts/*.tar.gz
             artifacts/checksums.txt
           name: Release ${{ steps.version.outputs.VERSION }}
           body: ${{ steps.changelog.outputs.result }}
@@ -384,8 +385,8 @@ jobs:
       - name: Attest release artifacts
         uses: actions/attest-release-artifacts@v1
         with:
-          subject-path: artifacts/securenotify-${{ steps.version.outputs.VERSION }}.tar.gz
-          subject-digest: sha256:$(sha256sum artifacts/securenotify-${{ steps.version.outputs.VERSION }}.tar.gz | cut -d' ' -f1)
+          subject-path: artifacts/*.tar.gz
+          subject-digest: sha256:$(sha256sum artifacts/*.tar.gz | cut -d' ' -f1)
 
   # ========== 通知阶段 ==========
   notify:
