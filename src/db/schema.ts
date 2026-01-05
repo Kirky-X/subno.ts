@@ -2,7 +2,7 @@
 // Copyright (c) 2026 KirkyX. All rights reserved. 
 
 import {
-  pgTable,
+  pgSchema,
   uuid,
   varchar,
   text,
@@ -13,9 +13,14 @@ import {
 } from 'drizzle-orm/pg-core';
 
 /**
+ * Define subno schema
+ */
+export const subnoSchema = pgSchema('subno');
+
+/**
  * Public keys table - stores public keys for encrypted channels
  */
-export const publicKeys = pgTable(
+export const publicKeys = subnoSchema.table(
   'public_keys',
   {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -42,7 +47,7 @@ export const publicKeys = pgTable(
 /**
  * Channels table - stores channel metadata
  */
-export const channels = pgTable(
+export const channels = subnoSchema.table(
   'channels',
   {
     id: varchar('id', { length: 255 }).primaryKey(),
@@ -69,7 +74,7 @@ export const channels = pgTable(
 /**
  * Audit logs table - stores operation audit logs
  */
-export const auditLogs = pgTable(
+export const auditLogs = subnoSchema.table(
   'audit_logs',
   {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -98,7 +103,7 @@ export const auditLogs = pgTable(
 /**
  * Messages table - stores message persistence
  */
-export const messages = pgTable(
+export const messages = subnoSchema.table(
   'messages',
   {
     id: varchar('id', { length: 255 }).primaryKey(),
@@ -118,7 +123,7 @@ export const messages = pgTable(
 /**
  * API Keys table - stores API keys for authentication
  */
-export const apiKeys = pgTable(
+export const apiKeys = subnoSchema.table(
   'api_keys',
   {
     id: uuid('id').primaryKey().defaultRandom(),

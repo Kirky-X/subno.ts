@@ -1,4 +1,6 @@
-CREATE TABLE "api_keys" (
+CREATE SCHEMA "subno";
+--> statement-breakpoint
+CREATE TABLE "subno"."api_keys" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"key_hash" varchar(255) NOT NULL,
 	"key_prefix" varchar(8) NOT NULL,
@@ -12,7 +14,7 @@ CREATE TABLE "api_keys" (
 	CONSTRAINT "api_keys_key_hash_unique" UNIQUE("key_hash")
 );
 --> statement-breakpoint
-CREATE TABLE "audit_logs" (
+CREATE TABLE "subno"."audit_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"action" varchar(50) NOT NULL,
@@ -27,7 +29,7 @@ CREATE TABLE "audit_logs" (
 	"metadata" jsonb
 );
 --> statement-breakpoint
-CREATE TABLE "channels" (
+CREATE TABLE "subno"."channels" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"name" varchar(255),
 	"description" text,
@@ -39,7 +41,7 @@ CREATE TABLE "channels" (
 	"metadata" jsonb
 );
 --> statement-breakpoint
-CREATE TABLE "messages" (
+CREATE TABLE "subno"."messages" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
 	"channel" varchar(255) NOT NULL,
 	"message" text NOT NULL,
@@ -47,7 +49,7 @@ CREATE TABLE "messages" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "public_keys" (
+CREATE TABLE "subno"."public_keys" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"channel_id" varchar(255) NOT NULL,
 	"public_key" text NOT NULL,
@@ -59,17 +61,17 @@ CREATE TABLE "public_keys" (
 	CONSTRAINT "public_keys_channel_id_unique" UNIQUE("channel_id")
 );
 --> statement-breakpoint
-CREATE INDEX "idx_api_keys_user_id" ON "api_keys" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_api_keys_key_prefix" ON "api_keys" USING btree ("key_prefix");--> statement-breakpoint
-CREATE INDEX "idx_api_keys_is_active" ON "api_keys" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_audit_logs_created_at" ON "audit_logs" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_audit_logs_channel_id" ON "audit_logs" USING btree ("channel_id");--> statement-breakpoint
-CREATE INDEX "idx_audit_logs_action" ON "audit_logs" USING btree ("action");--> statement-breakpoint
-CREATE INDEX "idx_audit_logs_key_id" ON "audit_logs" USING btree ("key_id");--> statement-breakpoint
-CREATE INDEX "idx_channels_type" ON "channels" USING btree ("type");--> statement-breakpoint
-CREATE INDEX "idx_channels_expires_at" ON "channels" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "idx_channels_is_active" ON "channels" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "idx_messages_channel" ON "messages" USING btree ("channel");--> statement-breakpoint
-CREATE INDEX "idx_messages_created_at" ON "messages" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "idx_public_keys_expires_at" ON "public_keys" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "idx_public_keys_channel_id" ON "public_keys" USING btree ("channel_id");
+CREATE INDEX "idx_api_keys_user_id" ON "subno"."api_keys" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_api_keys_key_prefix" ON "subno"."api_keys" USING btree ("key_prefix");--> statement-breakpoint
+CREATE INDEX "idx_api_keys_is_active" ON "subno"."api_keys" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX "idx_audit_logs_created_at" ON "subno"."audit_logs" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "idx_audit_logs_channel_id" ON "subno"."audit_logs" USING btree ("channel_id");--> statement-breakpoint
+CREATE INDEX "idx_audit_logs_action" ON "subno"."audit_logs" USING btree ("action");--> statement-breakpoint
+CREATE INDEX "idx_audit_logs_key_id" ON "subno"."audit_logs" USING btree ("key_id");--> statement-breakpoint
+CREATE INDEX "idx_channels_type" ON "subno"."channels" USING btree ("type");--> statement-breakpoint
+CREATE INDEX "idx_channels_expires_at" ON "subno"."channels" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX "idx_channels_is_active" ON "subno"."channels" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX "idx_messages_channel" ON "subno"."messages" USING btree ("channel");--> statement-breakpoint
+CREATE INDEX "idx_messages_created_at" ON "subno"."messages" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "idx_public_keys_expires_at" ON "subno"."public_keys" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX "idx_public_keys_channel_id" ON "subno"."public_keys" USING btree ("channel_id");
