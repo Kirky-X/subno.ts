@@ -5,9 +5,9 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { getRedisClient } from '@/lib/redis';
 import { EncryptionService } from '@/lib/services/encryption.service';
-import { POST as publishPOST, GET as publishGET } from '../../app/api/publish/route';
-import { POST as registerPOST, GET as registerGET } from '../../app/api/register/route';
-import { GET as keysGET, DELETE as keysDELETE } from '../../app/api/keys/[id]/route';
+import { POST as publishPOST, GET as publishGET } from '../../src/app/api/publish/route';
+import { POST as registerPOST, GET as registerGET } from '../../src/app/api/register/route';
+import { GET as keysGET, DELETE as keysDELETE } from '../../src/app/api/keys/[id]/route';
 import { getApiKeyService } from '@/lib/services/api-key.service';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';

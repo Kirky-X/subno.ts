@@ -44,7 +44,7 @@ const nextConfig: NextConfig = {
           // 防止点击劫持
           {
             key: 'X-Frame-Options',
-            value: 'DENY',
+            value: 'SAMEORIGIN',
           },
           // 防止 MIME 类型嗅探
           {
