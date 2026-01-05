@@ -3,7 +3,7 @@
     "crons": [
         {
             "path": "/api/cron/cleanup-channels",
-            "schedule": "*/5 * * * *"
+            "schedule": "0 1 * * *"
         },
         {
             "path": "/api/cron/cleanup-keys",
