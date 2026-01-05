@@ -5,6 +5,7 @@
 /// <reference types="vitest/globals" />
 
 // Set default test environment variables
+process.env.VERCEL = undefined; // Force disable Vercel mode for tests
 process.env.DATABASE_URL = 'postgresql://securenotify:securenotify_password@localhost:5435/securenotify';
 process.env.REDIS_URL = 'redis://localhost:6380';
 process.env.PUBLIC_MESSAGE_TTL = '43200';
