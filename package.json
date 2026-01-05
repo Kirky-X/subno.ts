@@ -61,5 +61,10 @@
     "supertest": "^7.1.4",
     "typescript": "^5",
     "vitest": "^4.0.16"
+  },
+  "overrides": {
+    "eslint-config-next": {
+      "eslint": "$eslint"
+    }
   }
 }
