@@ -12,6 +12,7 @@
 - [部署步骤](#-部署步骤)
   - [方式一：Git 集成自动部署（推荐）](#方式一git-集成自动部署推荐)
   - [方式二：Vercel CLI 手动部署](#方式二vercel-cli-手动部署)
+  - [方式三：华为云函数工作流 (FunctionGraph)](#方式三华为云函数工作流-functiongraph)
 - [数据库迁移](#-数据库迁移)
 - [验证与监控](#-验证与监控)
 
@@ -19,7 +20,7 @@
 
 1. 拥有 [Vercel](https://vercel.com) 账号。
 2. 拥有 GitHub/GitLab/Bitbucket 账号（用于自动部署）。
-3. 安装 Node.js (>=20.0.0)。
+3. 安装 Node.js (>=20.9.0)。
 4. (可选) 安装 Vercel CLI: `npm i -g vercel`
 
 ## 📦 环境准备
@@ -99,6 +100,42 @@ vercel
 ```bash
 vercel --prod
 ```
+
+### 方式三：华为云函数工作流 (FunctionGraph)
+
+使用自定义容器 (Custom Container) 模式部署，以获得最佳的 Next.js 兼容性。
+
+**1. 准备华为云资源**
+- **RDS for PostgreSQL**: 购买并创建 PostgreSQL 实例。
+- **DCS for Redis**: 购买并创建 Redis 实例。
+- **SWR (容器镜像服务)**: 创建组织和镜像仓库。
+
+**2. 构建并推送镜像**
+
+确保项目根目录下已有 `Dockerfile` (已提供)。
+
+```bash
+# 登录 SWR (参考华为云控制台指令)
+docker login -u [username] -p [password] [region].swr.myhuaweicloud.com
+
+# 构建镜像
+docker build -t [region].swr.myhuaweicloud.com/[org]/securenotify:v1 .
+
+# 推送镜像
+docker push [region].swr.myhuaweicloud.com/[org]/securenotify:v1
+```
+
+**3. 创建函数**
+1. 进入 FunctionGraph 控制台，点击 "创建函数"。
+2. 选择 "容器镜像" (Custom Container)。
+3. 选择刚才推送的镜像。
+4. **配置环境变量**: 添加 `DATABASE_URL`, `REDIS_URL`, `ADMIN_MASTER_KEY` 等。
+5. **配置端口**: 设置监听端口为 `3000` (与 Dockerfile 中一致)。
+6. **配置执行超时**: 建议设置为 60秒 或更长 (SSE 需要)。
+
+**4. 配置触发器**
+1. 创建 APIG (API网关) 触发器。
+2. 将 API 网关的请求路径映射到函数。
 
 ## 🗄 数据库迁移
 

@@ -209,7 +209,7 @@
 
 ### 环境要求
 
-- Node.js 18+
+- Node.js 20.9.0+
 - PostgreSQL 14+
 - Redis 7+
 - Docker & Docker Compose（可选）
