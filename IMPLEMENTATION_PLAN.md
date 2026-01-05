@@ -10,6 +10,7 @@ Fix Vercel deployment issues (404/500 errors and preview access) by standardizin
 - [x] Verify Local Build & Tests
 - [x] Push to Trigger Vercel Deployment
 - [x] Fix NPM Dependency Conflict (`eslint` vs `eslint-config-next`)
+- [x] Separate DB Migration from Build Command (`package.json`)
 
 ## Next Steps
 1. Monitor Vercel deployment status.
