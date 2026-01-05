@@ -2,7 +2,8 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { sql } from '@vercel/postgres';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { drizzle as drizzleNode } from 'drizzle-orm/node-postgres';
+import { drizzle as drizzleVercel } from 'drizzle-orm/vercel-postgres';
 import pg from 'pg';
 import * as schema from '@/db/schema';
 import { env } from '@/config/env';
@@ -15,8 +16,7 @@ let pool: pg.Pool | null = null;
 export function getDb() {
   if (isVercel) {
     // Vercel environment uses @vercel/postgres
-    // Cast sql to unknown first to bypass strict type checking
-    return drizzle(sql as unknown as string, { schema });
+    return drizzleVercel(sql, { schema });
   } else {
     // Local development using pg - reuse connection
     if (!pool) {
@@ -27,7 +27,7 @@ export function getDb() {
         connectionTimeoutMillis: 10000,
       });
     }
-    return drizzle(pool, { schema });
+    return drizzleNode(pool, { schema });
   }
 }
 
