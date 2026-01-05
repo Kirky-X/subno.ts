@@ -6,17 +6,16 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build --webpack",
-    "db:deploy": "drizzle-kit migrate",
-    "start": "next start",
+    "dev": "npx tsx scripts/run-migrations.ts && next dev",
+    "build": "npx tsx scripts/run-migrations.ts && next build --webpack",
+    "start": "npx tsx scripts/run-migrations.ts && next start",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
-    "db:migrate": "drizzle-kit migrate",
     "prepare": "husky",
     "add-header": "node scripts/add-license-header.js",
     "pre-check": "node scripts/pre-check.js"
