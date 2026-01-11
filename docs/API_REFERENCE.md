@@ -28,6 +28,11 @@
 ### 基础 URL
 
 ```
+https://your-domain.com/api
+```
+
+开发环境：
+```
 http://localhost:3000/api
 ```
 
@@ -41,8 +46,17 @@ Content-Type: application/json
 
 ### 认证方式
 
-- **公开端点**：无需认证
-- **敏感操作**：需要 `X-API-Key` 请求头
+API 使用以下两种认证方式：
+
+| 认证头 | 说明 | 使用场景 |
+|--------|------|----------|
+| `X-API-Key` | 具有特定权限的 API 密钥 | 日常 API 调用，需要对应权限 |
+| `X-Admin-Key` | Master 管理密钥 | 管理员操作，从环境变量 `ADMIN_MASTER_KEY` 获取 |
+
+**权限说明**：
+- `read`：读取权限
+- `write`：写入权限
+- `admin`：管理权限（创建/删除密钥）
 
 ---
 
@@ -149,7 +163,11 @@ curl -X POST http://localhost:3000/api/channels \
     "name": "我的频道",
     "description": "频道描述",
     "type": "public",
-    "expiresIn": 86400
+    "creator": "user-123",
+    "expiresIn": 86400,
+    "metadata": {
+      "tags": ["important"]
+    }
   }'
 ```
 
@@ -157,11 +175,13 @@ curl -X POST http://localhost:3000/api/channels \
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `id` | string | 否 | 频道 ID（自动生成） |
-| `name` | string | 否 | 频道名称 |
+| `id` | string | 否 | 频道 ID（自动生成，如 `pub_xxx`） |
+| `name` | string | 否 | 频道名称（默认：频道 ID） |
 | `description` | string | 否 | 频道描述 |
 | `type` | string | 否 | 类型：public/encrypted（默认：public） |
-| `expiresIn` | number | 否 | 有效期秒数 |
+| `creator` | string | 否 | 创建者标识 |
+| `expiresIn` | number | 否 | 有效期秒数（默认：86400，最大：604800） |
+| `metadata` | object | 否 | 元数据（最大 4KB） |
 
 **响应（201）：**
 
@@ -173,11 +193,13 @@ curl -X POST http://localhost:3000/api/channels \
     "name": "我的频道",
     "description": "频道描述",
     "type": "public",
-    "creator": null,
+    "creator": "user-123",
     "createdAt": "2026-01-03T00:00:00.000Z",
     "expiresAt": "2026-01-04T00:00:00.000Z",
     "isActive": true,
-    "metadata": null
+    "metadata": {
+      "tags": ["important"]
+    }
   }
 }
 ```
@@ -220,10 +242,13 @@ curl "http://localhost:3000/api/channels?type=public"
       "id": "my-channel",
       "name": "我的频道",
       "type": "public",
-      "creator": null,
+      "creator": "user-123",
       "createdAt": "2026-01-03T00:00:00.000Z",
       "expiresAt": "2026-01-04T00:00:00.000Z",
-      "isActive": true
+      "isActive": true,
+      "metadata": {
+        "tags": ["important"]
+      }
     }
   ],
   "pagination": {
@@ -264,12 +289,12 @@ curl -X POST http://localhost:3000/api/publish \
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `channel` | string | 是 | 频道 ID |
-| `message` | string | 是 | 消息内容 |
-| `priority` | string | 否 | 优先级：critical/high/normal/low/bulk |
-| `sender` | string | 否 | 发送者名称 |
+| `message` | string | 是 | 消息内容（最大 4.5MB） |
+| `priority` | string | 否 | 优先级：critical/high/normal/low/bulk（默认：normal） |
+| `sender` | string | 否 | 发送者标识 |
 | `cache` | boolean | 否 | 是否缓存消息（默认：true） |
 | `encrypted` | boolean | 否 | 是否加密消息（默认：false） |
-| `autoCreate` | boolean | 否 | 自动创建临时频道（默认：true） |
+| `autoCreate` | boolean | 否 | 频道不存在时自动创建临时频道（默认：true） |
 
 **响应（201）：**
 
@@ -347,14 +372,26 @@ curl -N http://localhost:3000/api/subscribe?channel=my-channel
 **响应格式（Server-Sent Events）：**
 
 ```
-# 连接确认
+# 连接确认（作为注释发送）
+: channel="my-channel" requestID="xxx"
+
+# 连接事件
 event: connected
-data: {"channel":"my-channel","type":"channel","timestamp":1234567890,"message":"Connected"}
+data: {"channel":"my-channel","type":"channel","timestamp":1234567890,"message":"Connected","expiresAt":"..."}
 
 # 消息事件
 event: message
-id: event-123
-data: {"id":"msg-uuid","channel":"my-channel","message":"Hello!","sender":"User1","timestamp":1234567890}
+id: msg_1234567890
+data: {"id":"msg_1234567890","channel":"my-channel","message":"Hello!","sender":"User1","timestamp":1234567890}
+
+# 系统消息
+event: message
+id: system_1234567890
+data: {"id":"system_1234567890","channel":"my-channel","message":"Subscription active...","timestamp":1234567890,"system":true}
+
+# 错误事件
+event: error
+data: {"message":"Error description","error":"ERROR_CODE"}
 
 # Keepalive（每 30 秒）
 : keepalive
@@ -445,8 +482,10 @@ curl -X DELETE http://localhost:3000/api/keys/enc_channel_id \
 **请求：**
 
 ```bash
+# 使用 master admin key（x-admin-key）
 curl -X POST http://localhost:3000/api/keys \
   -H "Content-Type: application/json" \
+  -H "X-Admin-Key: your-master-admin-key" \
   -d '{
     "userId": "user-123",
     "name": "My App API Key",
@@ -455,27 +494,78 @@ curl -X POST http://localhost:3000/api/keys \
   }'
 ```
 
+**请求参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `userId` | string | 是 | 用户 ID |
+| `name` | string | 否 | 密钥名称（默认：API Key） |
+| `permissions` | array | 否 | 权限数组（默认：["read", "write"]） |
+| `expiresAt` | string | 否 | 过期时间（ISO 8601 格式） |
+
 **响应（201）：**
 
 ```json
 {
   "success": true,
-  "message": "API key created successfully. Store this key securely - it cannot be retrieved again.",
   "data": {
-    "key": "***REMOVED***xxxxxxxx",
-    "info": {
-      "id": "uuid",
-      "keyPrefix": "sk_live",
-      "userId": "user-123",
-      "name": "My App API Key",
-      "permissions": ["read", "write"],
-      "isActive": true,
-      "createdAt": "2026-01-03T00:00:00.000Z",
-      "expiresAt": "2026-12-31T23:59:59.000Z"
-    }
+    "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "userId": "user-123",
+    "name": "My App API Key",
+    "permissions": ["read", "write"],
+    "apiKey": "***REMOVED***",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "expiresAt": "2026-12-31T23:59:59.000Z"
   }
 }
 ```
+
+> ⚠️ **注意**：API 密钥只在创建时返回一次，请妥善保存！
+
+---
+
+### GET /api/keys
+
+列出用户的 API 密钥（需要 admin 权限）。
+
+**请求：**
+
+```bash
+curl "http://localhost:3000/api/keys?userId=user-123" \
+  -H "X-Admin-Key: your-master-admin-key"
+```
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `userId` | string | 是 | 用户 ID |
+
+**响应（200）：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "keys": [
+      {
+        "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+        "userId": "user-123",
+        "name": "My API Key",
+        "permissions": ["read", "write"],
+        "createdAt": "2026-01-03T00:00:00.000Z",
+        "expiresAt": "2026-12-31T23:59:59.000Z",
+        "isActive": true,
+        "lastUsedAt": "2026-01-03T12:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+**认证方式（二选一）：**
+- `X-Admin-Key`：Master 管理密钥（环境变量 `ADMIN_MASTER_KEY`）
+- `X-API-Key`：具有 admin 权限的 API 密钥
 
 ---
 
@@ -483,7 +573,7 @@ curl -X POST http://localhost:3000/api/keys \
 
 ### GET /api/cron/cleanup-channels
 
-清理过期频道（需要 cron secret）。
+清理过期频道（需要 cron secret 和 IP 白名单）。
 
 **请求：**
 
@@ -491,6 +581,16 @@ curl -X POST http://localhost:3000/api/keys \
 curl "http://localhost:3000/api/cron/cleanup-channels?task=all" \
   -H "X-Cron-Secret: your-cron-secret"
 ```
+
+**请求头：**
+
+| 头信息 | 必填 | 说明 |
+|--------|------|------|
+| `X-Cron-Secret` | 是 | Cron 密钥（环境变量 `CRON_SECRET`） |
+
+**安全要求**：
+- 请求 IP 必须在白名单中（默认：localhost）
+- 需要正确的 `X-Cron-Secret`
 
 **任务类型：**
 
@@ -520,7 +620,7 @@ curl "http://localhost:3000/api/cron/cleanup-channels?task=all" \
 
 ### GET /api/cron/cleanup-keys
 
-清理过期密钥和数据（需要 cron secret）。
+清理过期密钥和数据（需要 cron secret 和 IP 白名单）。
 
 **请求：**
 
@@ -528,6 +628,16 @@ curl "http://localhost:3000/api/cron/cleanup-channels?task=all" \
 curl "http://localhost:3000/api/cron/cleanup-keys?task=all" \
   -H "X-Cron-Secret: your-cron-secret"
 ```
+
+**请求头：**
+
+| 头信息 | 必填 | 说明 |
+|--------|------|------|
+| `X-Cron-Secret` | 是 | Cron 密钥（环境变量 `CRON_SECRET`） |
+
+**安全要求**：
+- 请求 IP 必须在白名单中（默认：localhost）
+- 需要正确的 `X-Cron-Secret`
 
 **任务类型：**
 
@@ -581,16 +691,21 @@ curl "http://localhost:3000/api/cron/cleanup-keys?task=all" \
 | 400 | VALIDATION_ERROR | 请求参数验证失败 |
 | 400 | INVALID_JSON | JSON 解析失败 |
 | 400 | INVALID_CHANNEL_FORMAT | 频道 ID 格式无效 |
+| 400 | INVALID_TYPE | 频道类型无效 |
+| 400 | METADATA_TOO_LARGE | 元数据太大 |
+| 400 | MISSING_CHANNEL | 缺少频道参数 |
+| 400 | MISSING_PARAMETER | 缺少必需参数 |
 | 401 | AUTH_REQUIRED | 需要认证 |
 | 401 | AUTH_FAILED | 认证失败 |
+| 401 | FORBIDDEN | 无权限访问 |
 | 401 | UNAUTHORIZED | Cron secret 无效 |
+| 403 | IP_NOT_ALLOWED | IP 不在白名单中 |
 | 404 | NOT_FOUND | 资源不存在 |
 | 404 | CHANNEL_NOT_FOUND | 频道不存在 |
 | 409 | CHANNEL_EXISTS | 频道已存在 |
 | 409 | DUPLICATE_KEY | 密钥已存在 |
 | 410 | KEY_EXPIRED | 密钥已过期 |
 | 413 | KEY_TOO_LARGE | 公钥太大 |
-| 413 | METADATA_TOO_LARGE | 元数据太大 |
 | 413 | MESSAGE_TOO_LARGE | 消息太大 |
 | 429 | RATE_LIMIT_EXCEEDED | 请求过于频繁 |
 | 500 | INTERNAL_ERROR | 服务器内部错误 |
@@ -742,8 +857,10 @@ curl -s -X GET "http://localhost:3000/api/publish?channel=pub_46bc630d636b&count
 #### 创建API密钥
 
 ```bash
+# 使用 master admin key 创建
 curl -s -X POST http://localhost:3000/api/keys \
   -H "Content-Type: application/json" \
+  -H "X-Admin-Key: your-admin-master-key" \
   -d '{
     "userId": "test-user",
     "name": "Test API Key",
@@ -772,6 +889,7 @@ curl -s -X POST http://localhost:3000/api/keys \
 # 保存API密钥到变量
 API_KEY=$(curl -s -X POST http://localhost:3000/api/keys \
   -H "Content-Type: application/json" \
+  -H "X-Admin-Key: your-admin-master-key" \
   -d '{
     "userId": "test-user",
     "name": "Test API Key",
@@ -781,11 +899,19 @@ API_KEY=$(curl -s -X POST http://localhost:3000/api/keys \
 echo "API Key: $API_KEY"
 ```
 
+#### 列出用户密钥
+
+```bash
+# 使用 master admin key 列出用户密钥
+curl -s -X GET "http://localhost:3000/api/keys?userId=test-user" \
+  -H "X-Admin-Key: your-admin-master-key" | jq .
+```
+
 #### 撤销公钥（需要认证）
 
 ```bash
-# 替换 CHANNEL_ID 和 API_KEY
-curl -s -X DELETE "http://localhost:3000/api/keys/enc_948662cd3e294ffc" \
+# 使用 API 密钥认证
+curl -s -X DELETE "http://localhost:3000/api/keys/enc_channel_id" \
   -H "X-API-Key: YOUR_API_KEY" | jq .
 ```
 
@@ -875,13 +1001,12 @@ curl -s -X DELETE "http://localhost:3000/api/keys/enc_948662cd3e294ffc" | jq .
   "success": false,
   "error": {
     "message": "API key required in X-API-Key header",
-    "code": "AUTH_REQUIRED",
-    "timestamp": "2026-01-04T10:00:00.000Z"
+    "code": "AUTH_REQUIRED"
   }
 }
 ```
 
-#### 测试 401 - 错误的cron secret
+#### 测试 401 - 错误的 cron secret
 
 ```bash
 curl -s -X GET http://localhost:3000/api/cron/cleanup-channels \
@@ -894,8 +1019,7 @@ curl -s -X GET http://localhost:3000/api/cron/cleanup-channels \
   "success": false,
   "error": {
     "message": "Invalid or missing cron secret",
-    "code": "UNAUTHORIZED",
-    "timestamp": "2026-01-04T10:00:00.000Z"
+    "code": "UNAUTHORIZED"
   }
 }
 ```
@@ -996,6 +1120,7 @@ echo ""
 echo "【测试6】创建API密钥"
 API_KEY_RESPONSE=$(curl -s -X POST "$BASE_URL/api/keys" \
   -H "Content-Type: application/json" \
+  -H "X-Admin-Key: your-admin-master-key" \
   -d '{
     "userId": "test-user",
     "name": "Test API Key",
@@ -1073,6 +1198,7 @@ done
 | **201** | 创建成功 |
 | **400** | 请求参数错误 |
 | **401** | 未授权 |
+| **403** | 无权限访问 |
 | **404** | 资源不存在 |
 | **409** | 资源冲突 |
 | **410** | 资源已过期 |
@@ -1082,14 +1208,20 @@ done
 
 ---
 
-### 10. 注意事项
+### 11. 注意事项
 
-1. **替换占位符**: 将 `CHANNEL_ID`、`API_KEY` 等占位符替换为实际值
-2. **保存API密钥**: API密钥只在创建时返回一次，请妥善保存
-3. **频道ID格式**: 频道ID只能包含字母、数字、下划线和连字符
-4. **消息大小限制**: 单条消息最大 4.5MB
-5. **公钥大小限制**: 公钥最大 4KB
-6. **速率限制**: 发布消息、注册公钥等操作有速率限制
+1. **替换占位符**：将 `CHANNEL_ID`、`API_KEY` 等占位符替换为实际值
+2. **保存 API 密钥**：API 密钥只在创建时返回一次，请妥善保存
+3. **频道 ID 格式**：频道 ID 只能包含字母、数字、下划线和连字符，长度 1-64
+4. **消息大小限制**：单条消息最大 4.5MB
+5. **公钥大小限制**：公钥最大 4KB
+6. **频道元数据限制**：最大 4KB
+7. **速率限制**：
+   - 发布消息：10 次/分钟
+   - 注册公钥：5 次/分钟
+   - 订阅频道：5 次/分钟
+8. **Cron 端点安全**：需要 IP 白名单和正确的 `X-Cron-Secret`
+9. **API 密钥认证**：使用 `X-API-Key` 或 `X-Admin-Key` 头
 
 ---
 
