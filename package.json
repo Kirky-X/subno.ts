@@ -1,0 +1,40 @@
+{
+  "name": "subno.ts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "加密推送通知服务 - SecureNotify",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "vercel-build": "next build",
+    "db:migrate": "node scripts/run-migrations.js",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "next": "^16.1.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zod": "^3.24.1",
+    "drizzle-orm": "^0.45.1",
+    "@neondatabase/serverless": "^0.10.0",
+    "ioredis": "^5.4.0",
+    "uuid": "^9.0.0",
+    "crypto-js": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/uuid": "^9.0.0",
+    "@types/crypto-js": "^4.2.0",
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.16",
+    "@vitest/coverage-v8": "^4.0.0"
+  }
+}
