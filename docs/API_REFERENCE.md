@@ -513,7 +513,7 @@ curl -X POST http://localhost:3000/api/keys \
     "userId": "user-123",
     "name": "My App API Key",
     "permissions": ["read", "write"],
-    "apiKey": "sn_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_placeholder",
+    "apiKey": "<api-key-id>",
     "createdAt": "2026-01-03T00:00:00.000Z",
     "expiresAt": "2026-12-31T23:59:59.000Z"
   }
