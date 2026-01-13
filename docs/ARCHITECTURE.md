@@ -280,8 +280,52 @@ enum MessagePriority {
 - API 密钥管理
 - 密钥缓存
 - 密钥过期处理
+- **两阶段撤销确认**
+- **软删除机制**
+
+**密钥撤销流程** (两阶段确认):
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   密钥撤销流程                                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. POST /api/keys/{keyId}/revoke                               │
+│     ├── 验证 admin 权限                                         │
+│     ├── 验证撤销原因 (最小 10 字符)                              │
+│     ├── 生成确认码 (PBKDF2 哈希, 64 字符)                        │
+│     ├── 创建撤销确认记录 (24 小时有效期)                          │
+│     └── 返回确认码 (仅此一次)                                    │
+│                                                                 │
+│  2. 等待管理员确认 (最长 24 小时)                                │
+│     ├── 确认码可被多次验证 (最多 5 次)                            │
+│     ├── 5 次失败后锁定 1 小时                                    │
+│     └── 可随时取消撤销请求                                        │
+│                                                                 │
+│  3. DELETE /api/keys/{keyId}?confirmationCode=xxx               │
+│     ├── 验证确认码有效性                                         │
+│     ├── 执行软删除 (is_deleted = true)                           │
+│     ├── 记录审计日志 (包含数据快照)                               │
+│     └── 通知频道订阅者                                           │
+│                                                                 │
+│  4. 或 POST /api/keys/{keyId}/revoke/cancel                     │
+│     ├── 取消待确认的撤销请求                                      │
+│     └── 清除撤销确认记录                                         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**软删除机制**:
+
+| 操作 | 效果 |
+|------|------|
+| 撤销密钥 | `is_deleted = true`, `revoked_at = NOW()` |
+| 查询密钥 | 默认排除已删除密钥 |
+| 恢复密钥 | `is_deleted = false`, 清除撤销标记 |
+| 永久删除 | 30 天后由 Cron 任务清理 |
 
 **密钥缓存策略** (Cache-Aside 模式):
+
 ```typescript
 // key-cache.service.ts
 class KeyCacheService {
@@ -292,7 +336,7 @@ class KeyCacheService {
     
     // 2. 缓存未命中，查数据库
     const key = await db.publicKeys.findById(publicKeyId);
-    if (key) {
+    if (key && !key.isDeleted) {  // 排除已删除密钥
       // 3. 写入缓存 (TTL: 7 天)
       await redis.setex(`key:${publicKeyId}`, 604800, key);
     }
@@ -314,7 +358,7 @@ class KeyCacheService {
 interface AuditLog {
   id: UUID;
   createdAt: Date;
-  action: string;        // key_register, message_publish, etc.
+  action: string;        // key_register, key_revoke_request, key_revoke_confirmed, etc.
   channelId?: string;
   keyId?: string;
   messageId?: string;
@@ -323,9 +367,23 @@ interface AuditLog {
   userAgent?: string;
   success: boolean;
   error?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;  // 包含删除前数据快照
 }
 ```
+
+**审计动作类型**:
+
+| 动作类型 | 说明 | 元数据 |
+|----------|------|--------|
+| `key_register` | 公钥注册 | algorithm, channelId |
+| `key_revoke_request` | 撤销请求发起 | reason (脱敏), expiresAt |
+| `key_revoke_confirmed` | 撤销已确认 | keySnapshot (数据快照) |
+| `key_revoke_cancelled` | 撤销已取消 | - |
+| `key_revoke_expired` | 撤销已过期 | - |
+| `auth_failure` | 认证失败 | attemptedAction |
+| `message_publish` | 消息发布 | priority, channelId |
+| `channel_create` | 频道创建 | type, creator |
+| `cleanup_executed` | 清理任务执行 | task, deletedCount |
 
 ---
 

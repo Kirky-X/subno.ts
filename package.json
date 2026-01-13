@@ -13,6 +13,8 @@
     "lint": "next lint",
     "vercel-build": "next build",
     "db:migrate": "node scripts/run-migrations.js",
+    "db:migrate:revocation": "node scripts/migrate-revocation.js",
+    "db:migrate:revocation:rollback": "node scripts/migrate-revocation.js rollback",
     "test": "vitest",
     "test:coverage": "vitest --coverage"
   },

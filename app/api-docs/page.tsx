@@ -323,9 +323,10 @@ const endpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/api/keys/:id',
     title: '撤销公钥',
-    description: '撤销指定的公钥（需要 API 密钥认证）。',
+    description: '撤销指定的公钥（需要 API 密钥认证）。新版 API 使用两阶段确认流程。',
     params: [
       { name: 'id', type: 'string', required: true, description: '公钥 UUID 或频道 ID' },
+      { name: 'confirmationCode', type: 'string', required: false, description: '确认码 (两阶段确认模式)' },
     ],
     example: {
       response: {
@@ -334,6 +335,71 @@ const endpoints: Endpoint[] = [
         data: {
           deletedId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
           channelId: 'enc_channel_id',
+          deletedAt: '2026-01-14T01:00:00.000Z',
+          deletedBy: 'user-123',
+        },
+      },
+    },
+  },
+  {
+    method: 'POST',
+    path: '/api/keys/:id/revoke',
+    title: '请求撤销公钥 (两阶段确认)',
+    description: '启动两阶段撤销流程。首次请求生成确认码，有效期 24 小时。',
+    params: [
+      { name: 'id', type: 'string', required: true, description: '公钥 UUID 或频道 ID' },
+      { name: 'reason', type: 'string', required: true, description: '撤销原因 (最小 10 字符)' },
+      { name: 'confirmationHours', type: 'number', required: false, description: '确认码有效期 (小时，默认 24)' },
+    ],
+    example: {
+      request: {
+        reason: 'Key rotation required for security',
+        confirmationHours: 24,
+      },
+      response: {
+        success: true,
+        data: {
+          revocationId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+          keyId: 'enc_channel_id',
+          status: 'pending',
+          expiresAt: '2026-01-15T01:00:00.000Z',
+          confirmationCodeSent: true,
+        },
+      },
+    },
+  },
+  {
+    method: 'POST',
+    path: '/api/keys/:id/revoke/cancel',
+    title: '取消撤销请求',
+    description: '取消待确认的撤销请求。',
+    params: [
+      { name: 'id', type: 'string', required: true, description: '撤销请求 ID' },
+    ],
+    example: {
+      response: {
+        success: true,
+        message: 'Revocation cancelled successfully',
+      },
+    },
+  },
+  {
+    method: 'GET',
+    path: '/api/keys/:id/revoke/status',
+    title: '查询撤销状态',
+    description: '查询密钥撤销的当前状态。',
+    params: [
+      { name: 'id', type: 'string', required: false, description: '撤销请求 ID' },
+      { name: 'keyId', type: 'string', required: false, description: '公钥 ID (查询待确认撤销)' },
+    ],
+    example: {
+      response: {
+        success: true,
+        data: {
+          status: 'pending',
+          keyId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+          channelId: 'enc_channel_id',
+          expiresAt: '2026-01-15T01:00:00.000Z',
         },
       },
     },

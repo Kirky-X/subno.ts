@@ -589,16 +589,108 @@ curl http://localhost:3000/api/keys/enc_channel_id
 
 ---
 
+## 密钥撤销 (两阶段确认流程)
+
+### POST /api/keys/[id]/revoke
+
+请求撤销公钥（需要认证，启动两阶段确认流程）。
+
+**认证**: X-API-Key (必需，且必须包含 `admin` 权限)
+
+**请求**:
+
+```bash
+curl -X POST http://localhost:3000/api/keys/enc_channel_id/revoke \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: <api-key-id>" \
+  -d '{
+    "reason": "Key rotation required",
+    "confirmationHours": 24
+  }'
+```
+
+**请求参数**:
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| `reason` | string | 是 | - | 撤销原因 (最小 10 字符) |
+| `confirmationHours` | number | 否 | 24 | 确认码有效期 (小时) |
+
+**响应 (201)**:
+
+```json
+{
+  "success": true,
+  "data": {
+    "revocationId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "keyId": "enc_channel_id",
+    "status": "pending",
+    "expiresAt": "2026-01-15T01:00:00.000Z",
+    "confirmationCodeSent": true
+  }
+}
+```
+
+> ⚠️ **重要提示**：确认码只在响应中返回一次，请立即保存！确认码过期后需要重新发起撤销请求。
+
+**错误响应**:
+
+| 错误码 | 说明 |
+|--------|------|
+| NOT_FOUND | 密钥不存在 |
+| ALREADY_REVOKED | 密钥已被撤销 |
+| INVALID_REASON | 原因太短 (最少 10 字符) |
+| REVOCATION_PENDING | 已存在待确认的撤销请求 |
+
+---
+
 ### DELETE /api/keys/[id]
 
-撤销公钥（需要认证）。
+**重要变更**: 此端点现在需要两阶段确认。
+
+确认执行密钥撤销。
 
 **认证**: X-API-Key (必需)
 
 **请求**:
 
 ```bash
-curl -X DELETE http://localhost:3000/api/keys/enc_channel_id \
+curl -X DELETE "http://localhost:3000/api/keys/enc_channel_id?confirmationCode=xxxxxx" \
+  -H "X-API-Key: <api-key-id>"
+```
+
+**查询参数**:
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `confirmationCode` | string | 是 | 撤销确认码 |
+
+**响应 (200)**:
+
+```json
+{
+  "success": true,
+  "data": {
+    "deletedId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "channelId": "enc_channel_id",
+    "deletedAt": "2026-01-14T01:00:00.000Z",
+    "deletedBy": "user-123"
+  }
+}
+```
+
+---
+
+### POST /api/keys/[id]/revoke/cancel
+
+取消待确认的撤销请求。
+
+**认证**: X-API-Key (必需)
+
+**请求**:
+
+```bash
+curl -X POST "http://localhost:3000/api/keys/enc_channel_id/revoke/cancel" \
   -H "X-API-Key: <api-key-id>"
 ```
 
@@ -607,15 +699,60 @@ curl -X DELETE http://localhost:3000/api/keys/enc_channel_id \
 ```json
 {
   "success": true,
-  "message": "Public key revoked successfully",
-  "data": {
-    "deletedId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-    "channelId": "enc_channel_id"
-  }
+  "message": "Revocation cancelled successfully"
 }
 ```
 
 ---
+
+### GET /api/keys/[id]/revoke/status
+
+查询密钥撤销状态。
+
+**认证**: 无需认证
+
+**请求**:
+
+```bash
+# 按撤销 ID 查询
+curl "http://localhost:3000/api/keys/enc_channel_id/revoke/status" \
+  -H "X-API-Key: <api-key-id>"
+
+# 或按密钥 ID 查询待确认的撤销
+curl "http://localhost:3000/api/keys/enc_channel_id/revoke/status?keyId=enc_channel_id" \
+  -H "X-API-Key: <api-key-id>"
+```
+
+**响应 (200)**:
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "pending",
+    "keyId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "channelId": "enc_channel_id",
+    "expiresAt": "2026-01-15T01:00:00.000Z"
+  }
+}
+```
+
+**状态值**:
+
+| 状态 | 说明 |
+|------|------|
+| `pending` | 等待确认 |
+| `confirmed` | 已确认撤销 |
+| `cancelled` | 已取消 |
+| `expired` | 确认码已过期 |
+
+---
+
+### DELETE /api/keys/[id] (旧版 - 已废弃)
+
+撤销公钥（需要认证）。
+
+> ⚠️ **已废弃**: 请使用两阶段确认流程 (`POST /api/keys/[id]/revoke` → `DELETE /api/keys/[id]?confirmationCode=xxx`)
 
 ### POST /api/keys
 
