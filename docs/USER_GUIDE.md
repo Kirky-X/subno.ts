@@ -461,12 +461,12 @@ curl -X POST http://localhost:3000/api/keys \
   }'
 
 # 响应包含 apiKey（只返回一次！）
-# {"data": {"apiKey": "sk_live_xxx...", ...}}
+# {"data": {"apiKey": "<api-key-id>", ...}}
 
 # 2. 使用 API 密钥发布消息
 curl -X POST http://localhost:3000/api/publish \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: sk_live_xxx..." \
+  -H "X-API-Key: <api-key-id>" \
   -d '{
     "channel": "my-channel",
     "message": "Hello from authenticated app!"

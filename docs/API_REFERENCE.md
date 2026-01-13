@@ -109,7 +109,7 @@ API 密钥支持以下权限：
 # 使用 API 密钥发布消息
 curl -X POST http://localhost:3000/api/publish \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: ***REMOVED***" \
+  -H "X-API-Key: <api-key-id>" \
   -d '{
     "channel": "my-channel",
     "message": "Hello, World!"
@@ -599,7 +599,7 @@ curl http://localhost:3000/api/keys/enc_channel_id
 
 ```bash
 curl -X DELETE http://localhost:3000/api/keys/enc_channel_id \
-  -H "X-API-Key: ***REMOVED***"
+  -H "X-API-Key: <api-key-id>"
 ```
 
 **响应 (200)**:
@@ -656,7 +656,7 @@ curl -X POST http://localhost:3000/api/keys \
     "userId": "user-123",
     "name": "My App API Key",
     "permissions": ["read", "write"],
-    "apiKey": "***REMOVED***xxxxxxxxxxxxxxxxxxxxxxxx",
+    "apiKey": "<api-key-id>xxxxxxxxxxxxxxxxxxxxxxxx",
     "createdAt": "2026-01-13T00:00:00.000Z",
     "expiresAt": "2026-12-31T23:59:59.000Z"
   }
@@ -1137,7 +1137,7 @@ curl -s -X POST "$BASE_URL/api/keys" \
     "userId": "test-user",
     "name": "Test API Key",
     "permissions": ["read", "write", "admin"],
-    "apiKey": "***REMOVED***xxxxxxxxxxxxxxxxxxxxxxxx",
+    "apiKey": "<api-key-id>xxxxxxxxxxxxxxxxxxxxxxxx",
     "createdAt": "2026-01-13T10:00:00.000Z",
     "expiresAt": null
   }
@@ -1157,7 +1157,7 @@ curl -s -X GET "$BASE_URL/api/keys?userId=test-user" \
 
 ```bash
 CHANNEL_KEY_ID="enc_948662cd3e294ffc"
-API_KEY="***REMOVED***xxxxxxxxxxxxxxxxxxxxxxxx"
+API_KEY="<api-key-id>xxxxxxxxxxxxxxxxxxxxxxxx"
 
 curl -s -X DELETE "$BASE_URL/api/keys/$CHANNEL_KEY_ID" \
   -H "X-API-Key: $API_KEY" | jq .
