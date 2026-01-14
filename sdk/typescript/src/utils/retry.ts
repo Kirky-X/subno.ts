@@ -193,15 +193,15 @@ function parseRetryAfter(error: SecureNotifyError): number | undefined {
 export function createRetryableFunction<T extends (...args: Args) => Promise<Return>, Args extends unknown[], Return>(
   fn: T,
   config?: RetryConfig
-): T => {
-  return (async (...args: Args): Promise<Return> => {
+): (...args: Args) => Promise<Return> {
+  return async (...args: Args): Promise<Return> => {
     const result = await withRetry(() => fn(...args), config);
     if (!result.success) {
       throw result.error;
     }
     return result.data!;
-  }) as T;
-};
+  };
+}
 
 /**
  * Decorator for adding retry logic to class methods

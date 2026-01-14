@@ -73,28 +73,6 @@ function HeaderBadge() {
   );
 }
 
-function ApiDocsBadge() {
-  const { t } = useTranslation();
-  const pathname = usePathname();
-
-  const handleClick = () => {
-    const isAtHome = pathname === '/';
-    if (isAtHome) {
-      sessionStorage.setItem('nav-direction', 'forward');
-    }
-  };
-
-  return (
-    <Link href="/api-docs" className="header-badge api-badge" onClick={handleClick}>
-      <span className="badge-icon">📖</span>
-      <div className="badge-text">
-        <div className="badge-title">API</div>
-        <div className="badge-version">{t('common.apiDocs')}</div>
-      </div>
-    </Link>
-  );
-}
-
 function RepoBadge() {
   const { t } = useTranslation();
   

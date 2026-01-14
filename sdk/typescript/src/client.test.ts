@@ -2,8 +2,8 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { SecureNotifyClient } from "../../src/client.js";
-import type { SseMessageEvent } from "../../src/types/api.js";
+import { SecureNotifyClient } from "../client.js";
+import type { SseMessageEvent } from "./types/api.js";
 
 describe("SecureNotifyClient", () => {
   let client: SecureNotifyClient;

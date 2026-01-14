@@ -3,7 +3,6 @@
 
 'use client';
 
-import StarField from '../components/StarField';
 import { useState } from 'react';
 import { useTranslation } from '@/app/hooks/useTranslation';
 

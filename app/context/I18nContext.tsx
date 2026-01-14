@@ -33,7 +33,6 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('zh-CN');
   const [translations, setTranslations] = useState<Record<string, unknown>>({});
-  const [mounted, setMounted] = useState(false);
 
   // Load translations
   useEffect(() => {
@@ -71,7 +70,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         setLocaleState('en');
       }
     }
-    setMounted(true);
   }, []);
 
   const setLocale = (newLocale: Locale) => {

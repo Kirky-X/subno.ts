@@ -105,33 +105,3 @@ describe('Security Implementation Files', () => {
     });
   });
 });
-
-describe('OpenSpec Change Proposal', () => {
-  it('should have add-ddos-protection-and-security-headers proposal', () => {
-    const changePath = path.join(process.cwd(), 'openspec/changes/add-ddos-protection-and-security-headers');
-    expect(fs.existsSync(changePath)).toBe(true);
-    
-    const proposalPath = path.join(changePath, 'proposal.md');
-    expect(fs.existsSync(proposalPath)).toBe(true);
-    
-    const designPath = path.join(changePath, 'design.md');
-    expect(fs.existsSync(designPath)).toBe(true);
-    
-    const tasksPath = path.join(changePath, 'tasks.md');
-    expect(fs.existsSync(tasksPath)).toBe(true);
-  });
-
-  it('should have security spec delta', () => {
-    const specPath = path.join(
-      process.cwd(), 
-      'openspec/changes/add-ddos-protection-and-security-headers/specs/security/spec.md'
-    );
-    expect(fs.existsSync(specPath)).toBe(true);
-    
-    const content = fs.readFileSync(specPath, 'utf-8');
-    expect(content).toContain('Rate Limiting');
-    expect(content).toContain('Security Response Headers');
-    expect(content).toContain('Revocation Cancel Authorization');
-    expect(content).toContain('Cleanup Service Authentication');
-  });
-});

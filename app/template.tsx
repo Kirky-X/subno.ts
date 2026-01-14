@@ -1,13 +1,11 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
 export default function Template({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const isFirstRender = useRef(true);
-  const previousPath = useRef(pathname);
 
   useEffect(() => {
     if (isFirstRender.current) {
