@@ -4,7 +4,7 @@
 import { getDatabase } from '../../db';
 import { publicKeys, revocationConfirmations } from '../../db/schema';
 import { eq, lt, sql, and, inArray } from 'drizzle-orm';
-import { sanitizeErrorMessage, SECURITY_CONFIG } from '../utils/secure-compare';
+import { sanitizeErrorMessage, secureCompare, KEY_MANAGEMENT_CONFIG } from '../utils/secure-compare';
 
 interface CleanupResult {
   deletedKeys: number;
@@ -17,8 +17,74 @@ export class CleanupService {
   private db = getDatabase();
 
   private getRevokedKeysCleanupDays(): number {
+    const minDays = 1;
+    const maxDays = 365;
     const days = process.env.REVOKED_KEY_CLEANUP_DAYS;
-    return days ? parseInt(days, 10) : SECURITY_CONFIG.DEFAULT_CLEANUP_DAYS;
+    const value = days ? parseInt(days, 10) : KEY_MANAGEMENT_CONFIG.DEFAULT_CLEANUP_DAYS;
+    if (isNaN(value) || value < minDays) return KEY_MANAGEMENT_CONFIG.DEFAULT_CLEANUP_DAYS;
+    if (value > maxDays) return maxDays;
+    return value;
+  }
+
+  /**
+   * Validate CRON_SECRET for cleanup operations
+   * CRON_SECRET is always required, regardless of environment
+   */
+  static validateCronSecret(request: Request): { valid: boolean; error?: string } {
+    const cronSecret = process.env.CRON_SECRET;
+    const nodeEnv = process.env.NODE_ENV;
+
+    // CRON_SECRET is always required
+    if (!cronSecret) {
+      if (nodeEnv === 'production') {
+        return { valid: false, error: 'CRON_SECRET must be configured in production environment' };
+      }
+      return { valid: false, error: 'CRON_SECRET must be configured' };
+    }
+
+    // Reject default placeholder secrets
+    const defaultSecrets = [
+      'your-cron-secret-change-this-in-production',
+      'change-me',
+      'default-cron-secret',
+      'cron-secret',
+      'secret',
+    ];
+    if (defaultSecrets.some(defaultSecret => 
+      cronSecret.toLowerCase().includes(defaultSecret.toLowerCase())
+    )) {
+      return { valid: false, error: 'CRON_SECRET cannot be a default/placeholder value' };
+    }
+
+    // Check minimum length
+    if (cronSecret.length < 32) {
+      return { valid: false, error: 'CRON_SECRET must be at least 32 characters long' };
+    }
+
+    const requestSecret = request.headers.get('X-Cron-Secret') ||
+                          request.headers.get('Authorization')?.replace('Bearer ', '');
+
+    if (!requestSecret) {
+      return { valid: false, error: 'Cron secret required' };
+    }
+
+    // Use constant-time comparison to prevent timing attacks
+    if (!secureCompare(requestSecret, cronSecret)) {
+      return { valid: false, error: 'Invalid cron secret' };
+    }
+
+    return { valid: true };
+  }
+
+  private async batchProcess<T>(
+    items: T[],
+    processor: (batch: T[]) => Promise<void>
+  ): Promise<void> {
+    const batchSize = KEY_MANAGEMENT_CONFIG.BATCH_SIZE;
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batch = items.slice(i, i + batchSize);
+      await processor(batch);
+    }
   }
 
   async cleanupExpiredRevocations(): Promise<{ count: number; errors: string[] }> {
@@ -56,7 +122,6 @@ export class CleanupService {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - days);
 
-      // Find keys that should be permanently deleted
       const keysToDelete = await this.db
         .select({ id: publicKeys.id })
         .from(publicKeys)
@@ -70,20 +135,14 @@ export class CleanupService {
         return { count: 0, errors: [] };
       }
 
-      // Process in batches to avoid memory issues
-      const batchSize = SECURITY_CONFIG.BATCH_SIZE;
       let totalDeleted = 0;
-
-      for (let i = 0; i < keysToDelete.length; i += batchSize) {
-        const batch = keysToDelete.slice(i, i + batchSize);
+      await this.batchProcess(keysToDelete, async (batch) => {
         const batchIds = batch.map(k => k.id);
-
         await this.db
           .delete(publicKeys)
           .where(inArray(publicKeys.id, batchIds));
-
         totalDeleted += batchIds.length;
-      }
+      });
 
       return { count: totalDeleted, errors: [] };
     } catch (err) {
@@ -92,22 +151,17 @@ export class CleanupService {
   }
 
   async executeFullCleanup(): Promise<CleanupResult> {
-    const result: CleanupResult = {
-      deletedKeys: 0,
-      expiredConfirmations: 0,
+    const [expResult, keyResult] = await Promise.all([
+      this.cleanupExpiredRevocations(),
+      this.cleanupRevokedKeys(),
+    ]);
+
+    return {
+      deletedKeys: keyResult.count,
+      expiredConfirmations: expResult.count,
       cleanedUpAt: new Date(),
-      errors: [],
+      errors: [...expResult.errors, ...keyResult.errors],
     };
-
-    const expResult = await this.cleanupExpiredRevocations();
-    result.expiredConfirmations = expResult.count;
-    result.errors.push(...expResult.errors);
-
-    const keyResult = await this.cleanupRevokedKeys();
-    result.deletedKeys = keyResult.count;
-    result.errors.push(...keyResult.errors);
-
-    return result;
   }
 
   async getCleanupStatus(): Promise<{

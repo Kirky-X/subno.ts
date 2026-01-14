@@ -3,11 +3,45 @@
 
 import { getDatabase } from '../../db';
 import { apiKeys, type ApiKey } from '../../db/schema';
-import { eq, and, desc, lt, isNull, gt, or } from 'drizzle-orm';
-import { SECURITY_CONFIG } from '../utils/secure-compare';
+import { eq, and, desc, lt, isNull, gt } from 'drizzle-orm';
+import { KEY_MANAGEMENT_CONFIG } from '../utils/secure-compare';
+import { QueryBuilder } from './query-builder';
 
 export class ApiKeyRepository {
   private db = getDatabase();
+
+  /**
+   * Calculate the expiry date based on configured days
+   */
+  private calculateExpiryDate(): Date {
+    return new Date(Date.now() - KEY_MANAGEMENT_CONFIG.DEFAULT_API_KEY_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  }
+
+  /**
+   * Build find conditions using the unified QueryBuilder
+   */
+  private buildFindConditions(options: {
+    includeDeleted?: boolean;
+    includeExpired?: boolean;
+    userId?: string;
+  }): ReturnType<QueryBuilder<ApiKey>['build']> {
+    const builder = new QueryBuilder<ApiKey>();
+
+    if (options.userId) {
+      builder.whereEqual(apiKeys.userId, options.userId);
+    }
+
+    if (!options.includeDeleted) {
+      builder.whereEqual(apiKeys.isDeleted, false);
+    }
+
+    if (!options.includeExpired) {
+      builder.whereIsNull(apiKeys.expiresAt);
+      builder.whereGt(apiKeys.createdAt, this.calculateExpiryDate());
+    }
+
+    return builder.build();
+  }
 
   async findById(id: string): Promise<ApiKey | null> {
     const result = await this.db
@@ -30,10 +64,6 @@ export class ApiKeyRepository {
   /**
    * Validate that an API key has the required permission.
    * Returns true only if the key exists, is active, not deleted, and has the permission.
-   * 
-   * @param keyHash - The API key hash to validate
-   * @param requiredPermission - The permission to check for (e.g., 'admin', 'key_revoke')
-   * @returns true if the key is valid and has the required permission
    */
   async validatePermission(
     keyHash: string,
@@ -67,20 +97,15 @@ export class ApiKeyRepository {
   }): Promise<ApiKey[]> {
     const { includeDeleted = false, limit = 50, offset = 0 } = options || {};
 
-    let condition;
-    if (includeDeleted) {
-      condition = undefined;
-    } else {
-      condition = eq(apiKeys.isDeleted, false);
-    }
+    const condition = this.buildFindConditions({ 
+      includeDeleted, 
+      userId 
+    });
 
     const result = await this.db
       .select()
       .from(apiKeys)
-      .where(and(
-        eq(apiKeys.userId, userId),
-        condition
-      ))
+      .where(condition)
       .orderBy(desc(apiKeys.createdAt))
       .limit(limit)
       .offset(offset);
@@ -95,23 +120,12 @@ export class ApiKeyRepository {
   }): Promise<ApiKey[]> {
     const { includeExpired = false, limit = 100, offset = 0 } = options || {};
 
-    let whereConditions = and(
-      eq(apiKeys.isActive, true),
-      eq(apiKeys.isDeleted, false)
-    );
-    
-    if (!includeExpired) {
-      whereConditions = and(
-        whereConditions,
-        isNull(apiKeys.expiresAt),
-        gt(apiKeys.createdAt, new Date(Date.now() - SECURITY_CONFIG.DEFAULT_API_KEY_EXPIRY_DAYS * 24 * 60 * 60 * 1000))
-      );
-    }
+    const condition = this.buildFindConditions({ includeExpired });
 
     const result = await this.db
       .select()
       .from(apiKeys)
-      .where(whereConditions)
+      .where(condition)
       .orderBy(desc(apiKeys.createdAt))
       .limit(limit)
       .offset(offset);
@@ -138,7 +152,7 @@ export class ApiKeyRepository {
         eq(apiKeys.isDeleted, false)
       ))
       .returning();
-    return result[0] || null;
+    return result[0] ?? null;
   }
 
   async restore(id: string): Promise<ApiKey | null> {
@@ -153,7 +167,7 @@ export class ApiKeyRepository {
       })
       .where(eq(apiKeys.id, id))
       .returning();
-    return result[0] || null;
+    return result[0] ?? null;
   }
 
   async getDeletedKeys(olderThan: Date): Promise<ApiKey[]> {
@@ -162,7 +176,7 @@ export class ApiKeyRepository {
       .from(apiKeys)
       .where(and(
         eq(apiKeys.isDeleted, true),
-        lt(apiKeys.revokedAt!, olderThan)
+        lt(apiKeys.revokedAt, olderThan)
       ));
     return result;
   }
@@ -190,7 +204,7 @@ export class ApiKeyRepository {
       .set({ isActive: false })
       .where(eq(apiKeys.id, id))
       .returning();
-    return result[0] || null;
+    return result[0] ?? null;
   }
 }
 

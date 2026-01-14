@@ -6,5 +6,7 @@ export {
   validateLength,
   containsInvalidCharacters,
   sanitizeErrorMessage,
-  SECURITY_CONFIG,
+  KEY_MANAGEMENT_CONFIG,
 } from './secure-compare';
+
+export { parseEnvInt, isValidUUID } from './env.utils';

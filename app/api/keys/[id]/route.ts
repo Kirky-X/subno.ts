@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { keyRevocationService } from '@/src/lib/services';
-import { secureCompare, validateLength, SECURITY_CONFIG } from '@/src/lib/utils/secure-compare';
+import { secureCompare, validateLength, KEY_MANAGEMENT_CONFIG } from '@/src/lib/utils/secure-compare';
 
 // DELETE /api/keys/:id
 // - 新模式: 带 confirmationCode 参数，执行两阶段确认删除
@@ -78,15 +78,15 @@ export async function DELETE(
       const body = await request.json().catch(() => ({}));
       const reasonValidation = validateLength(
         body.reason, 
-        SECURITY_CONFIG.REVOCATION_REASON_MIN_LENGTH, 
-        SECURITY_CONFIG.REVOCATION_REASON_MAX_LENGTH
+        KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MIN_LENGTH, 
+        KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MAX_LENGTH
       );
       
       if (!body.reason || !reasonValidation) {
         return NextResponse.json({
           success: false,
           error: {
-            message: `Reason required for direct deletion (min ${SECURITY_CONFIG.REVOCATION_REASON_MIN_LENGTH} characters)`,
+            message: `Reason required for direct deletion (min ${KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MIN_LENGTH} characters)`,
             code: 'INVALID_REASON',
             timestamp: new Date().toISOString(),
           },

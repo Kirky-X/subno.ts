@@ -4,3 +4,4 @@
 export { auditService, AuditService, type AuditAction } from './audit.service';
 export { keyRevocationService, KeyRevocationService } from './key-revocation.service';
 export { cleanupService, CleanupService } from './cleanup.service';
+export { apiKeyRepository, ApiKeyRepository } from '../repositories/api-key.repository';

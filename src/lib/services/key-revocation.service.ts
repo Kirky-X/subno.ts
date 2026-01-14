@@ -6,7 +6,7 @@ import type { PublicKey } from '../../db/schema';
 import { 
   validateLength, 
   containsInvalidCharacters, 
-  SECURITY_CONFIG 
+  KEY_MANAGEMENT_CONFIG 
 } from '../utils/secure-compare';
 
 export interface RevokeKeyRequest {
@@ -55,15 +55,15 @@ export class KeyRevocationService {
       return { error: 'Reason must be a string', code: 'INVALID_INPUT' };
     }
 
-    if (!validateLength(reason, SECURITY_CONFIG.REVOCATION_REASON_MIN_LENGTH, SECURITY_CONFIG.REVOCATION_REASON_MAX_LENGTH)) {
-      if (reason.length < SECURITY_CONFIG.REVOCATION_REASON_MIN_LENGTH) {
+    if (!validateLength(reason, KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MIN_LENGTH, KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MAX_LENGTH)) {
+      if (reason.length < KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MIN_LENGTH) {
         return { 
-          error: `Reason must be at least ${SECURITY_CONFIG.REVOCATION_REASON_MIN_LENGTH} characters`, 
+          error: `Reason must be at least ${KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MIN_LENGTH} characters`, 
           code: 'INVALID_REASON' 
         };
       }
       return { 
-        error: `Reason must not exceed ${SECURITY_CONFIG.REVOCATION_REASON_MAX_LENGTH} characters`, 
+        error: `Reason must not exceed ${KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MAX_LENGTH} characters`, 
         code: 'INVALID_REASON' 
       };
     }
@@ -77,11 +77,39 @@ export class KeyRevocationService {
 
   /**
    * Validate that the API key has permission to revoke keys.
+   * Also validates that the API key belongs to the key owner (unless admin).
    */
-  private async validateApiKeyPermission(apiKeyId: string): Promise<{ valid: boolean; error?: string; code?: string }> {
-    const hasPermission = await apiKeyRepository.validatePermission(apiKeyId, 'key_revoke');
+  private async validateApiKeyPermission(
+    apiKeyId: string,
+    targetKeyId: string
+  ): Promise<{ valid: boolean; error?: string; code?: string }> {
+    const apiKey = await apiKeyRepository.findById(apiKeyId);
     
-    if (!hasPermission) {
+    if (!apiKey) {
+      return { valid: false, error: 'API key not found', code: 'INVALID_API_KEY' };
+    }
+
+    // Check if API key is active
+    if (!apiKey.isActive) {
+      return { valid: false, error: 'API key is inactive', code: 'INACTIVE_API_KEY' };
+    }
+
+    // Check if API key is expired
+    if (apiKey.expiresAt && new Date(apiKey.expiresAt) < new Date()) {
+      return { valid: false, error: 'API key has expired', code: 'EXPIRED_API_KEY' };
+    }
+
+    // Check if API key has been revoked
+    if (apiKey.isDeleted) {
+      return { valid: false, error: 'API key has been revoked', code: 'REVOKED_API_KEY' };
+    }
+
+    // Check permissions
+    const permissions = apiKey.permissions as string[];
+    const hasAdminPermission = permissions.includes('admin');
+    const hasRevokePermission = permissions.includes('key_revoke');
+
+    if (!hasRevokePermission && !hasAdminPermission) {
       return { 
         valid: false, 
         error: 'Insufficient permissions for key revocation', 
@@ -89,12 +117,29 @@ export class KeyRevocationService {
       };
     }
 
+    // If not admin, verify API key has key_revoke permission (ownership check not available)
+    if (!hasAdminPermission) {
+      const hasRevokePermission = permissions.includes('key_revoke');
+      if (!hasRevokePermission) {
+        return { 
+          valid: false, 
+          error: 'Insufficient permissions for key revocation', 
+          code: 'FORBIDDEN' 
+        };
+      }
+    }
+
     return { valid: true };
   }
 
   async requestRevocation(request: RevokeKeyRequest): Promise<RevokeKeyResult> {
-    // Validate API key has permission
-    const permissionCheck = await this.validateApiKeyPermission(request.apiKeyId);
+    // Parallel DB queries for better performance
+    const [permissionCheck, key, existingConfirmation] = await Promise.all([
+      this.validateApiKeyPermission(request.apiKeyId, request.keyId),
+      publicKeyRepository.findById(request.keyId),
+      revocationConfirmationRepository.findByKeyId(request.keyId),
+    ]);
+
     if (!permissionCheck.valid) {
       return { 
         success: false, 
@@ -103,8 +148,6 @@ export class KeyRevocationService {
       };
     }
 
-    const key = await publicKeyRepository.findById(request.keyId);
-    
     if (!key) {
       return { success: false, error: 'Key not found', code: 'NOT_FOUND' };
     }
@@ -124,7 +167,6 @@ export class KeyRevocationService {
     }
 
     // Check for existing pending revocation
-    const existingConfirmation = await revocationConfirmationRepository.findByKeyId(request.keyId);
     if (existingConfirmation && existingConfirmation.status === 'pending') {
       return {
         success: false,
