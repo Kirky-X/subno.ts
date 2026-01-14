@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { publicKeyRepository, revocationConfirmationRepository } from '../repositories';
+import { publicKeyRepository, apiKeyRepository, revocationConfirmationRepository } from '../repositories';
 import type { PublicKey } from '../../db/schema';
+import { 
+  validateLength, 
+  containsInvalidCharacters, 
+  SECURITY_CONFIG 
+} from '../utils/secure-compare';
 
 export interface RevokeKeyRequest {
   keyId: string;
@@ -41,7 +46,63 @@ export interface RevocationStatusResult {
 }
 
 export class KeyRevocationService {
+  /**
+   * Validate the revocation request reason for security.
+   * Returns null if valid, or an error object if invalid.
+   */
+  private validateReason(reason: string): { error: string; code: string } | null {
+    if (typeof reason !== 'string') {
+      return { error: 'Reason must be a string', code: 'INVALID_INPUT' };
+    }
+
+    if (!validateLength(reason, SECURITY_CONFIG.REVOCATION_REASON_MIN_LENGTH, SECURITY_CONFIG.REVOCATION_REASON_MAX_LENGTH)) {
+      if (reason.length < SECURITY_CONFIG.REVOCATION_REASON_MIN_LENGTH) {
+        return { 
+          error: `Reason must be at least ${SECURITY_CONFIG.REVOCATION_REASON_MIN_LENGTH} characters`, 
+          code: 'INVALID_REASON' 
+        };
+      }
+      return { 
+        error: `Reason must not exceed ${SECURITY_CONFIG.REVOCATION_REASON_MAX_LENGTH} characters`, 
+        code: 'INVALID_REASON' 
+      };
+    }
+
+    if (containsInvalidCharacters(reason)) {
+      return { error: 'Reason contains invalid characters', code: 'INVALID_INPUT' };
+    }
+
+    return null;
+  }
+
+  /**
+   * Validate that the API key has permission to revoke keys.
+   */
+  private async validateApiKeyPermission(apiKeyId: string): Promise<{ valid: boolean; error?: string; code?: string }> {
+    const hasPermission = await apiKeyRepository.validatePermission(apiKeyId, 'key_revoke');
+    
+    if (!hasPermission) {
+      return { 
+        valid: false, 
+        error: 'Insufficient permissions for key revocation', 
+        code: 'FORBIDDEN' 
+      };
+    }
+
+    return { valid: true };
+  }
+
   async requestRevocation(request: RevokeKeyRequest): Promise<RevokeKeyResult> {
+    // Validate API key has permission
+    const permissionCheck = await this.validateApiKeyPermission(request.apiKeyId);
+    if (!permissionCheck.valid) {
+      return { 
+        success: false, 
+        error: permissionCheck.error, 
+        code: permissionCheck.code 
+      };
+    }
+
     const key = await publicKeyRepository.findById(request.keyId);
     
     if (!key) {
@@ -52,8 +113,14 @@ export class KeyRevocationService {
       return { success: false, error: 'Key already revoked', code: 'ALREADY_REVOKED' };
     }
 
-    if (request.reason.length < 10) {
-      return { success: false, error: 'Reason must be at least 10 characters', code: 'INVALID_REASON' };
+    // Validate reason with enhanced checks
+    const reasonValidation = this.validateReason(request.reason);
+    if (reasonValidation) {
+      return { 
+        success: false, 
+        error: reasonValidation.error, 
+        code: reasonValidation.code 
+      };
     }
 
     // Check for existing pending revocation

@@ -2,7 +2,8 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { keyRevocationService } from '../../../src/lib/services';
+import { keyRevocationService } from '@/src/lib/services';
+import { secureCompare, validateLength, SECURITY_CONFIG } from '@/src/lib/utils/secure-compare';
 
 // DELETE /api/keys/:id
 // - 新模式: 带 confirmationCode 参数，执行两阶段确认删除
@@ -60,7 +61,9 @@ export async function DELETE(
     // 模式2: 直接删除 (仅限紧急情况，需要 ADMIN_MASTER_KEY)
     if (adminKey) {
       const envAdminKey = process.env.ADMIN_MASTER_KEY;
-      if (adminKey !== envAdminKey) {
+      
+      // 使用安全比较防止时序攻击
+      if (!envAdminKey || !secureCompare(adminKey, envAdminKey)) {
         return NextResponse.json({
           success: false,
           error: {
@@ -73,11 +76,17 @@ export async function DELETE(
 
       // 直接删除需要 reason
       const body = await request.json().catch(() => ({}));
-      if (!body.reason || body.reason.length < 10) {
+      const reasonValidation = validateLength(
+        body.reason, 
+        SECURITY_CONFIG.REVOCATION_REASON_MIN_LENGTH, 
+        SECURITY_CONFIG.REVOCATION_REASON_MAX_LENGTH
+      );
+      
+      if (!body.reason || !reasonValidation) {
         return NextResponse.json({
           success: false,
           error: {
-            message: 'Reason required for direct deletion (min 10 characters)',
+            message: `Reason required for direct deletion (min ${SECURITY_CONFIG.REVOCATION_REASON_MIN_LENGTH} characters)`,
             code: 'INVALID_REASON',
             timestamp: new Date().toISOString(),
           },
@@ -85,7 +94,7 @@ export async function DELETE(
       }
 
       // 导入 repository
-      const { publicKeyRepository } = await import('../../../src/lib/repositories');
+      const { publicKeyRepository } = await import('@/src/lib/repositories');
       const key = await publicKeyRepository.findById(keyId);
       
       if (!key) {
@@ -143,7 +152,7 @@ export async function DELETE(
     return NextResponse.json({
       success: false,
       error: {
-        message: error instanceof Error ? error.message : 'Internal server error',
+        message: 'Internal server error',
         code: 'INTERNAL_ERROR',
         timestamp: new Date().toISOString(),
       },

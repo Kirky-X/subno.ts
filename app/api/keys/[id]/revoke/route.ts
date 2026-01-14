@@ -2,7 +2,7 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { keyRevocationService } from '../../../../src/lib/services';
+import { keyRevocationService } from '@/src/lib/services';
 
 // POST /api/keys/:id/revoke - Request key revocation
 export async function POST(
@@ -40,7 +40,9 @@ export async function POST(
         NOT_FOUND: 404,
         ALREADY_REVOKED: 409,
         INVALID_REASON: 400,
+        INVALID_INPUT: 400,
         REVOCATION_PENDING: 409,
+        FORBIDDEN: 403,
       };
 
       return NextResponse.json({

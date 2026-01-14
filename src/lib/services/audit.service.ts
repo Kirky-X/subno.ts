@@ -197,7 +197,9 @@ export class AuditService {
         gte(auditLogs.createdAt, cutoffDate)
       ));
 
-    return (result as unknown as { rowCount: number }).rowCount || 0;
+    // Drizzle delete returns { rowCount: number | null }
+    const rowCount = (result as { rowCount?: number | null }).rowCount ?? 0;
+    return rowCount;
   }
 }
 

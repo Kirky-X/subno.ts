@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { getDatabase } from '../db';
-import { apiKeys, type ApiKey } from '../db/schema';
+import { getDatabase } from '../../db';
+import { apiKeys, type ApiKey } from '../../db/schema';
 import { eq, and, desc, lt, isNull, gt, or } from 'drizzle-orm';
+import { SECURITY_CONFIG } from '../utils/secure-compare';
 
 export class ApiKeyRepository {
   private db = getDatabase();
@@ -14,7 +15,7 @@ export class ApiKeyRepository {
       .from(apiKeys)
       .where(eq(apiKeys.id, id))
       .limit(1);
-    return result[0] || null;
+    return result[0] ?? null;
   }
 
   async findByKeyHash(keyHash: string): Promise<ApiKey | null> {
@@ -23,7 +24,40 @@ export class ApiKeyRepository {
       .from(apiKeys)
       .where(eq(apiKeys.keyHash, keyHash))
       .limit(1);
-    return result[0] || null;
+    return result[0] ?? null;
+  }
+
+  /**
+   * Validate that an API key has the required permission.
+   * Returns true only if the key exists, is active, not deleted, and has the permission.
+   * 
+   * @param keyHash - The API key hash to validate
+   * @param requiredPermission - The permission to check for (e.g., 'admin', 'key_revoke')
+   * @returns true if the key is valid and has the required permission
+   */
+  async validatePermission(
+    keyHash: string,
+    requiredPermission: string
+  ): Promise<boolean> {
+    const key = await this.findByKeyHash(keyHash);
+    
+    if (!key) {
+      return false;
+    }
+
+    // Check if key is active and not deleted
+    if (!key.isActive || key.isDeleted) {
+      return false;
+    }
+
+    // Check if key has expired
+    if (key.expiresAt && key.expiresAt < new Date()) {
+      return false;
+    }
+
+    // Check if key has the required permission
+    const permissions = key.permissions as string[];
+    return permissions.includes('admin') || permissions.includes(requiredPermission);
   }
 
   async findByUserId(userId: string, options?: {
@@ -70,7 +104,7 @@ export class ApiKeyRepository {
       whereConditions = and(
         whereConditions,
         isNull(apiKeys.expiresAt),
-        gt(apiKeys.createdAt, new Date(Date.now() - 365 * 24 * 60 * 60 * 1000))
+        gt(apiKeys.createdAt, new Date(Date.now() - SECURITY_CONFIG.DEFAULT_API_KEY_EXPIRY_DAYS * 24 * 60 * 60 * 1000))
       );
     }
 
@@ -137,7 +171,10 @@ export class ApiKeyRepository {
     const result = await this.db
       .delete(apiKeys)
       .where(eq(apiKeys.id, id));
-    return (result.rowCount ?? 0) > 0;
+    
+    // Drizzle delete returns { rowCount: number | null }
+    const rowCount = (result as { rowCount?: number | null }).rowCount ?? 0;
+    return rowCount > 0;
   }
 
   async updateLastUsed(id: string): Promise<void> {

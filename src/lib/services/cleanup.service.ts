@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { getDatabase } from '../db';
-import { publicKeys, revocationConfirmations } from '../db/schema';
-import { eq, lt, sql, and } from 'drizzle-orm';
+import { getDatabase } from '../../db';
+import { publicKeys, revocationConfirmations } from '../../db/schema';
+import { eq, lt, sql, and, inArray } from 'drizzle-orm';
+import { sanitizeErrorMessage, SECURITY_CONFIG } from '../utils/secure-compare';
 
 interface CleanupResult {
   deletedKeys: number;
@@ -17,13 +18,10 @@ export class CleanupService {
 
   private getRevokedKeysCleanupDays(): number {
     const days = process.env.REVOKED_KEY_CLEANUP_DAYS;
-    return days ? parseInt(days, 10) : 30;
+    return days ? parseInt(days, 10) : SECURITY_CONFIG.DEFAULT_CLEANUP_DAYS;
   }
 
   async cleanupExpiredRevocations(): Promise<{ count: number; errors: string[] }> {
-    const errors: string[] = [];
-    let count = 0;
-
     try {
       // Get all expired pending confirmations
       const expiredConfirmations = await this.db
@@ -34,29 +32,25 @@ export class CleanupService {
           lt(revocationConfirmations.expiresAt, new Date())
         ));
 
-      // Update each to expired status
-      for (const conf of expiredConfirmations) {
-        try {
-          await this.db
-            .update(revocationConfirmations)
-            .set({ status: 'expired' })
-            .where(eq(revocationConfirmations.id, conf.id));
-          count++;
-        } catch (err) {
-          errors.push(`Failed to expire confirmation ${conf.id}: ${err}`);
-        }
+      if (expiredConfirmations.length === 0) {
+        return { count: 0, errors: [] };
       }
-    } catch (err) {
-      errors.push(`Failed to get expired confirmations: ${err}`);
-    }
 
-    return { count, errors };
+      // Batch update all expired confirmations
+      const ids = expiredConfirmations.map(c => c.id);
+      await this.db
+        .update(revocationConfirmations)
+        .set({ status: 'expired' })
+        .where(inArray(revocationConfirmations.id, ids));
+
+      return { count: ids.length, errors: [] };
+    } catch (err) {
+      return { count: 0, errors: ['Failed to cleanup expired confirmations'] };
+    }
   }
 
   async cleanupRevokedKeys(olderThanDays?: number): Promise<{ count: number; errors: string[] }> {
     const days = olderThanDays || this.getRevokedKeysCleanupDays();
-    const errors: string[] = [];
-    let count = 0;
 
     try {
       const cutoffDate = new Date();
@@ -64,7 +58,7 @@ export class CleanupService {
 
       // Find keys that should be permanently deleted
       const keysToDelete = await this.db
-        .select({ id: publicKeys.id, channelId: publicKeys.channelId })
+        .select({ id: publicKeys.id })
         .from(publicKeys)
         .where(and(
           eq(publicKeys.isDeleted, true),
@@ -72,21 +66,29 @@ export class CleanupService {
           lt(publicKeys.revokedAt!, cutoffDate)
         ));
 
-      for (const key of keysToDelete) {
-        try {
-          await this.db
-            .delete(publicKeys)
-            .where(eq(publicKeys.id, key.id));
-          count++;
-        } catch (err) {
-          errors.push(`Failed to delete key ${key.id}: ${err}`);
-        }
+      if (keysToDelete.length === 0) {
+        return { count: 0, errors: [] };
       }
-    } catch (err) {
-      errors.push(`Failed to get keys for deletion: ${err}`);
-    }
 
-    return { count, errors };
+      // Process in batches to avoid memory issues
+      const batchSize = SECURITY_CONFIG.BATCH_SIZE;
+      let totalDeleted = 0;
+
+      for (let i = 0; i < keysToDelete.length; i += batchSize) {
+        const batch = keysToDelete.slice(i, i + batchSize);
+        const batchIds = batch.map(k => k.id);
+
+        await this.db
+          .delete(publicKeys)
+          .where(inArray(publicKeys.id, batchIds));
+
+        totalDeleted += batchIds.length;
+      }
+
+      return { count: totalDeleted, errors: [] };
+    } catch (err) {
+      return { count: 0, errors: ['Failed to cleanup revoked keys'] };
+    }
   }
 
   async executeFullCleanup(): Promise<CleanupResult> {
