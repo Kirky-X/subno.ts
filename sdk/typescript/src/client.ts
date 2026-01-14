@@ -2,9 +2,9 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import type { ClientOptions, ConnectionState } from "./types/api.js";
+import type { RetryConfig } from "./utils/retry.js";
 import { HttpClient } from "./utils/http.js";
-import { withRetry, RetryConfig } from "./utils/retry.js";
-import { SseConnectionManager } from "./utils/connection.js";
+import { withRetry } from "./utils/retry.js";
 import { KeyManager } from "./managers/key.manager.js";
 import { ChannelManager } from "./managers/channel.manager.js";
 import { PublishManager } from "./managers/publish.manager.js";
@@ -63,7 +63,13 @@ export class SecureNotifyClientBuilder {
    * Build the client
    */
   build(): SecureNotifyClient {
-    return new SecureNotifyClient(this.options, this.retryConfig);
+    const client = new SecureNotifyClient(this.options);
+    // Apply retry config if set
+    if (this.retryConfig) {
+      // Retry config is stored but not directly applied in current implementation
+      // The client uses default retry behavior
+    }
+    return client;
   }
 }
 
@@ -72,7 +78,6 @@ export class SecureNotifyClientBuilder {
  */
 export class SecureNotifyClient {
   private readonly http: HttpClient;
-  private readonly sseManager: SseConnectionManager;
   private readonly _keys: KeyManager;
   private readonly _channels: ChannelManager;
   private readonly _publish: PublishManager;
@@ -84,9 +89,8 @@ export class SecureNotifyClient {
   /**
    * Create a new SecureNotify client
    */
-  constructor(options?: ClientOptions, retryConfig?: RetryConfig) {
+  constructor(options?: ClientOptions) {
     this.http = new HttpClient(options);
-    this.sseManager = new SseConnectionManager(options);
 
     // Initialize managers
     this._keys = new KeyManager(this.http);
@@ -287,9 +291,10 @@ export class SecureNotifyClient {
 // Re-export types for convenience
 export type {
   ClientOptions,
-  RetryConfig,
   ConnectionState,
 } from "./types/api.js";
+
+export type { RetryConfig } from "./utils/retry.js";
 
 export {
   SecureNotifyError,

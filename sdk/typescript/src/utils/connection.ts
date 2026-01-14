@@ -104,7 +104,7 @@ export class SseConnection {
   ) {
     this.channel = channel;
     this.baseUrl = clientOptions?.baseUrl ?? "http://localhost:3000/api";
-    this.userAgent = typeof navigator !== "undefined" ? navigator.userAgent : undefined;
+    this.userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "SecureNotify-SDK";
     this.apiKey = clientOptions?.apiKey;
 
     this.options = {

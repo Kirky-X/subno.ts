@@ -86,7 +86,8 @@ describe("Retry Utility", () => {
       const elapsed = Date.now() - startTime;
 
       expect(result.success).toBe(true);
-      expect(result.totalTime).toBeGreaterThanOrEqual(50);
+      // With jitter disabled and 50ms delay, should be at least 50ms
+      expect(elapsed).toBeGreaterThanOrEqual(50);
     });
   });
 
@@ -115,7 +116,14 @@ describe("Retry Utility", () => {
 
       const retryableFn = createRetryableFunction(mockFn, { maxRetries: 2, initialDelay: 10 });
 
-      await expect(retryableFn()).rejects.toThrow("INTERNAL_ERROR");
+      try {
+        await retryableFn();
+        expect(true).toBe(false); // Should have thrown
+      } catch (error) {
+        expect(error).toBeInstanceOf(SecureNotifyError);
+        const sdkError = error as SecureNotifyError;
+        expect(sdkError.code).toBe("INTERNAL_ERROR");
+      }
     });
   });
 

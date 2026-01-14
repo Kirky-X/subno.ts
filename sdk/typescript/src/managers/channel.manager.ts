@@ -98,19 +98,19 @@ export class ChannelManager {
     const query: Record<string, string | number | boolean | undefined> = {};
 
     if (options?.limit !== undefined) {
-      query.limit = options.limit;
+      query['limit'] = options.limit;
     }
     if (options?.offset !== undefined) {
-      query.offset = options.offset;
+      query['offset'] = options.offset;
     }
     if (options?.type !== undefined) {
-      query.type = options.type;
+      query['type'] = options.type;
     }
     if (options?.creator !== undefined) {
-      query.creator = options.creator;
+      query['creator'] = options.creator;
     }
     if (options?.isActive !== undefined) {
-      query.isActive = options.isActive;
+      query['isActive'] = options.isActive;
     }
 
     const response = await this.http.get<SuccessResponse<ChannelInfo[]> & { pagination: PaginationResult }>(

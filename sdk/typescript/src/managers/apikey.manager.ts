@@ -108,16 +108,16 @@ export class ApiKeyManager {
     const query: Record<string, string | number | boolean | undefined> = {};
 
     if (options?.limit !== undefined) {
-      query.limit = options.limit;
+      query['limit'] = options.limit;
     }
     if (options?.offset !== undefined) {
-      query.offset = options.offset;
+      query['offset'] = options.offset;
     }
     if (options?.userId !== undefined) {
-      query.userId = options.userId;
+      query['userId'] = options.userId;
     }
     if (options?.isActive !== undefined) {
-      query.isActive = options.isActive;
+      query['isActive'] = options.isActive;
     }
 
     const response = await this.http.get<SuccessResponse<ApiKeyInfo[]> & { pagination: PaginationResult }>(

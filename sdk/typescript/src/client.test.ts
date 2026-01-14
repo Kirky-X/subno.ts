@@ -2,7 +2,7 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { SecureNotifyClient } from "../client.js";
+import { SecureNotifyClient } from "./client.js";
 import type { SseMessageEvent } from "./types/api.js";
 
 describe("SecureNotifyClient", () => {
@@ -117,12 +117,13 @@ describe("SecureNotifyClient", () => {
     describe("builder", () => {
       it("should return a builder instance", () => {
         const builder = SecureNotifyClient.builder();
-        expect(builder).toBeInstanceOf(SecureNotifyClientBuilder);
+        expect(builder.constructor.name).toBe("SecureNotifyClientBuilder");
+        expect(typeof builder.baseUrl).toBe("function");
+        expect(typeof builder.build).toBe("function");
       });
 
       it("should build client with builder", () => {
-        const builder = SecureNotifyClient.builder();
-        const builtClient = builder
+        const builtClient = SecureNotifyClient.builder()
           .baseUrl("https://api.example.com")
           .apiKey("test-key")
           .timeout(50000)

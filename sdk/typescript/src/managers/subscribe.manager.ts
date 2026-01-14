@@ -6,12 +6,14 @@ import type {
   SseConnectedEvent,
   ClientOptions,
 } from "../types/api.js";
-import {
-  SseConnection,
-  SseConnectionManager,
+import type {
   SseEvent,
   SseEventHandler,
   SseEventType,
+} from "../utils/connection.js";
+import {
+  SseConnection,
+  SseConnectionManager,
 } from "../utils/connection.js";
 import { SecureNotifyError } from "../types/errors.js";
 
@@ -326,21 +328,25 @@ export class SubscribeManager {
    */
   async nextMessage(channel: string, timeout: number = 30000): Promise<SseMessageEvent | undefined> {
     return new Promise((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        unsubscribe();
+      const timeoutId = setTimeout(async () => {
+        const unsub = await unsubscribePromise;
+        await unsub();
         resolve(undefined);
       }, timeout);
 
-      const unsubscribe = this.subscribe(channel, (event) => {
+      let unsubscribePromise: Promise<() => Promise<void>>;
+      unsubscribePromise = this.subscribe(channel, async (event) => {
         clearTimeout(timeoutId);
-        unsubscribe();
+        const unsub = await unsubscribePromise;
+        await unsub();
         resolve(event);
       });
 
       // Handle errors
-      const unsubscribeError = this.onError(channel, () => {
+      this.onError(channel, async () => {
         clearTimeout(timeoutId);
-        unsubscribe();
+        const unsub = await unsubscribePromise;
+        await unsub();
         reject(new Error("Connection error"));
       });
     });

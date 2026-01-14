@@ -119,10 +119,10 @@ export class KeyManager {
     const query: Record<string, string | number | boolean | undefined> = {};
 
     if (options?.limit !== undefined) {
-      query.limit = options.limit;
+      query['limit'] = options.limit;
     }
     if (options?.offset !== undefined) {
-      query.offset = options.offset;
+      query['offset'] = options.offset;
     }
 
     const response = await this.http.get<SuccessResponse<PublicKeyInfo[]>>(
