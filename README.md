@@ -1,56 +1,81 @@
-# SecureNotify (subno.ts)
-
 <div align="center">
 
-**加密推送通知服务** | 公钥存储与消息分发
+<span id="-securenotify-subnots"></span>
 
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.9.0-339933?logo=node.js)](https://nodejs.org)
-[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://typescriptlang.org)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1?logo=postgresql)](https://postgresql.org)
-[![Redis](https://img.shields.io/badge/Redis-7+-DC382D?logo=redis)](https://redis.io)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+<img src="public/assets/logo.webp" alt="SecureNotify Logo" height="150" />
+
+<h3 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.8rem; margin: 0.5rem 0;">
+  加密推送通知服务
+</h3>
+
+<p style="color: #6b7280; margin: 0;">
+  公钥存储与消息分发
+</p>
+
+---
+
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.9.0-339933?logo=node.js&style=flat-square&logoColor=fff)](https://nodejs.org)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&style=flat-square&logoColor=fff)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&style=flat-square&logoColor=fff)](https://typescriptlang.org)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
+
+---
+
+[🚀 快速开始](#-快速开始) • [📖 API 文档](docs/API_REFERENCE.md) • [🏗️ 架构设计](docs/ARCHITECTURE.md) • [📚 用户指南](docs/USER_GUIDE.md) • [📘RAEDME English](./README_en.md)
 
 </div>
 
-## 简介
+---
 
-**SecureNotify** (品牌名：subno.ts) 是一个专注于公钥存储与消息分发的加密推送通知服务。它提供端到端加密通信、实时消息推送和密钥管理功能，确保您的消息在传输过程中得到最大程度的安全保护。
+## 💡 简介
 
-### 核心特性
+> **SecureNotify** (subno.ts) 是一个专注于公钥存储与消息分发的加密推送通知服务。它提供端到端加密通信、实时消息推送和密钥管理功能，确保您的消息在传输过程中得到最大程度的安全保护。
 
-| 特性 | 描述 |
-|------|------|
-| **公钥注册与管理** | 支持多种加密算法（RSA-2048、RSA-4096、ECC-SECP256K1）的公钥注册、存储和查询 |
-| **频道管理** | 支持公开频道、加密频道和临时频道三种类型，满足不同场景需求 |
-| **实时消息推送** | 基于 Server-Sent Events (SSE) 的实时消息分发，即时送达订阅者 |
-| **消息加密** | 采用混合加密架构（RSA + AES-256-GCM），支持端到端加密 |
-| **安全控制** | API 密钥认证、请求限流、审计日志、输入验证等多重安全机制 |
-| **速率限制** | 基于 IP 和 User-Agent 的双重限流，LRU  eviction 内存保护（最大 10,000 条目） |
-| **优雅关闭** | SIGTERM/SIGINT 信号处理，确保数据库连接正确关闭 |
-| **消息优先级** | 支持优先级队列（CRITICAL/HIGH/NORMAL/LOW/BULK），确保重要消息优先处理 |
+---
 
-### 技术栈
+## ✨ 核心特性
 
-| 技术 | 版本/说明 |
-|------|-----------|
-| **运行时** | Node.js >= 20.9.0 |
-| **框架** | Next.js ^16.1.1 (App Router) |
-| **语言** | TypeScript ^5.x (strict mode) |
-| **数据库** | PostgreSQL 14+ (持久化存储) |
-| **缓存/消息队列** | Redis 7+ (缓存、发布订阅、优先级队列) |
-| **ORM** | Drizzle ORM ^0.45.1 |
-| **验证** | Zod ^3.24.1 (运行时验证) |
-| **测试** | Vitest ^4.0.16 |
-| **部署** | Vercel ^50.1.3 |
+| | |
+|---|---|
+| **🔐 公钥注册与管理** | 支持多种加密算法（RSA-2048、RSA-4096、ECC-SECP256K1）的公钥注册、存储和查询 |
+| **📢 频道管理** | 支持公开频道、加密频道和临时频道三种类型，满足不同场景需求 |
+| **⚡ 实时消息推送** | 基于 Server-Sent Events (SSE) 的实时消息分发，即时送达订阅者 |
+| **🔒 消息加密** | 采用混合加密架构（RSA + AES-256-GCM），支持端到端加密 |
+| **🛡️ 安全控制** | API 密钥认证、请求限流、审计日志、输入验证等多重安全机制 |
+| **🎯 消息优先级** | 支持优先级队列（CRITICAL/HIGH/NORMAL/LOW/BULK），确保重要消息优先处理 |
+| **🔑 两阶段撤销** | 密钥撤销采用两阶段确认机制，防止误操作 |
 
-## 快速开始
+---
+
+## 🛠️ 技术栈
+
+<div style="display: flex; flex-direction: column; gap: 0.5rem;">
+
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.9.0-339933?logo=node.js)](https://nodejs.org)
+
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js)](https://nextjs.org)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://typescriptlang.org)
+
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-336791?logo=postgresql)](https://www.postgresql.org)
+
+[![Redis](https://img.shields.io/badge/Redis-7+-DC382D?logo=redis)](https://redis.io)
+
+[![Drizzle ORM](https://img.shields.io/badge/Drizzle%20ORM-0.45.1-6291c5)](https://orm.drizzle.team)
+
+[![Zod](https://img.shields.io/badge/Zod-3.24.1-c42427)](https://zod.dev)
+
+</div>
+
+---
+
+## 🚀 快速开始
 
 ### 前置要求
 
-- Node.js >= 20.9.0
-- PostgreSQL 14+
-- Redis 7+
+- ✅ Node.js >= 20.9.0
+- ✅ PostgreSQL 14+
+- ✅ Redis 7+
 
 ### 安装
 
@@ -64,92 +89,67 @@ npm install
 
 # 配置环境变量
 cp .env.example .env
-# 编辑 .env 文件配置数据库和 Redis 连接
 ```
 
 ### 环境配置
 
-创建 `.env` 文件：
-
 ```env
-# Database Connection
-DATABASE_URL=postgresql://securenotify:password@localhost:5432/securenotify
+DATABASE_URL=postgresql://user:password@localhost:5432/securenotify
 REDIS_URL=redis://localhost:6379
-
-# Admin Configuration (生产环境必须设置)
 ADMIN_MASTER_KEY=your-secure-master-key
 CRON_SECRET=your-cron-secret
-
-# Message Configuration (可选，使用默认值)
-PUBLIC_MESSAGE_TTL=43200
-PRIVATE_MESSAGE_TTL=86400
-
-# Security Configuration (可选，使用默认值)
-MAX_MESSAGE_SIZE=4718592
-RATE_LIMIT_PUBLISH=10
-RATE_LIMIT_REGISTER=5
-RATE_LIMIT_SUBSCRIBE=5
 ```
 
-### 运行开发服务器
+> ⚠️ **重要**：生产环境中，`ADMIN_MASTER_KEY` 和 `CRON_SECRET` 必须设置，且长度至少 32 字符。
+
+### 运行
 
 ```bash
+# 开发模式
 npm run dev
-```
 
-服务将在 `http://localhost:3000` 启动。
-
-### 构建生产版本
-
-```bash
+# 生产构建
 npm run build
 npm start
-```
 
-### 运行测试
-
-```bash
-# 运行所有测试
+# 运行测试
 npm test
-
-# 监听模式运行测试
-npm run test:watch
-
-# 运行特定测试
-npm test -- channel.test.ts
 ```
 
-## 项目结构
+---
+
+## 📁 项目结构
 
 ```
 subno.ts/
-├── app/                    # Next.js App Router 路由
-│   └── api/               # API 端点
-│       ├── channels/      # 频道管理 API
-│       ├── keys/          # 密钥管理 API
-│       ├── publish/       # 消息发布 API
-│       ├── register/      # 公钥注册 API
-│       ├── subscribe/     # 实时订阅 API
-│       └── cron/          # 定时任务 API
+├── app/                    # Next.js App Router
+│   ├── api/               # API 端点
+│   │   ├── channels/      # 频道管理
+│   │   ├── keys/          # 密钥管理
+│   │   ├── publish/       # 消息发布
+│   │   ├── register/      # 公钥注册
+│   │   ├── subscribe/     # 实时订阅
+│   │   └── cron/          # 定时任务
+│   └── components/        # React 组件
 ├── src/
-│   ├── lib/               # 核心库
-│   │   ├── services/     # 业务逻辑服务
-│   │   │   ├── encryption/    # 加密服务 (RSA, AES, Hybrid)
-│   │   │   ├── rate-limiter.service.ts   # 速率限制
-│   │   │   └── audit.service.ts          # 审计日志
-│   │   └── repositories/ # 数据访问层
-│   └── middleware.ts      # Next.js 中间件
+│   ├── config/            # 配置文件
+│   ├── db/                # 数据库 schema
+│   └── lib/               # 核心库
+│       ├── services/      # 业务逻辑
+│       ├── repositories/  # 数据访问
+│       └── middleware/    # 中间件
 ├── docs/                   # 文档
-├── openspec/              # OpenSpec 规范文档
-└── __tests__/             # 测试文件
+├── __tests__/              # 测试
+└── scripts/                # 脚本工具
 ```
 
-## API 概览
+---
+
+## 🔌 API 概览
 
 ### 公钥注册
 
 ```bash
-# 注册公钥
 POST /api/register
 Content-Type: application/json
 
@@ -163,21 +163,18 @@ Content-Type: application/json
 ### 频道管理
 
 ```bash
-# 创建频道
 POST /api/channels
 Content-Type: application/json
 
 {
   "name": "my-channel",
-  "type": "public",
-  "expiresIn": 86400
+  "type": "public"
 }
 ```
 
 ### 消息发布
 
 ```bash
-# 发布消息
 POST /api/publish
 Content-Type: application/json
 
@@ -191,86 +188,84 @@ Content-Type: application/json
 ### 实时订阅
 
 ```bash
-# SSE 订阅频道
 GET /api/subscribe?channel=my-channel
 ```
 
-详细 API 文档请参阅 [API 参考](docs/API_REFERENCE.md)。
+📖 详细 API 文档请参阅 [API 参考](docs/API_REFERENCE.md)。
 
-## 核心概念
+---
+
+## 💡 核心概念
 
 ### 频道类型
 
-| 类型 | 说明 | 使用场景 |
-|------|------|----------|
-| **公开频道 (public)** | 无加密，所有订阅者可访问 | 公告、广播通知 |
-| **加密频道 (encrypted)** | 需要公钥注册，端到端加密 | 私密消息、敏感通知 |
-| **临时频道 (temporary)** | 自动过期（默认 30 分钟） | 临时会话、一次性通知 |
+| 类型 | 说明 | 加密 | 图标 |
+|------|------|------|------|
+| 公开频道 | 所有订阅者可访问 | ❌ | 🌐 |
+| 加密频道 | 端到端加密 | ✅ | 🔒 |
+| 临时频道 | 自动过期 | ❌/✅ | ⏱️ |
 
 ### 消息优先级
 
-| 优先级 | 值 | 说明 |
-|--------|-----|------|
-| **CRITICAL** | 100 | 最高优先级，立即送达 |
-| **HIGH** | 75 | 高优先级消息 |
-| **NORMAL** | 50 | 默认优先级 |
-| **LOW** | 25 | 低优先级 |
-| **BULK** | 0 | 批量消息，最低优先级 |
+| 优先级 | 值 | 说明 | 颜色 |
+|--------|-----|------|------|
+| CRITICAL | 100 | 最高优先级 | 🔴 |
+| HIGH | 75 | 高优先级 | 🟠 |
+| NORMAL | 50 | 默认优先级 | 🟡 |
+| LOW | 25 | 低优先级 | 🟢 |
+| BULK | 0 | 批量消息 | ⚪ |
 
-### 加密算法
+---
 
-| 算法 | 密钥长度 | 说明 |
-|------|----------|------|
-| **RSA-2048** | 2048 位 | 默认非对称加密 |
-| **RSA-4096** | 4096 位 | 增强安全性 |
-| **ECC-SECP256K1** | 256 位 | 椭圆曲线加密 |
-| **AES-256-GCM** | 256 位 | 对称加密（混合加密） |
-
-## 文档
+## 📚 文档
 
 | 文档 | 描述 |
 |------|------|
-| [API 参考](docs/API_REFERENCE.md) | 完整的 API 端点文档 |
-| [用户指南](docs/USER_GUIDE.md) | 产品概述、使用示例、常见问题 |
-| [架构文档](docs/ARCHITECTURE.md) | 系统架构、数据流程、安全设计 |
+| [📖 API 参考](docs/API_REFERENCE.md) | 完整的 API 端点文档，包含请求/响应示例和错误码说明 |
+| [📚 用户指南](docs/USER_GUIDE.md) | 产品概述、核心概念、使用示例、安全最佳实践 |
+| [🏗️ 架构文档](docs/ARCHITECTURE.md) | 系统架构、数据流程、安全性设计、性能考虑 |
 
-## 贡献指南
+---
 
-### 开发流程
+## 🤝 贡献指南
 
-1. **Fork** 本仓库
-2. 创建特性分支：`git checkout -b feature/your-feature`
-3. 提交更改：`git commit -m 'Add: your feature'`
-4. 推送到分支：`git push origin feature/your-feature`
-5. 创建 **Pull Request**
+1. 🍴 Fork 本仓库
+2. 🌿 创建特性分支：`git checkout -b feature/your-feature`
+3. ✏️ 提交更改：`git commit -m 'Add: your feature'`
+4. 📤 推送到分支：`git push origin feature/your-feature`
+5. 🔀 创建 Pull Request
 
-### 代码规范
+---
 
-- TypeScript 严格模式
-- 所有文件必须包含 Apache 2.0 许可证头
-- 使用 ESLint 进行代码检查
-- 提交前运行 `npm run lint`
-
-### 测试要求
-
-- 所有新功能必须有对应的测试
-- 单元测试覆盖核心逻辑
-- 集成测试覆盖 API 端点
-- 目标测试覆盖率 >80%
-
-## 许可证
+## 📄 许可证
 
 本项目采用 **Apache License 2.0** 许可证。详见 [LICENSE](LICENSE) 文件。
 
-## 联系方式
+---
 
-- **项目仓库**: https://github.com/your-org/subno.ts
-- **问题反馈**: https://github.com/your-org/subno.ts/issues
+## 📞 联系方式
+
+- **📦 项目仓库**: https://github.com/your-org/subno.ts
+- **🐛 问题反馈**: https://github.com/your-org/subno.ts/issues
 
 ---
 
 <div align="center">
 
 **SecureNotify** - 安全、实时、可靠的推送通知服务
+
+Made with ❤️ by [Kirky.X](https://github.com/KirkyX)
+
+---
+
+[⬆️ 回到顶部](#-securenotify-subnots)
+
+</div>
+
+---
+
+<div align="center">
+
+*© 2026 SecureNotify. All rights reserved.*
 
 </div>
