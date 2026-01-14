@@ -260,12 +260,24 @@ class SecureNotifyClient:
 
 # Sync wrapper utilities
 def _run_async(coro):
-    """Run an async coroutine in a new event loop."""
+    """Run an async coroutine in a new event loop.
+
+    Creates a new event loop, runs the coroutine, and ensures proper cleanup
+    to prevent resource leaks.
+    """
     loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(coro)
     finally:
+        # Cancel all remaining tasks
+        pending = asyncio.all_tasks(loop)
+        for task in pending:
+            task.cancel()
+        if pending:
+            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
         loop.close()
+        asyncio.set_event_loop(None)
 
 
 class SyncSecureNotifyClient:

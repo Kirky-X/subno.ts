@@ -8,6 +8,7 @@ import type {
   RetryOptions,
 } from "../types/api.js";
 import { SecureNotifyError } from "../types/errors.js";
+import { withRetry, type RetryConfig } from "./retry.js";
 
 /**
  * HTTP method types
@@ -53,6 +54,7 @@ export class HttpClient {
   private readonly apiKey: string | undefined;
   private readonly apiKeyId: string | undefined;
   private readonly defaultTimeout: number;
+  private readonly retryConfig: RetryConfig | undefined;
 
   /**
    * Create a new HTTP client
@@ -62,6 +64,7 @@ export class HttpClient {
     this.apiKey = options.apiKey;
     this.apiKeyId = options.apiKeyId;
     this.defaultTimeout = options.timeout ?? 30000;
+    this.retryConfig = options.retry;
   }
 
   /**
@@ -167,6 +170,27 @@ export class HttpClient {
   async request<T>(
     options: HttpRequestOptions,
     retryOptions?: RetryOptions
+  ): Promise<HttpResponse<T>> {
+    // Merge retry options: explicit options > client config > default
+    const finalRetryConfig: RetryConfig = retryOptions ?? this.retryConfig ?? {};
+
+    // Execute the request with retry logic
+    const result = await withRetry(async () => {
+      return await this.executeRequest<T>(options);
+    }, finalRetryConfig);
+
+    if (!result.success) {
+      throw result.error;
+    }
+
+    return result.data;
+  }
+
+  /**
+   * Execute a single HTTP request (without retry logic)
+   */
+  private async executeRequest<T>(
+    options: HttpRequestOptions
   ): Promise<HttpResponse<T>> {
     const url = this.buildUrl(options.path, options.query);
     const headers = this.buildHeaders(options.headers);

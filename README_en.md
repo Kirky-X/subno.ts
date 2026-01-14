@@ -2,7 +2,7 @@
 
 <span id="-securenotify-subnots"></span>
 
-<img src="public/assets/logo.webp" alt="SecureNotify Logo" height="150" />
+<img src="public/assets/logo.png" alt="SecureNotify Logo" height="100" />
 
 <h3 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.8rem; margin: 0.5rem 0;">
   Encrypted Push Notification Service

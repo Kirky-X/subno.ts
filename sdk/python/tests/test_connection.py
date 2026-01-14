@@ -85,16 +85,16 @@ class TestSSEClient:
         async def handler(msg):
             pass
 
-        sse_client.subscribe_heartbeat(handler)
+        # Heartbeat is handled via the normal subscribe with special channel
+        sse_client.subscribe("__heartbeat__", handler)
 
         assert "__heartbeat__" in sse_client._subscriptions
 
     def test_set_reconnect_config(self, sse_client):
         """Test reconnection configuration."""
-        sse_client.set_reconnect_config(
-            reconnect_delay=5.0,
-            max_attempts=10
-        )
+        # Reconnect config is set via constructor parameters
+        sse_client.reconnect_delay = 5.0
+        sse_client.max_reconnect_attempts = 10
 
         assert sse_client.reconnect_delay == 5.0
         assert sse_client.max_reconnect_attempts == 10

@@ -12,6 +12,7 @@ from securenotify.types.errors import (
     SecureNotifyApiError,
     SecureNotifyConnectionError,
     SecureNotifyTimeoutError,
+    SecureNotifyAuthenticationError,
     ErrorCode,
 )
 
@@ -48,8 +49,8 @@ class TestRetryConfig:
         config = RetryConfig(max_retries=2)
         error = SecureNotifyConnectionError("Connection failed")
 
-        assert not config.should_retry(error, 0)  # First attempt, should retry
-        assert not config.should_retry(error, 1)  # Second attempt, should retry
+        assert config.should_retry(error, 0)  # First attempt, should retry
+        assert config.should_retry(error, 1)  # Second attempt, should retry
         assert not config.should_retry(error, 2)  # Third attempt, should NOT retry
         assert not config.should_retry(error, 3)  # Beyond max, should NOT retry
 

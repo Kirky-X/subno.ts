@@ -17,7 +17,6 @@ import { SecureNotifyError } from "./types/errors.js";
  */
 export class SecureNotifyClientBuilder {
   private options: ClientOptions = {};
-  private retryConfig?: RetryConfig;
 
   /**
    * Set the base URL
@@ -55,7 +54,7 @@ export class SecureNotifyClientBuilder {
    * Configure retry options
    */
   retry(config: RetryConfig): this {
-    this.retryConfig = config;
+    this.options.retry = config;
     return this;
   }
 
@@ -63,13 +62,7 @@ export class SecureNotifyClientBuilder {
    * Build the client
    */
   build(): SecureNotifyClient {
-    const client = new SecureNotifyClient(this.options);
-    // Apply retry config if set
-    if (this.retryConfig) {
-      // Retry config is stored but not directly applied in current implementation
-      // The client uses default retry behavior
-    }
-    return client;
+    return new SecureNotifyClient(this.options);
   }
 }
 
