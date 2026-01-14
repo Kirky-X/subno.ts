@@ -50,7 +50,7 @@ public class ConnectionManager implements AutoCloseable {
     }
 
     public ConnectionManager(String baseUrl, String apiKey, String apiKeyId, int timeoutMs) {
-        this.baseUrl = baseUrl != null && !baseUrl.isEmpty() ? baseUrl : "https://api.securenotify.dev";
+        this.baseUrl = UrlHelper.getDefaultBaseUrl(baseUrl);
         this.apiKey = apiKey != null ? apiKey : "";
         this.apiKeyId = apiKeyId;
         this.timeoutMs = timeoutMs;
@@ -252,8 +252,8 @@ public class ConnectionManager implements AutoCloseable {
      * Build SSE URL for a channel.
      */
     private String buildSseUrl(String channelId) {
-        String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-        return base + "/api/subscribe?channel=" + channelId;
+        String base = UrlHelper.buildUrl(baseUrl, "/api/subscribe");
+        return base + "?channel=" + channelId;
     }
 
     /**

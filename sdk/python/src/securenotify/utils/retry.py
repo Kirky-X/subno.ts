@@ -3,6 +3,7 @@
 Implements retry logic with configurable backoff strategy.
 """
 
+import asyncio
 import random
 import time
 from typing import Callable, TypeVar, Awaitable, Optional
@@ -151,6 +152,3 @@ class RetryableException(Exception):
         """
         super().__init__(message)
         self.retry_after = retry_after
-
-
-import asyncio

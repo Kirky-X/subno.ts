@@ -35,6 +35,7 @@
 //! ```
 
 use std::sync::Arc;
+#[cfg(feature = "uniffi")]
 use uniffi::prelude::*;
 
 /// FFI-safe error type for SecureNotify operations
@@ -86,6 +87,7 @@ impl Clone for SecureNotifyError {
 // Note: SecureNotifyError cannot implement Copy trait because it contains String fields
 // For FFI compatibility, we use Clone instead
 
+#[cfg(feature = "uniffi")]
 #[uniffi::export]
 impl SecureNotifyError {
     #[uniffi::constructor]
@@ -310,63 +312,22 @@ impl ConnectionState {
 pub mod types;
 pub mod managers;
 pub mod utils;
+pub mod client;
 
 use types::api::*;
 use managers::*;
 use utils::http::HttpClient;
 
-/// SSE event types
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SseEventType {
-    Message,
-    Heartbeat,
-    Error,
-    Connected,
-    Disconnected,
-    Unknown(String),
-}
+// Re-export types from api module
+pub use types::api::{SseEvent, SseEventType};
 
-impl std::fmt::Display for SseEventType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Message => write!(f, "message"),
-            Self::Heartbeat => write!(f, "heartbeat"),
-            Self::Error => write!(f, "error"),
-            Self::Connected => write!(f, "connected"),
-            Self::Disconnected => write!(f, "disconnected"),
-            Self::Unknown(s) => write!(f, "unknown: {}", s),
-        }
-    }
-}
+// Re-export ClientBuilder from client module
+pub use client::ClientBuilder;
 
-/// SSE event
-#[derive(Debug, Clone)]
-pub struct SseEvent {
-    /// Event type
-    pub event_type: SseEventType,
-    /// Event data
-    pub data: String,
-    /// Event ID (if provided)
-    pub id: Option<String>,
-    /// Event name (if provided)
-    pub name: Option<String>,
-}
+// Re-export SseMessage from utils module
+pub use utils::connection::SseMessage;
 
-impl SseEvent {
-    pub fn new(
-        event_type: SseEventType,
-        data: String,
-        id: Option<String>,
-        name: Option<String>,
-    ) -> Self {
-        Self {
-            event_type,
-            data,
-            id,
-            name,
-        }
-    }
-}
+
 
 /// SecureNotify Client for Rust
 ///
@@ -428,109 +389,11 @@ impl SecureNotifyClient {
     }
 }
 
-/// Builder for SecureNotifyClient
-#[derive(Debug, Clone)]
-pub struct ClientBuilder {
-    base_url: String,
-    api_key: String,
-    timeout: std::time::Duration,
-    max_retries: u32,
-    initial_delay_ms: u64,
-    max_delay_ms: u64,
-    backoff_multiplier: f64,
-}
-
-impl Default for ClientBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ClientBuilder {
-    /// Create a new builder with default settings
-    pub fn new() -> Self {
-        Self {
-            base_url: "https://api.securenotify.dev".to_string(),
-            api_key: String::new(),
-            timeout: std::time::Duration::from_secs(30),
-            max_retries: 3,
-            initial_delay_ms: 1000,
-            max_delay_ms: 30000,
-            backoff_multiplier: 2.0,
-        }
-    }
-
-    /// Set the base URL
-    pub fn base_url(mut self, base_url: impl Into<String>) -> Self {
-        self.base_url = base_url.into();
-        self
-    }
-
-    /// Set the API key
-    pub fn api_key(mut self, api_key: impl Into<String>) -> Self {
-        self.api_key = api_key.into();
-        self
-    }
-
-    /// Set the request timeout
-    pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
-        self.timeout = timeout;
-        self
-    }
-
-    /// Set the maximum number of retries
-    pub fn max_retries(mut self, max_retries: u32) -> Self {
-        self.max_retries = max_retries;
-        self
-    }
-
-    /// Set the initial delay for retries (in milliseconds)
-    pub fn initial_delay_ms(mut self, delay_ms: u64) -> Self {
-        self.initial_delay_ms = delay_ms;
-        self
-    }
-
-    /// Set the maximum delay for retries (in milliseconds)
-    pub fn max_delay_ms(mut self, delay_ms: u64) -> Self {
-        self.max_delay_ms = delay_ms;
-        self
-    }
-
-    /// Set the backoff multiplier
-    pub fn backoff_multiplier(mut self, multiplier: f64) -> Self {
-        self.backoff_multiplier = multiplier;
-        self
-    }
-
-    /// Build the client
-    pub fn build(self) -> Result<SecureNotifyClient> {
-        if self.api_key.is_empty() {
-            return Err(SecureNotifyError::AuthError(
-                "API key is required".to_string(),
-            ));
-        }
-
-        Ok(SecureNotifyClient {
-            base_url: self.base_url,
-            api_key: self.api_key,
-            http_client: Arc::new(HttpClient::with_config(
-                &self.base_url,
-                &self.api_key,
-                self.timeout,
-                self.max_retries,
-                self.initial_delay_ms,
-                self.max_delay_ms,
-                self.backoff_multiplier,
-            )),
-        })
-    }
-}
-
 // Implement manager traits for SecureNotifyClient
 implement_managers!(SecureNotifyClient);
 
 /// Create a new client (convenience function for FFI)
-#[uniffi::export]
+// #[uniffi::export]
 pub fn create_client(base_url: String, api_key: String) -> Result<SecureNotifyClient> {
     SecureNotifyClient::builder()
         .base_url(base_url)
@@ -539,12 +402,12 @@ pub fn create_client(base_url: String, api_key: String) -> Result<SecureNotifyCl
 }
 
 /// Create a client with default URL
-#[uniffi::export]
+// #[uniffi::export]
 pub fn create_client_with_defaults(api_key: String) -> Result<SecureNotifyClient> {
     create_client("https://api.securenotify.dev".to_string(), api_key)
 }
 
-uniffi::include_scaffolding!("securenotify");
+// uniffi::include_scaffolding!("securenotify");
 
 #[cfg(test)]
 mod tests;

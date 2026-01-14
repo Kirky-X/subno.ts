@@ -3,7 +3,6 @@
 
 //! SSE (Server-Sent Events) connection manager for SecureNotify SDK
 
-use reqwest::EventSource;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::time::{timeout, Duration};

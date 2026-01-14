@@ -5,7 +5,6 @@ import type {
   MessagePublishRequest,
   MessagePublishResponse,
   MessagePriority,
-  PublishMessageOptions,
   MessageInfo,
   QueueStatusResponse,
   SuccessResponse,
@@ -117,110 +116,28 @@ export class PublishManager {
     return response.data.data;
   }
 
-  /**
-   * Send a critical priority message
-   *
-   * @param channel - The channel ID
-   * @param message - The message content
-   * @param sender - Optional sender identifier
-   * @returns The publish result
-   */
-  async sendCritical(
-    channel: string,
-    message: string,
-    sender?: string
-  ): Promise<PublishResult> {
-    return this.send({
-      channel,
-      message,
-      priority: "critical",
-      sender,
-    });
-  }
-
-  /**
-   * Send a high priority message
-   *
-   * @param channel - The channel ID
-   * @param message - The message content
-   * @param sender - Optional sender identifier
-   * @returns The publish result
-   */
-  async sendHigh(
-    channel: string,
-    message: string,
-    sender?: string
-  ): Promise<PublishResult> {
-    return this.send({
-      channel,
-      message,
-      priority: "high",
-      sender,
-    });
-  }
-
-  /**
-   * Send a normal priority message
-   *
-   * @param channel - The channel ID
-   * @param message - The message content
-   * @param sender - Optional sender identifier
-   * @returns The publish result
-   */
-  async sendNormal(
-    channel: string,
-    message: string,
-    sender?: string
-  ): Promise<PublishResult> {
-    return this.send({
-      channel,
-      message,
-      priority: "normal",
-      sender,
-    });
-  }
-
-  /**
-   * Send a low priority message
-   *
-   * @param channel - The channel ID
-   * @param message - The message content
-   * @param sender - Optional sender identifier
-   * @returns The publish result
-   */
-  async sendLow(
-    channel: string,
-    message: string,
-    sender?: string
-  ): Promise<PublishResult> {
-    return this.send({
-      channel,
-      message,
-      priority: "low",
-      sender,
-    });
-  }
-
-  /**
-   * Send a bulk message (lowest priority)
-   *
-   * @param channel - The channel ID
-   * @param message - The message content
-   * @param sender - Optional sender identifier
-   * @returns The publish result
-   */
-  async sendBulk(
-    channel: string,
-    message: string,
-    sender?: string
-  ): Promise<PublishResult> {
-    return this.send({
-      channel,
-      message,
-      priority: "bulk",
-      sender,
-    });
-  }
+/**
+ * Send a priority message
+ *
+ * @param priority - The message priority level
+ * @param channel - The channel ID
+ * @param message - The message content
+ * @param sender - Optional sender identifier
+ * @returns The publish result
+ */
+async sendPriority(
+  priority: MessagePriority,
+  channel: string,
+  message: string,
+  sender?: string
+): Promise<PublishResult> {
+  return this.send({
+    channel,
+    message,
+    priority,
+    sender,
+  });
+}
 
   /**
    * Send a message to multiple channels

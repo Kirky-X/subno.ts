@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
+
+// UniFFI definition file for SecureNotify SDK
+
+namespace securenotify {
+  SecureNotifyClient create_client(string base_url, string api_key);
+  SecureNotifyError api_error(string code, string message, u16 status);
+  SecureNotifyError network_error(string message);
+  SecureNotifyError connection_error(string message);
+  SecureNotifyError timeout_error(string message);
+  SecureNotifyError serialization_error(string message);
+  SecureNotifyError auth_error(string message);
+};
+

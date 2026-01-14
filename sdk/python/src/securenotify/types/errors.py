@@ -11,72 +11,79 @@ class ErrorCode(Enum):
     """Error codes returned by the SecureNotify API."""
 
     # Success (no error)
-    SUCCESS = 0
+    SUCCESS = "SUCCESS"
 
-    # Authentication errors (1xx)
-    AUTH_REQUIRED = 1001
-    AUTH_INVALID = 1002
-    AUTH_EXPIRED = 1003
-    AUTH_INSUFFICIENT_PERMISSIONS = 1004
+    # Authentication errors (4xx)
+    AUTH_REQUIRED = "AUTH_REQUIRED"
+    AUTH_FAILED = "AUTH_FAILED"
+    FORBIDDEN = "FORBIDDEN"
 
-    # Resource errors (2xx)
-    RESOURCE_NOT_FOUND = 2001
-    RESOURCE_EXISTS = 2002
-    RESOURCE_EXPIRED = 2003
-    RESOURCE_INVALID = 2004
+    # Resource errors (4xx)
+    NOT_FOUND = "NOT_FOUND"
+    CHANNEL_EXISTS = "CHANNEL_EXISTS"
+    KEY_EXPIRED = "KEY_EXPIRED"
+    RESOURCE_EXISTS = "RESOURCE_EXISTS"
 
-    # Request errors (3xx)
-    REQUEST_INVALID = 3001
-    REQUEST_TOO_LARGE = 3002
-    REQUEST_RATE_LIMITED = 3003
+    # Request errors (4xx)
+    VALIDATION_ERROR = "VALIDATION_ERROR"
+    MESSAGE_TOO_LARGE = "MESSAGE_TOO_LARGE"
+    RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
 
     # Server errors (5xx)
-    SERVER_INTERNAL_ERROR = 5001
-    SERVER_UNAVAILABLE = 5002
-    SERVER_TIMEOUT = 5003
+    INTERNAL_ERROR = "INTERNAL_ERROR"
+    BAD_GATEWAY = "BAD_GATEWAY"
+    SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"
+    GATEWAY_TIMEOUT = "GATEWAY_TIMEOUT"
 
-    # SDK errors (9xxx)
-    SDK_CONNECTION_ERROR = 9001
-    SDK_TIMEOUT_ERROR = 9002
-    SDK_SERIALIZATION_ERROR = 9003
-    SDK_RETRY_EXHAUSTED = 9004
+    # Client-side errors
+    NETWORK_ERROR = "NETWORK_ERROR"
+    TIMEOUT_ERROR = "TIMEOUT_ERROR"
+    CONNECTION_ERROR = "CONNECTION_ERROR"
+    SERIALIZATION_ERROR = "SERIALIZATION_ERROR"
+    DESERIALIZATION_ERROR = "DESERIALIZATION_ERROR"
+
+    # SSE errors
+    SSE_CONNECTION_ERROR = "SSE_CONNECTION_ERROR"
+    SSE_HEARTBEAT_TIMEOUT = "SSE_HEARTBEAT_TIMEOUT"
+
+    # SDK errors
+    INVALID_OPTIONS = "INVALID_OPTIONS"
+    MISSING_API_KEY = "MISSING_API_KEY"
+    INVALID_BASE_URL = "INVALID_BASE_URL"
 
 
 # Retryable error codes
 RETRYABLE_ERRORS = {
-    ErrorCode.SERVER_UNAVAILABLE,
-    ErrorCode.SERVER_TIMEOUT,
-    ErrorCode.REQUEST_RATE_LIMITED,
-    ErrorCode.SDK_CONNECTION_ERROR,
-    ErrorCode.SDK_TIMEOUT_ERROR,
+    ErrorCode.RATE_LIMIT_EXCEEDED,
+    ErrorCode.INTERNAL_ERROR,
+    ErrorCode.BAD_GATEWAY,
+    ErrorCode.SERVICE_UNAVAILABLE,
+    ErrorCode.GATEWAY_TIMEOUT,
+    ErrorCode.NETWORK_ERROR,
+    ErrorCode.TIMEOUT_ERROR,
+    ErrorCode.CONNECTION_ERROR,
+    ErrorCode.SSE_CONNECTION_ERROR,
+    ErrorCode.SSE_HEARTBEAT_TIMEOUT,
 }
 
 # Non-retryable error codes
 NON_RETRYABLE_ERRORS = {
     ErrorCode.AUTH_REQUIRED,
-    ErrorCode.AUTH_INVALID,
-    ErrorCode.AUTH_EXPIRED,
-    ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS,
-    ErrorCode.RESOURCE_NOT_FOUND,
+    ErrorCode.AUTH_FAILED,
+    ErrorCode.FORBIDDEN,
+    ErrorCode.NOT_FOUND,
+    ErrorCode.CHANNEL_EXISTS,
+    ErrorCode.KEY_EXPIRED,
     ErrorCode.RESOURCE_EXISTS,
-    ErrorCode.RESOURCE_EXPIRED,
-    ErrorCode.RESOURCE_INVALID,
-    ErrorCode.REQUEST_INVALID,
-    ErrorCode.REQUEST_TOO_LARGE,
-    ErrorCode.SERVER_INTERNAL_ERROR,
-    ErrorCode.SDK_SERIALIZATION_ERROR,
-    ErrorCode.SDK_RETRY_EXHAUSTED,
+    ErrorCode.VALIDATION_ERROR,
+    ErrorCode.MESSAGE_TOO_LARGE,
 }
 
 
 class SecureNotifyError(Exception):
     """Base exception class for SecureNotify SDK."""
 
-    def __init__(
-        self,
-        message: str,
-        details: Optional[Dict[str, Any]] = None
-    ):
+    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
         """Initialize SecureNotifyError.
 
         Args:
@@ -103,7 +110,7 @@ class SecureNotifyApiError(SecureNotifyError):
         error_code: ErrorCode,
         message: str,
         details: Optional[Dict[str, Any]] = None,
-        request_id: Optional[str] = None
+        request_id: Optional[str] = None,
     ):
         """Initialize SecureNotifyApiError.
 
@@ -131,7 +138,7 @@ class SecureNotifyConnectionError(SecureNotifyError):
     def __init__(
         self,
         message: str = "Connection failed",
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize SecureNotifyConnectionError.
 
@@ -149,7 +156,7 @@ class SecureNotifyTimeoutError(SecureNotifyError):
         self,
         message: str = "Request timed out",
         timeout: Optional[float] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize SecureNotifyTimeoutError.
 
@@ -168,7 +175,7 @@ class SecureNotifyAuthenticationError(SecureNotifyError):
     def __init__(
         self,
         message: str = "Authentication failed",
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize SecureNotifyAuthenticationError.
 
@@ -186,7 +193,7 @@ class SecureNotifyRateLimitError(SecureNotifyApiError):
         self,
         message: str = "Rate limit exceeded",
         retry_after: Optional[float] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize SecureNotifyRateLimitError.
 
@@ -197,9 +204,9 @@ class SecureNotifyRateLimitError(SecureNotifyApiError):
         """
         super().__init__(
             status_code=429,
-            error_code=ErrorCode.REQUEST_RATE_LIMITED,
+            error_code=ErrorCode.RATE_LIMIT_EXCEEDED,
             message=message,
-            details=details
+            details=details,
         )
         self.retry_after = retry_after
 
@@ -213,15 +220,14 @@ def get_error_class(error_code: ErrorCode) -> type:
     Returns:
         Exception class to use.
     """
-    if error_code == ErrorCode.AUTH_REQUIRED:
+    auth_errors = {
+        ErrorCode.AUTH_REQUIRED,
+        ErrorCode.AUTH_FAILED,
+    }
+
+    if error_code in auth_errors:
         return SecureNotifyAuthenticationError
-    elif error_code == ErrorCode.AUTH_INVALID:
-        return SecureNotifyAuthenticationError
-    elif error_code == ErrorCode.AUTH_EXPIRED:
-        return SecureNotifyAuthenticationError
-    elif error_code == ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS:
-        return SecureNotifyAuthenticationError
-    elif error_code == ErrorCode.REQUEST_RATE_LIMITED:
+    elif error_code == ErrorCode.RATE_LIMIT_EXCEEDED:
         return SecureNotifyRateLimitError
     elif error_code in RETRYABLE_ERRORS:
         return SecureNotifyApiError

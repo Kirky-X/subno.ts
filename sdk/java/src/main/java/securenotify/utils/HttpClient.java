@@ -7,12 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hc.client5.http.classic.methods.HttpDelete;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.classic.methods.HttpRequestBase;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
+import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
-import org.apache.hc.client5.http.impl.timeout.ConnectTimeoutBuilder;
-import org.apache.hc.client5.http.impl.timeout.RequestTimeoutBuilder;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
@@ -50,7 +49,7 @@ public class HttpClient implements AutoCloseable {
     }
 
     public HttpClient(String baseUrl, String apiKey, String apiKeyId, int timeoutMs) {
-        this.baseUrl = baseUrl != null && !baseUrl.isEmpty() ? baseUrl : "https://api.securenotify.dev";
+        this.baseUrl = UrlHelper.getDefaultBaseUrl(baseUrl);
         this.apiKey = apiKey != null ? apiKey : "";
         this.apiKeyId = apiKeyId;
         this.timeoutMs = timeoutMs;
@@ -63,18 +62,15 @@ public class HttpClient implements AutoCloseable {
                         .setMaxConnPerRoute(20);
 
         // Build HTTP client with timeouts
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setResponseTimeout(Timeout.ofMilliseconds(timeoutMs))
+                .setConnectTimeout(Timeout.ofMilliseconds(timeoutMs))
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(timeoutMs))
+                .build();
+
         this.httpClient = HttpClients.custom()
                 .setConnectionManager(connectionManagerBuilder.build())
-                .setDefaultRequestConfig(
-                        org.apache.hc.client5.http.config.RequestConfig.custom()
-                                .setResponseTimeout(Timeout.ofMilliseconds(timeoutMs))
-                                .setConnectTimeout(ConnectTimeoutBuilder.create()
-                                        .setTimeout(Timeout.ofMilliseconds(timeoutMs))
-                                        .build())
-                                .setConnectionRequestTimeout(RequestTimeoutBuilder.create()
-                                        .setTimeout(Timeout.ofMilliseconds(timeoutMs))
-                                        .build())
-                                .build())
+                .setDefaultRequestConfig(requestConfig)
                 .build();
 
         logger.info("HttpClient initialized with baseUrl: {}", this.baseUrl);
@@ -93,14 +89,8 @@ public class HttpClient implements AutoCloseable {
      */
     public <T> ApiResponse<T> get(String path, Map<String, String> params, Class<T> responseClass) throws Exception {
         String url = buildUrl(path);
-        if (params != null && !params.isEmpty()) {
-            String query = params.entrySet().stream()
-                    .map(e -> e.getKey() + "=" + e.getValue())
-                    .reduce((a, b) -> a + "&" + b)
-                    .orElse("");
-            url += "?" + query;
-        }
-        HttpGet request = new HttpGet(url);
+        String queryParams = UrlHelper.buildQueryParams(params);
+        HttpGet request = new HttpGet(url + queryParams);
         return execute(request, responseClass);
     }
 
@@ -143,7 +133,7 @@ public class HttpClient implements AutoCloseable {
      * Execute a request and handle the response.
      */
     @SuppressWarnings("unchecked")
-    private <T> ApiResponse<T> execute(HttpRequestBase request, Class<T> responseClass) throws Exception {
+    private <T> ApiResponse<T> execute(HttpUriRequestBase request, Class<T> responseClass) throws Exception {
         addHeaders(request);
 
         try {
@@ -231,7 +221,7 @@ public class HttpClient implements AutoCloseable {
     /**
      * Add required headers to the request.
      */
-    private void addHeaders(HttpRequestBase request) {
+    private void addHeaders(HttpUriRequestBase request) {
         request.setHeader("Accept", "application/json");
         request.setHeader("Content-Type", "application/json");
 
@@ -252,10 +242,7 @@ public class HttpClient implements AutoCloseable {
             return path;
         }
 
-        String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-        String pathStr = path.startsWith("/") ? path.substring(1) : path;
-
-        return base + "/" + pathStr;
+        return UrlHelper.buildUrl(baseUrl, path);
     }
 
     /**

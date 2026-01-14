@@ -13,10 +13,7 @@ from securenotify.types.errors import SecureNotifyConnectionError
 class SubscribeManager:
     """Manages real-time subscriptions via SSE."""
 
-    def __init__(
-        self,
-        sse_client: SSEClient
-    ):
+    def __init__(self, sse_client: SSEClient):
         """Initialize subscribe manager.
 
         Args:
@@ -39,7 +36,7 @@ class SubscribeManager:
         self,
         channel: str,
         handler: Callable[[Any], Awaitable[None]],
-        auto_reconnect: bool = True
+        auto_reconnect: bool = True,
     ) -> None:
         """Subscribe to a channel for real-time messages.
 
@@ -100,8 +97,7 @@ class SubscribeManager:
             await self.unsubscribe(channel)
 
     async def subscribe_heartbeat(
-        self,
-        handler: Callable[[Any], Awaitable[None]]
+        self, handler: Callable[[Any], Awaitable[None]]
     ) -> None:
         """Register a heartbeat handler.
 
@@ -113,9 +109,7 @@ class SubscribeManager:
         self._sse.subscribe("__heartbeat__", handler)
 
     def set_reconnect_config(
-        self,
-        reconnect_delay: float = 1.0,
-        max_attempts: int = 10
+        self, reconnect_delay: float = 1.0, max_attempts: int = 10
     ) -> None:
         """Configure reconnection behavior.
 

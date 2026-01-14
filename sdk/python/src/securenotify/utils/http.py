@@ -4,6 +4,7 @@ Provides async HTTP client with authentication and serialization.
 """
 
 import json
+from dataclasses import asdict
 from typing import Optional, Dict, Any, Type, TypeVar
 from datetime import datetime
 
@@ -37,11 +38,7 @@ class HttpClient:
     """HTTP client for SecureNotify API."""
 
     def __init__(
-        self,
-        base_url: str,
-        api_key: str,
-        timeout: float = 30.0,
-        verify: bool = True
+        self, base_url: str, api_key: str, timeout: float = 30.0, verify: bool = True
     ):
         """Initialize HTTP client.
 
@@ -70,10 +67,7 @@ class HttpClient:
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create the async HTTP client."""
         if self._client is None or self._client.is_closed:
-            self._client = httpx.AsyncClient(
-                timeout=self.timeout,
-                verify=self.verify
-            )
+            self._client = httpx.AsyncClient(timeout=self.timeout, verify=self.verify)
         return self._client
 
     async def close(self):
@@ -102,40 +96,34 @@ class HttpClient:
         try:
             error_data = response.json()
             error_code = ErrorCode(
-                error_data.get("error_code", ErrorCode.SERVER_INTERNAL_ERROR.value)
+                error_data.get("error_code", ErrorCode.INTERNAL_ERROR.value)
             )
             message = error_data.get("message", "Unknown error")
             details = error_data.get("details")
             request_id = response.headers.get("x-request-id")
 
-            if error_code == ErrorCode.REQUEST_RATE_LIMITED:
+            if error_code == ErrorCode.RATE_LIMIT_EXCEEDED:
                 retry_after = float(response.headers.get("retry-after", 60))
                 return SecureNotifyRateLimitError(
-                    message=message,
-                    retry_after=retry_after,
-                    details=details
+                    message=message, retry_after=retry_after, details=details
                 )
 
-            if error_code in (ErrorCode.AUTH_REQUIRED, ErrorCode.AUTH_INVALID,
-                            ErrorCode.AUTH_EXPIRED, ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS):
-                return SecureNotifyAuthenticationError(
-                    message=message,
-                    details=details
-                )
+            if error_code in (ErrorCode.AUTH_REQUIRED, ErrorCode.AUTH_FAILED):
+                return SecureNotifyAuthenticationError(message=message, details=details)
 
             return SecureNotifyApiError(
                 status_code=response.status_code,
                 error_code=error_code,
                 message=message,
                 details=details,
-                request_id=request_id
+                request_id=request_id,
             )
         except (json.JSONDecodeError, ValueError):
             return SecureNotifyApiError(
                 status_code=response.status_code,
-                error_code=ErrorCode.SERVER_INTERNAL_ERROR,
+                error_code=ErrorCode.INTERNAL_ERROR,
                 message=f"Server error (status: {response.status_code})",
-                request_id=response.headers.get("x-request-id")
+                request_id=response.headers.get("x-request-id"),
             )
 
     async def _request(
@@ -143,7 +131,7 @@ class HttpClient:
         method: str,
         endpoint: str,
         data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None
+        params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Make an HTTP request.
 
@@ -166,11 +154,7 @@ class HttpClient:
 
         try:
             response = await client.request(
-                method=method,
-                url=url,
-                headers=self.headers,
-                json=data,
-                params=params
+                method=method, url=url, headers=self.headers, json=data, params=params
             )
 
             if response.status_code == 200:
@@ -182,24 +166,20 @@ class HttpClient:
 
         except httpx.TimeoutException:
             raise SecureNotifyTimeoutError(
-                message=f"Request timed out after {self.timeout}s",
-                timeout=self.timeout
+                message=f"Request timed out after {self.timeout}s", timeout=self.timeout
             )
         except httpx.ConnectError as e:
-            raise SecureNotifyConnectionError(
-                message=f"Connection failed: {str(e)}"
-            )
+            raise SecureNotifyConnectionError(message=f"Connection failed: {str(e)}")
         except httpx.DecodingError as e:
             raise SecureNotifyApiError(
                 status_code=0,
                 error_code=ErrorCode.SDK_SERIALIZATION_ERROR,
-                message=f"Failed to decode response: {str(e)}"
+                message=f"Failed to decode response: {str(e)}",
             )
 
     # Public Key Methods
     async def register_public_key(
-        self,
-        request: RegisterPublicKeyRequest
+        self, request: RegisterPublicKeyRequest
     ) -> RegisterPublicKeyResponse:
         """Register a new public key.
 
@@ -209,21 +189,18 @@ class HttpClient:
         Returns:
             Registration response.
         """
-        data = {
-            "public_key": request.public_key,
-            "algorithm": request.algorithm,
-        }
-        if request.expires_in is not None:
-            data["expires_in"] = request.expires_in
-        if request.metadata is not None:
-            data["metadata"] = request.metadata
+        data = asdict(request)
+        # Remove None values to keep payload clean
+        data = {k: v for k, v in data.items() if v is not None}
 
         result = await self._request("POST", "/api/register", data=data)
         return RegisterPublicKeyResponse(
             key_id=result["key_id"],
             channel_id=result["channel_id"],
             created_at=datetime.fromisoformat(result["created_at"]),
-            expires_at=datetime.fromisoformat(result["expires_at"]) if result.get("expires_at") else None
+            expires_at=datetime.fromisoformat(result["expires_at"])
+            if result.get("expires_at")
+            else None,
         )
 
     async def get_public_key(self, key_id: str) -> Dict[str, Any]:
@@ -246,9 +223,7 @@ class HttpClient:
         return await self._request("GET", "/api/keys")
 
     async def revoke_public_key(
-        self,
-        key_id: str,
-        reason: Optional[str] = None
+        self, key_id: str, reason: Optional[str] = None
     ) -> Dict[str, Any]:
         """Revoke a public key.
 
@@ -267,8 +242,7 @@ class HttpClient:
 
     # Channel Methods
     async def create_channel(
-        self,
-        request: ChannelCreateRequest
+        self, request: ChannelCreateRequest
     ) -> ChannelCreateResponse:
         """Create a new channel.
 
@@ -278,25 +252,24 @@ class HttpClient:
         Returns:
             Channel creation response.
         """
-        data = {
-            "name": request.name,
-            "type": request.channel_type.value,
-        }
-        if request.description is not None:
-            data["description"] = request.description
-        if request.ttl is not None:
-            data["ttl"] = request.ttl
-        if request.metadata is not None:
-            data["metadata"] = request.metadata
+        data = asdict(request)
+        # Convert enum to value
+        data["type"] = data["channel_type"].value
+        del data["channel_type"]
+        # Remove None values to keep payload clean
+        data = {k: v for k, v in data.items() if v is not None}
 
         result = await self._request("POST", "/api/channels", data=data)
         from securenotify.types.api import ChannelType
+
         return ChannelCreateResponse(
             channel_id=result["channel_id"],
             name=result["name"],
             channel_type=ChannelType(result["type"]),
             created_at=datetime.fromisoformat(result["created_at"]),
-            expires_at=datetime.fromisoformat(result["expires_at"]) if result.get("expires_at") else None
+            expires_at=datetime.fromisoformat(result["expires_at"])
+            if result.get("expires_at")
+            else None,
         )
 
     async def get_channel(self, channel_id: str) -> Dict[str, Any]:
@@ -320,8 +293,7 @@ class HttpClient:
 
     # Publish Methods
     async def publish_message(
-        self,
-        request: MessagePublishRequest
+        self, request: MessagePublishRequest
     ) -> MessagePublishResponse:
         """Publish a message to a channel.
 
@@ -331,26 +303,18 @@ class HttpClient:
         Returns:
             Message publish response.
         """
-        data = {
-            "channel": request.channel,
-            "message": request.message,
-            "priority": request.priority.value,
-        }
-        if request.sender is not None:
-            data["sender"] = request.sender
-        if request.encrypted is not None:
-            data["encrypted"] = request.encrypted
-        if request.signature is not None:
-            data["signature"] = request.signature
-        if request.cache is not None:
-            data["cache"] = request.cache
+        data = asdict(request)
+        # Convert enum to value
+        data["priority"] = data["priority"].value
+        # Remove None values to keep payload clean
+        data = {k: v for k, v in data.items() if v is not None}
 
         result = await self._request("POST", "/api/publish", data=data)
         return MessagePublishResponse(
             message_id=result["message_id"],
             channel=result["channel"],
             timestamp=datetime.fromisoformat(result["timestamp"]),
-            auto_created=result.get("auto_created", False)
+            auto_created=result.get("auto_created", False),
         )
 
     async def get_queue_status(self, channel: str) -> Dict[str, Any]:
@@ -366,8 +330,7 @@ class HttpClient:
 
     # API Key Methods
     async def create_api_key(
-        self,
-        request: ApiKeyCreateRequest
+        self, request: ApiKeyCreateRequest
     ) -> ApiKeyCreateResponse:
         """Create a new API key.
 
@@ -377,12 +340,9 @@ class HttpClient:
         Returns:
             API key creation response.
         """
-        data = {
-            "name": request.name,
-            "permissions": request.permissions,
-        }
-        if request.expires_in is not None:
-            data["expires_in"] = request.expires_in
+        data = asdict(request)
+        # Remove None values to keep payload clean
+        data = {k: v for k, v in data.items() if v is not None}
 
         result = await self._request("POST", "/api/keys", data=data)
         return ApiKeyCreateResponse(
@@ -392,7 +352,9 @@ class HttpClient:
             name=result["name"],
             permissions=result["permissions"],
             created_at=datetime.fromisoformat(result["created_at"]),
-            expires_at=datetime.fromisoformat(result["expires_at"]) if result.get("expires_at") else None
+            expires_at=datetime.fromisoformat(result["expires_at"])
+            if result.get("expires_at")
+            else None,
         )
 
     async def get_api_key(self, key_id: str) -> Dict[str, Any]:

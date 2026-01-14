@@ -5,7 +5,10 @@
 
 use reqwest::{Client, RequestBuilder, Response};
 use std::sync::Arc;
+use std::time::Duration;
 use crate::{SecureNotifyError, Result};
+use crate::types::error::is_retryable_error;
+use crate::utils::retry::{with_retry, RetryConfig};
 
 /// HTTP client configuration
 #[derive(Debug, Clone)]
@@ -116,40 +119,23 @@ impl HttpClient {
         &self,
         request: RequestBuilder,
     ) -> Result<T> {
-        let mut last_error: Option<SecureNotifyError> = None;
-        let mut delay_ms = self.config.initial_delay_ms;
+        let retry_config = RetryConfig::new()
+            .with_max_retries(self.config.max_retries)
+            .with_initial_delay(Duration::from_millis(self.config.initial_delay_ms))
+            .with_max_delay(Duration::from_millis(self.config.max_delay_ms))
+            .with_backoff_multiplier(self.config.backoff_multiplier)
+            .with_jitter(true);
 
-        for attempt in 0..=self.config.max_retries {
-            match request.try_clone().unwrap().send().await {
-                Ok(response) => {
-                    return self.handle_response(response).await;
-                }
-                Err(e) => {
-                    let error = SecureNotifyError::from(e);
+        let request = request.try_clone().unwrap();
 
-                    // Check if we should retry
-                    if attempt < self.config.max_retries && is_retryable_error(&error) {
-                        last_error = Some(error);
-
-                        // Add jitter
-                        let jitter = rand::random::<u64>() % (delay_ms / 10 + 1);
-                        let actual_delay = delay_ms + jitter;
-
-                        tokio::time::sleep(std::time::Duration::from_millis(actual_delay)).await;
-
-                        // Exponential backoff
-                        delay_ms = (delay_ms as f64 * self.config.backoff_multiplier)
-                            as u64
-                            .min(self.config.max_delay_ms);
-                    } else {
-                        return Err(error);
-                    }
-                }
-            }
-        }
-
-        // biome-ignore lint: last_error is guaranteed to be Some here
-        Err(last_error.unwrap())
+        with_retry(
+            |_attempt| async move {
+                let response = request.send().await?;
+                self.handle_response(response).await
+            },
+            &retry_config,
+        )
+        .await
     }
 
     /// Handle the HTTP response
@@ -226,18 +212,5 @@ impl HttpClient {
             }
             Err(e) => Err(e.into()),
         }
-    }
-}
-
-/// Helper function to check if an error is retryable
-fn is_retryable_error(error: &SecureNotifyError) -> bool {
-    match error {
-        SecureNotifyError::NetworkError(_) => true,
-        SecureNotifyError::ConnectionError(_) => true,
-        SecureNotifyError::TimeoutError(_) => true,
-        SecureNotifyError::ApiError { status, .. } => {
-            matches!(status, 429 | 500 | 502 | 503 | 504)
-        }
-        _ => false,
     }
 }

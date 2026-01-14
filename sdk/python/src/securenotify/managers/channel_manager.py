@@ -12,22 +12,12 @@ from securenotify.types.api import (
     ChannelInfo,
     ChannelType,
 )
-from securenotify.utils.http import HttpClient
-from securenotify.utils.retry import with_retry, RetryConfig
+from securenotify.utils.helpers import parse_datetime
+from .base import BaseManager
 
 
-class ChannelManager:
+class ChannelManager(BaseManager):
     """Manages channel operations."""
-
-    def __init__(self, http_client: HttpClient, retry_config: Optional[RetryConfig] = None):
-        """Initialize channel manager.
-
-        Args:
-            http_client: HTTP client for API calls.
-            retry_config: Retry configuration.
-        """
-        self._http = http_client
-        self._retry_config = retry_config
 
     async def create(
         self,
@@ -35,7 +25,7 @@ class ChannelManager:
         channel_type: ChannelType = ChannelType.ENCRYPTED,
         description: Optional[str] = None,
         ttl: Optional[int] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> ChannelCreateResponse:
         """Create a new channel.
 
@@ -58,13 +48,9 @@ class ChannelManager:
             channel_type=channel_type,
             description=description,
             ttl=ttl,
-            metadata=metadata
+            metadata=metadata,
         )
-
-        async def do_create():
-            return await self._http.create_channel(request)
-
-        return await with_retry(do_create, self._retry_config)
+        return await self._execute("create_channel", request)
 
     async def get(self, channel_id: str) -> ChannelInfo:
         """Get channel information.
@@ -78,21 +64,18 @@ class ChannelManager:
         Raises:
             SecureNotifyApiError: On API error.
         """
-        async def do_get():
-            data = await self._http.get_channel(channel_id)
-            return ChannelInfo(
-                id=data["id"],
-                name=data["name"],
-                channel_type=ChannelType(data["type"]),
-                description=data.get("description"),
-                creator=data.get("creator"),
-                created_at=datetime.fromisoformat(data["created_at"]),
-                expires_at=datetime.fromisoformat(data["expires_at"]) if data.get("expires_at") else None,
-                is_active=data.get("is_active", True),
-                metadata=data.get("metadata")
-            )
-
-        return await with_retry(do_get, self._retry_config)
+        data = await self._execute("get_channel", channel_id)
+        return ChannelInfo(
+            id=data["id"],
+            name=data["name"],
+            channel_type=ChannelType(data["type"]),
+            description=data.get("description"),
+            creator=data.get("creator"),
+            created_at=parse_datetime(data, "created_at"),
+            expires_at=parse_datetime(data, "expires_at"),
+            is_active=data.get("is_active", True),
+            metadata=data.get("metadata"),
+        )
 
     async def list(self) -> List[ChannelInfo]:
         """List all channels.
@@ -103,21 +86,20 @@ class ChannelManager:
         Raises:
             SecureNotifyApiError: On API error.
         """
-        async def do_list():
-            data = await self._http.list_channels()
-            channels = []
-            for item in data.get("channels", []):
-                channels.append(ChannelInfo(
+        data = await self._execute("list_channels")
+        channels = []
+        for item in data.get("channels", []):
+            channels.append(
+                ChannelInfo(
                     id=item["id"],
                     name=item["name"],
                     channel_type=ChannelType(item["type"]),
                     description=item.get("description"),
                     creator=item.get("creator"),
-                    created_at=datetime.fromisoformat(item["created_at"]),
-                    expires_at=datetime.fromisoformat(item["expires_at"]) if item.get("expires_at") else None,
+                    created_at=parse_datetime(item, "created_at"),
+                    expires_at=parse_datetime(item, "expires_at"),
                     is_active=item.get("is_active", True),
-                    metadata=item.get("metadata")
-                ))
-            return channels
-
-        return await with_retry(do_list, self._retry_config)
+                    metadata=item.get("metadata"),
+                )
+            )
+        return channels
