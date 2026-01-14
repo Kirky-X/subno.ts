@@ -90,20 +90,21 @@ export class CleanupService {
   async cleanupExpiredRevocations(): Promise<{ count: number; errors: string[] }> {
     try {
       // Get all expired pending confirmations
+      type ConfirmationSelect = { id: string };
       const expiredConfirmations = await this.db
         .select({ id: revocationConfirmations.id })
         .from(revocationConfirmations)
         .where(and(
           eq(revocationConfirmations.status, 'pending'),
           lt(revocationConfirmations.expiresAt, new Date())
-        ));
+        )) as ConfirmationSelect[];
 
       if (expiredConfirmations.length === 0) {
         return { count: 0, errors: [] };
       }
 
       // Batch update all expired confirmations
-      const ids = expiredConfirmations.map(c => c.id);
+      const ids = expiredConfirmations.map((c) => c.id);
       await this.db
         .update(revocationConfirmations)
         .set({ status: 'expired' })
@@ -122,6 +123,7 @@ export class CleanupService {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - days);
 
+      type KeySelect = { id: string };
       const keysToDelete = await this.db
         .select({ id: publicKeys.id })
         .from(publicKeys)
@@ -129,7 +131,7 @@ export class CleanupService {
           eq(publicKeys.isDeleted, true),
           sql`${publicKeys.revokedAt} IS NOT NULL`,
           lt(publicKeys.revokedAt!, cutoffDate)
-        ));
+        )) as KeySelect[];
 
       if (keysToDelete.length === 0) {
         return { count: 0, errors: [] };

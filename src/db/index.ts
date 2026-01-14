@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
+import type { NeonClient } from 'drizzle-orm/neon-serverless';
+
 import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle } from 'drizzle-orm/neon-serverless';
 import * as schema from './schema';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,9 +17,8 @@ export function getDatabase(): any {
       throw new Error('DATABASE_URL environment variable is not set');
     }
 
-    const sql = neon(connectionString);
-    // Use type assertion to work around drizzle-orm type incompatibility
-    db = drizzle(sql as unknown as string, { schema });
+    const sql = neon(connectionString) as unknown as NeonClient;
+    db = drizzle(sql, { schema });
   }
 
   return db;
