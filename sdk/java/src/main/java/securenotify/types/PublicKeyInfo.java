@@ -5,10 +5,12 @@ package securenotify.types;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
 
 /**
  * Represents a public key registered with SecureNotify.
  */
+@Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PublicKeyInfo {
 
@@ -38,79 +40,4 @@ public class PublicKeyInfo {
 
     @JsonProperty("isExpired")
     private boolean isExpired;
-
-    public PublicKeyInfo() {
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getChannelId() {
-        return channelId;
-    }
-
-    public void setChannelId(String channelId) {
-        this.channelId = channelId;
-    }
-
-    public String getPublicKey() {
-        return publicKey;
-    }
-
-    public void setPublicKey(String publicKey) {
-        this.publicKey = publicKey;
-    }
-
-    public String getAlgorithm() {
-        return algorithm;
-    }
-
-    public void setAlgorithm(String algorithm) {
-        this.algorithm = algorithm;
-    }
-
-    public String getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(String createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public String getExpiresAt() {
-        return expiresAt;
-    }
-
-    public void setExpiresAt(String expiresAt) {
-        this.expiresAt = expiresAt;
-    }
-
-    public String getLastUsedAt() {
-        return lastUsedAt;
-    }
-
-    public void setLastUsedAt(String lastUsedAt) {
-        this.lastUsedAt = lastUsedAt;
-    }
-
-    public Object getMetadata() {
-        return metadata;
-    }
-
-    public void setMetadata(Object metadata) {
-        this.metadata = metadata;
-    }
-
-    public boolean isExpired() {
-        return isExpired;
-    }
-
-    public void setExpired(boolean expired) {
-        isExpired = expired;
-    }
 }

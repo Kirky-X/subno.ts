@@ -5,10 +5,14 @@ package securenotify.types;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
 /**
  * Pagination result from list queries.
  */
+@Data
+@AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PaginationResult {
 
@@ -25,44 +29,5 @@ public class PaginationResult {
     private boolean hasMore;
 
     public PaginationResult() {
-    }
-
-    public PaginationResult(int total, int limit, int offset, boolean hasMore) {
-        this.total = total;
-        this.limit = limit;
-        this.offset = offset;
-        this.hasMore = hasMore;
-    }
-
-    public int getTotal() {
-        return total;
-    }
-
-    public void setTotal(int total) {
-        this.total = total;
-    }
-
-    public int getLimit() {
-        return limit;
-    }
-
-    public void setLimit(int limit) {
-        this.limit = limit;
-    }
-
-    public int getOffset() {
-        return offset;
-    }
-
-    public void setOffset(int offset) {
-        this.offset = offset;
-    }
-
-    public boolean isHasMore() {
-        return hasMore;
-    }
-
-    public void setHasMore(boolean hasMore) {
-        this.hasMore = hasMore;
     }
 }
