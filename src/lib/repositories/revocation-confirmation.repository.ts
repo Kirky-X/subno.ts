@@ -4,11 +4,8 @@
 import { getDatabase } from '../../db';
 import { revocationConfirmations, type RevocationConfirmation } from '../../db/schema';
 import { eq, and, desc, lt } from 'drizzle-orm';
-import crypto, { createHash, randomBytes, timingSafeEqual } from 'crypto';
-
-const PBKDF2_ITERATIONS = 100000;
-const HASH_LENGTH = 64; // SHA-256 produces 32 bytes, hex encoded = 64 chars
-const SALT_LENGTH = 32;
+import crypto, { randomBytes, timingSafeEqual } from 'crypto';
+import { SECURITY_CONFIG } from '../config/security.config';
 
 export interface CreateRevocationConfirmation {
   keyId: string;
@@ -29,28 +26,73 @@ export class RevocationConfirmationRepository {
 
   private async hashConfirmationCode(code: string, salt: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      crypto.pbkdf2(code, salt, PBKDF2_ITERATIONS, HASH_LENGTH, 'sha256', (err, derivedKey) => {
-        if (err) reject(err);
-        resolve(salt + ':' + derivedKey.toString('hex'));
-      });
+      crypto.pbkdf2(
+        code,
+        salt,
+        SECURITY_CONFIG.pbkdf2Iterations,
+        SECURITY_CONFIG.hashLength,
+        'sha256',
+        (err, derivedKey) => {
+          if (err) reject(err);
+          resolve(salt + ':' + derivedKey.toString('hex'));
+        }
+      );
     });
   }
 
   private async verifyConfirmationCodeHash(code: string, hashedCode: string): Promise<boolean> {
     const [salt] = hashedCode.split(':');
     const newHash = await this.hashConfirmationCode(code, salt);
-    // Use timing-safe comparison to prevent timing attacks
     const codeBuffer = Buffer.from(newHash, 'utf8');
     const hashedBuffer = Buffer.from(hashedCode, 'utf8');
     return timingSafeEqual(codeBuffer, hashedBuffer);
   }
 
   private generateSalt(): string {
-    return crypto.randomBytes(SALT_LENGTH).toString('hex');
+    return crypto.randomBytes(SECURITY_CONFIG.saltLength).toString('hex');
   }
 
   private generateConfirmationCode(): string {
     return crypto.randomBytes(32).toString('hex');
+  }
+
+  private isLocked(confirmation: RevocationConfirmation): boolean {
+    return !!(confirmation.lockedUntil && new Date() < confirmation.lockedUntil);
+  }
+
+  private isExpired(confirmation: RevocationConfirmation): boolean {
+    return new Date() > confirmation.expiresAt;
+  }
+
+  private calculateLockUntil(): Date {
+    const lockedUntil = new Date();
+    lockedUntil.setMinutes(lockedUntil.getMinutes() + SECURITY_CONFIG.lockoutDurationMinutes);
+    return lockedUntil;
+  }
+
+  private calculateExpiryDate(expiresInHours?: number): Date {
+    const minHours = 1;  // Minimum 1 hour
+    const maxHours = 24 * 365;  // Maximum 1 year
+    const validatedHours = Math.min(
+      Math.max(expiresInHours || 24, minHours),
+      maxHours
+    );
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + validatedHours);
+    return expiresAt;
+  }
+
+  private async updateLockout(id: string, attemptCount: number): Promise<boolean> {
+    const updates: { attemptCount: number; lockedUntil?: Date } = { attemptCount };
+    const isLocked = attemptCount >= SECURITY_CONFIG.maxAttempts;
+    if (isLocked) {
+      updates.lockedUntil = this.calculateLockUntil();
+    }
+    await this.db
+      .update(revocationConfirmations)
+      .set(updates)
+      .where(eq(revocationConfirmations.id, id));
+    return isLocked;
   }
 
   async create(data: CreateRevocationConfirmation): Promise<{
@@ -60,8 +102,7 @@ export class RevocationConfirmationRepository {
     const confirmationCode = this.generateConfirmationCode();
     const salt = this.generateSalt();
     const codeHash = await this.hashConfirmationCode(confirmationCode, salt);
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + (data.expiresInHours || 24));
+    const expiresAt = this.calculateExpiryDate(data.expiresInHours);
 
     const result = await this.db
       .insert(revocationConfirmations)
@@ -87,7 +128,7 @@ export class RevocationConfirmationRepository {
       .from(revocationConfirmations)
       .where(eq(revocationConfirmations.id, id))
       .limit(1);
-    return result[0] || null;
+    return result[0] ?? null;
   }
 
   async findByKeyId(keyId: string): Promise<RevocationConfirmation | null> {
@@ -100,7 +141,7 @@ export class RevocationConfirmationRepository {
       ))
       .orderBy(desc(revocationConfirmations.createdAt))
       .limit(1);
-    return result[0] || null;
+    return result[0] ?? null;
   }
 
   async verifyConfirmationCode(
@@ -112,11 +153,11 @@ export class RevocationConfirmationRepository {
       return { valid: false, confirmation: null, isLocked: false };
     }
 
-    if (confirmation.lockedUntil && new Date() < confirmation.lockedUntil) {
+    if (this.isLocked(confirmation)) {
       return { valid: false, confirmation, isLocked: true };
     }
 
-    if (new Date() > confirmation.expiresAt) {
+    if (this.isExpired(confirmation)) {
       await this.updateStatus(id, 'expired');
       return { valid: false, confirmation: null, isLocked: false };
     }
@@ -126,25 +167,15 @@ export class RevocationConfirmationRepository {
     }
 
     const valid = await this.verifyConfirmationCodeHash(code, confirmation.confirmationCodeHash);
-    
+
     if (!valid) {
       const newAttemptCount = confirmation.attemptCount + 1;
-      const updates: { attemptCount: number; lockedUntil?: Date } = {
-        attemptCount: newAttemptCount,
+      const isNowLocked = await this.updateLockout(id, newAttemptCount);
+      return {
+        valid: false,
+        confirmation: { ...confirmation, attemptCount: newAttemptCount },
+        isLocked: isNowLocked,
       };
-
-      if (newAttemptCount >= 5) {
-        const lockedUntil = new Date();
-        lockedUntil.setMinutes(lockedUntil.getMinutes() + 60);
-        updates.lockedUntil = lockedUntil;
-      }
-
-      await this.db
-        .update(revocationConfirmations)
-        .set(updates)
-        .where(eq(revocationConfirmations.id, id));
-
-      return { valid: false, confirmation: { ...confirmation, ...updates }, isLocked: newAttemptCount >= 5 };
     }
 
     return { valid: true, confirmation, isLocked: false };
@@ -156,7 +187,7 @@ export class RevocationConfirmationRepository {
     confirmedBy?: string
   ): Promise<RevocationConfirmation | null> {
     const updates: Record<string, unknown> = { status };
-    
+
     if (status === 'confirmed') {
       updates.confirmedAt = new Date();
       updates.confirmedBy = confirmedBy;
@@ -167,7 +198,7 @@ export class RevocationConfirmationRepository {
       .set(updates)
       .where(eq(revocationConfirmations.id, id))
       .returning();
-    return result[0] || null;
+    return result[0] ?? null;
   }
 
   async getExpiredConfirmations(): Promise<RevocationConfirmation[]> {

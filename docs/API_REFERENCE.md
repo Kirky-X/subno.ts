@@ -855,9 +855,19 @@ curl "http://localhost:3000/api/keys?userId=user-123" \
 
 **认证**: X-Cron-Secret (必需) + IP 白名单
 
-**安全要求**:
+**CRON_SECRET 安全要求**：
+
+> ⚠️ **重要**：`CRON_SECRET` 环境变量现在必须满足以下要求：
+> - 最小长度：**32 个字符**
+> - 不能使用默认值或占位符（如 `cron-secret`、`default` 等）
+> - 使用强随机字符串
+>
+> 系统会在启动时验证 CRON_SECRET 的有效性。
+
+**安全要求**：
 - 请求 IP 必须在白名单中（默认：localhost）
 - 需要正确的 `X-Cron-Secret`
+- CRON_SECRET 必须 ≥ 32 字符且非默认/占位符值
 
 **请求**:
 
@@ -1029,12 +1039,60 @@ async function handleApiCall(url, options) {
 
 ### 端点限流
 
-| 端点 | 限制 | 时间窗口 | 建议 |
+| 端点 | 限制 | 时间窗口 | 说明 |
 |------|------|----------|------|
 | POST /api/publish | 10 次 | 60 秒 | 控制消息发送频率 |
 | POST /api/register | 5 次 | 60 秒 | 防止密钥滥用 |
 | GET /api/subscribe | 5 次 | 60 秒 | 防止连接耗尽 |
 | POST /api/channels | 20 次 | 60 秒 | 防止频道滥用 |
+
+### 限流机制
+
+SecureNotify 采用**双重限流策略**：
+- **IP 限制**：严格控制来自同一 IP 的请求频率
+- **User-Agent 限制**：宽松控制来自同一客户端的请求频率
+
+两者都必须通过才能成功请求。
+
+### LRU Eviction 内存保护
+
+速率限制存储采用 **LRU (Least Recently Used)** 策略进行内存管理：
+
+| 特性 | 说明 |
+|------|------|
+| 最大条目数 | 10,000 个条目 |
+| 淘汰策略 | 最久未使用的条目被删除 |
+| 内存安全 | 防止无限制的内存增长 |
+| 适用场景 | 高并发、多租户环境 |
+
+```typescript
+// 内部实现示意
+class RateLimitStore {
+  private store: Map<string, RateLimitEntry>;
+  private readonly MAX_ENTRIES = 10000;
+  
+  // 检查限流并自动 LRU eviction
+  async check(key: string, limit: number, windowMs: number): Promise<boolean> {
+    // 存储满时自动清理最旧条目
+    if (this.store.size >= this.MAX_ENTRIES) {
+      this.evictOldest();
+    }
+    
+    // ... 限流检查逻辑
+  }
+  
+  // LRU eviction：删除最旧条目
+  private evictOldest(): void {
+    const oldestKey = this.store.keys().next().value;
+    this.store.delete(oldestKey);
+  }
+}
+```
+
+**内存保护优势**：
+- 防止恶意攻击导致的内存耗尽
+- 多实例部署时保持一致的内存使用
+- 无需人工干预的自动清理
 
 ### 超出限制
 

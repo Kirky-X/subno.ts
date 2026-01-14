@@ -6,7 +6,7 @@ import { relations } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
 // ============================================================================
-// Public Keys Table - 存储用户公钥
+// Public Keys Table - stores user public keys
 // ============================================================================
 export const publicKeys = pgTable('public_keys', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -31,7 +31,7 @@ export const publicKeysRelations = relations(publicKeys, ({ many }) => ({
 }));
 
 // ============================================================================
-// API Keys Table - 存储 API 访问密钥
+// API Keys Table - stores API access keys
 // ============================================================================
 export const apiKeys = pgTable('api_keys', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -57,7 +57,7 @@ export const apiKeysRelations = relations(apiKeys, ({ many }) => ({
 }));
 
 // ============================================================================
-// Channels Table - 存储频道信息
+// Channels Table - stores channel information
 // ============================================================================
 export const channels = pgTable('channels', {
   id: varchar('id', { length: 64 }).primaryKey(),
@@ -72,7 +72,7 @@ export const channels = pgTable('channels', {
 });
 
 // ============================================================================
-// Messages Table - 存储消息记录
+// Messages Table - stores message records
 // ============================================================================
 export const messages = pgTable('messages', {
   id: varchar('id', { length: 128 }).primaryKey(),
@@ -88,7 +88,7 @@ export const messages = pgTable('messages', {
 });
 
 // ============================================================================
-// Revocation Confirmations Table - 存储撤销确认码
+// Revocation Confirmations Table - stores revocation confirmation codes
 // ============================================================================
 export const revocationConfirmations = pgTable('revocation_confirmations', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -118,7 +118,7 @@ export const revocationConfirmationsRelations = relations(revocationConfirmation
 }));
 
 // ============================================================================
-// Notification History Table - 存储通知历史
+// Notification History Table - stores notification history
 // ============================================================================
 export const notificationHistory = pgTable('notification_history', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -140,7 +140,7 @@ export const notificationHistoryRelations = relations(notificationHistory, ({ on
 }));
 
 // ============================================================================
-// Audit Logs Table - 存储审计日志
+// Audit Logs Table - stores audit logs
 // ============================================================================
 export const auditLogs = pgTable('audit_logs', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -162,16 +162,16 @@ export const auditLogs = pgTable('audit_logs', {
 // Indexes for Performance
 // ============================================================================
 /*
---加速状态查询
+-- Performance indexes for status queries
 CREATE INDEX IF NOT EXISTS idx_revocations_status ON revocation_confirmations(status);
 CREATE INDEX IF NOT EXISTS idx_revocations_expires ON revocation_confirmations(expires_at);
 CREATE INDEX IF NOT EXISTS idx_revocations_key_id ON revocation_confirmations(key_id);
 
---加速清理查询
+-- Performance indexes for cleanup queries
 CREATE INDEX IF NOT EXISTS idx_public_keys_deleted ON public_keys(is_deleted, revoked_at);
 CREATE INDEX IF NOT EXISTS idx_api_keys_deleted ON api_keys(is_deleted, revoked_at);
 
---加速审计查询
+-- Performance indexes for audit queries
 CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action, created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_key_id ON audit_logs(key_id);
 */

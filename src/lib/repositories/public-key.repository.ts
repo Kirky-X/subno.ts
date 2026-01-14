@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { getDatabase } from '../db';
-import { publicKeys, type PublicKey } from '../db/schema';
+import { getDatabase } from '../../db';
+import { publicKeys, type PublicKey } from '../../db/schema';
 import { eq, ne, and, isNull, desc, lt, gte } from 'drizzle-orm';
 
 export class PublicKeyRepository {
@@ -104,7 +104,7 @@ export class PublicKeyRepository {
     const result = await this.db
       .delete(publicKeys)
       .where(eq(publicKeys.id, id));
-    return (result.rowCount ?? 0) > 0;
+    return ((result as unknown as { rowCount: number }).rowCount ?? 0) > 0;
   }
 }
 

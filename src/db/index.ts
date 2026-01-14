@@ -4,6 +4,7 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
+import { getPoolSize, getIdleTimeout, getConnectTimeout } from '../lib/config';
 
 // Database connection singleton
 let db: ReturnType<typeof drizzle> | null = null;
@@ -17,9 +18,9 @@ export function getDatabase(): ReturnType<typeof drizzle> {
     }
 
     client = postgres(connectionString, {
-      max: 10,
-      idle_timeout: 20,
-      connect_timeout: 10,
+      max: getPoolSize(),
+      idle_timeout: getIdleTimeout() / 1000, // Convert ms to seconds
+      connect_timeout: getConnectTimeout() / 1000, // Convert ms to seconds
     });
 
     db = drizzle(client, { schema });

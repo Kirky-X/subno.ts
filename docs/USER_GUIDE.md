@@ -566,11 +566,82 @@ AUDIT_LOG_RETENTION_DAYS=90
 
 ### 5. 速率限制
 
-| 端点 | 限制 | 建议 |
+| 端点 | 限制 | 说明 |
 |------|------|------|
 | `/api/publish` | 10 次/分钟 | 控制消息发送频率 |
 | `/api/register` | 5 次/分钟 | 防止密钥滥用 |
 | `/api/subscribe` | 5 次/分钟 | 防止连接耗尽 |
+
+**速率限制存储优化**：
+
+系统采用 LRU (Least Recently Used) 策略管理速率限制存储，最大可存储 10,000 个条目。当存储空间满时，会自动清理最久未使用的条目，确保内存使用可控。
+
+### 6. CRON_SECRET 配置要求
+
+**CRON_SECRET 是定时任务的安全凭证，必须满足以下要求**：
+
+```bash
+# 1. 最小长度：32 个字符
+# 2. 不能使用默认或占位符值（如 "cron-secret"、"default" 等）
+# 3. 应使用强随机字符串
+
+# 错误示例（会被拒绝）：
+CRON_SECRET="cron-secret"           # 太短，使用了默认值
+CRON_SECRET="default_secret_123"    # 使用了默认模式
+CRON_SECRET="12345678"              # 不足 32 字符
+
+# 正确示例：
+CRON_SECRET=$(openssl rand -base64 32)
+# 或
+CRON_SECRET="YourSecureRandomStringAtLeast32CharsLong!"
+```
+
+**验证机制**：
+
+系统会对 CRON_SECRET 进行格式验证和强度检查：
+- 长度验证：必须 ≥ 32 字符
+- 默认值检测：拒绝常见的默认/占位符值
+- 定时比较：使用 timing-safe 比较防止时序攻击
+
+### 7. 优雅关闭机制
+
+SecureNotify 实现了进程优雅关闭机制，确保在服务停止时数据完整性。
+
+**捕获的信号**：
+
+| 信号 | 来源 | 处理方式 |
+|------|------|----------|
+| `SIGTERM` | 容器编排（Kubernetes/Docker） | 优雅关闭 |
+| `SIGINT` | Ctrl+C（开发环境） | 优雅关闭 |
+| `uncaughtException` | 未捕获异常 | 记录后关闭 |
+| `unhandledRejection` | 未处理的 Promise 拒绝 | 记录后关闭 |
+
+**关闭流程**：
+
+```
+1. 接收停止信号
+2. 停止接受新请求
+3. 等待正在处理的请求完成（最长 30 秒）
+4. 关闭 Redis 连接
+5. 关闭 PostgreSQL 连接池
+6. 退出进程
+```
+
+**Kubernetes 部署建议**：
+
+```yaml
+# deployment.yaml
+spec:
+  template:
+    spec:
+      containers:
+        - name: securenotify
+          image: securenotify:latest
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]  # 等待负载均衡器移除流量
+```
 
 ---
 

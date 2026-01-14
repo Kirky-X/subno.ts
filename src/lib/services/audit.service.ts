@@ -11,13 +11,17 @@ export type AuditAction =
   | 'key_revoke_confirmed'
   | 'key_revoke_cancelled'
   | 'key_revoke_expired'
+  | 'key_revoke_unauthorized'
   | 'message_publish'
   | 'channel_create'
   | 'channel_delete'
   | 'api_key_create'
   | 'api_key_revoke'
   | 'auth_failure'
-  | 'cleanup_executed';
+  | 'cleanup_executed'
+  | 'cancel_revocation_unauthorized';
+
+const AUDIT_ACTIONS_TO_KEEP = ['key_revoke_confirmed', 'auth_failure'] as const;
 
 export interface CreateAuditLog {
   action: AuditAction;
@@ -193,11 +197,10 @@ export class AuditService {
       .delete(auditLogs)
       .where(and(
         eq(auditLogs.success, true),
-        sql`${auditLogs.action} NOT IN ('key_revoke_confirmed', 'auth_failure')`,
+        sql`${auditLogs.action} NOT IN (${AUDIT_ACTIONS_TO_KEEP})`,
         gte(auditLogs.createdAt, cutoffDate)
       ));
 
-    // Drizzle delete returns { rowCount: number | null }
     const rowCount = (result as { rowCount?: number | null }).rowCount ?? 0;
     return rowCount;
   }
