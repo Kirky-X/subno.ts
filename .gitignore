@@ -2,10 +2,12 @@
 .iflow/
 .trae/
 .claude/
+.opencode/
 CLAUDE.md
 
 # OpenSpec documentation system
 .openspec/
+openspec/
 
 # Project AGENTS.md (AI instructions)
 AGENTS.md
