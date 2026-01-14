@@ -1,6 +1,39 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
+//! SecureNotify Rust SDK with C FFI support via UniFFI
+//!
+//! This SDK provides a Rust interface to the SecureNotify API for
+//! encrypted push notifications and real-time messaging.
+//!
+//! # Features
+//!
+//! - Full API coverage for keys, channels, messages, and subscriptions
+//! - Async runtime support with tokio
+//! - Retry logic with exponential backoff
+//! - Real-time message streaming via SSE
+//! - C FFI export via UniFFI for cross-language support
+//!
+//! # Quick Start
+//!
+//! ```rust,ignore
+//! use securenotify_sdk::{SecureNotifyClient, MessagePriority};
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let client = SecureNotifyClient::builder()
+//!         .base_url("https://api.securenotify.dev")
+//!         .api_key("your-api-key")
+//!         .build()?;
+//!
+//!     let response = client
+//!         .register_public_key("channel-id", public_key, "RSA-4096", None)
+//!         .await?;
+//!
+//!     Ok(())
+//! }
+//! ```
+
 use std::sync::Arc;
 use uniffi::prelude::*;
 
@@ -50,7 +83,8 @@ impl Clone for SecureNotifyError {
     }
 }
 
-impl Copy for SecureNotifyError {}
+// Note: SecureNotifyError cannot implement Copy trait because it contains String fields
+// For FFI compatibility, we use Clone instead
 
 #[uniffi::export]
 impl SecureNotifyError {
@@ -281,6 +315,59 @@ use types::api::*;
 use managers::*;
 use utils::http::HttpClient;
 
+/// SSE event types
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SseEventType {
+    Message,
+    Heartbeat,
+    Error,
+    Connected,
+    Disconnected,
+    Unknown(String),
+}
+
+impl std::fmt::Display for SseEventType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Message => write!(f, "message"),
+            Self::Heartbeat => write!(f, "heartbeat"),
+            Self::Error => write!(f, "error"),
+            Self::Connected => write!(f, "connected"),
+            Self::Disconnected => write!(f, "disconnected"),
+            Self::Unknown(s) => write!(f, "unknown: {}", s),
+        }
+    }
+}
+
+/// SSE event
+#[derive(Debug, Clone)]
+pub struct SseEvent {
+    /// Event type
+    pub event_type: SseEventType,
+    /// Event data
+    pub data: String,
+    /// Event ID (if provided)
+    pub id: Option<String>,
+    /// Event name (if provided)
+    pub name: Option<String>,
+}
+
+impl SseEvent {
+    pub fn new(
+        event_type: SseEventType,
+        data: String,
+        id: Option<String>,
+        name: Option<String>,
+    ) -> Self {
+        Self {
+            event_type,
+            data,
+            id,
+            name,
+        }
+    }
+}
+
 /// SecureNotify Client for Rust
 ///
 /// This is the main client for interacting with the SecureNotify API.
@@ -458,3 +545,6 @@ pub fn create_client_with_defaults(api_key: String) -> Result<SecureNotifyClient
 }
 
 uniffi::include_scaffolding!("securenotify");
+
+#[cfg(test)]
+mod tests;
