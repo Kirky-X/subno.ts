@@ -3,16 +3,16 @@
 
 'use client';
 
-import Link from 'next/link';
 import StarField from '../components/StarField';
 import { useState } from 'react';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 interface Endpoint {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   path: string;
-  title: string;
-  description: string;
-  params?: { name: string; type: string; required: boolean; description: string }[];
+  titleKey: string;
+  descriptionKey: string;
+  params?: { name: string; type: string; required: boolean; descriptionKey: string }[];
   example?: {
     request?: Record<string, unknown>;
     response?: Record<string, unknown>;
@@ -23,13 +23,13 @@ const endpoints: Endpoint[] = [
   {
     method: 'POST',
     path: '/api/register',
-    title: '注册公钥',
-    description: '将用户的加密公钥注册到服务端进行托管，支持多种加密算法，自动创建加密频道。',
+    titleKey: 'apiDocs.endpoints.register.title',
+    descriptionKey: 'apiDocs.endpoints.register.desc',
     params: [
-      { name: 'publicKey', type: 'string', required: true, description: 'PEM 格式公钥 (最大 4KB)' },
-      { name: 'algorithm', type: 'string', required: false, description: '加密算法 (RSA-2048, RSA-4096, ECC-SECP256K1)，默认 RSA-2048' },
-      { name: 'expiresIn', type: 'number', required: false, description: '有效期秒数 (最大 30 天)，默认 604800' },
-      { name: 'metadata', type: 'object', required: false, description: '元数据 (最大 2KB)，如 deviceName、appVersion' },
+      { name: 'publicKey', type: 'string', required: true, descriptionKey: 'apiDocs.endpoints.register.params.publicKey' },
+      { name: 'algorithm', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.register.params.algorithm' },
+      { name: 'expiresIn', type: 'number', required: false, descriptionKey: 'apiDocs.endpoints.register.params.expiresIn' },
+      { name: 'metadata', type: 'object', required: false, descriptionKey: 'apiDocs.endpoints.register.params.metadata' },
     ],
     example: {
       request: {
@@ -53,11 +53,11 @@ const endpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/api/register',
-    title: '查询公钥信息',
-    description: '查询已注册的公钥信息，支持按频道 ID 或密钥 ID 查询。',
+    titleKey: 'apiDocs.endpoints.getRegister.title',
+    descriptionKey: 'apiDocs.endpoints.getRegister.desc',
     params: [
-      { name: 'channelId', type: 'string', required: false, description: '加密频道 ID (enc_xxx)' },
-      { name: 'keyId', type: 'string', required: false, description: '公钥 UUID' },
+      { name: 'channelId', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.getRegister.params.channelId' },
+      { name: 'keyId', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.getRegister.params.keyId' },
     ],
     example: {
       response: {
@@ -77,22 +77,22 @@ const endpoints: Endpoint[] = [
   {
     method: 'POST',
     path: '/api/channels',
-    title: '创建频道',
-    description: '创建新频道，支持自定义 ID、名称、类型和元数据。',
+    titleKey: 'apiDocs.endpoints.createChannel.title',
+    descriptionKey: 'apiDocs.endpoints.createChannel.desc',
     params: [
-      { name: 'id', type: 'string', required: false, description: '频道 ID (1-64字符，仅字母数字下划线连字符)' },
-      { name: 'name', type: 'string', required: false, description: '频道名称 (最大 255 字符)，默认使用 ID' },
-      { name: 'type', type: 'string', required: false, description: '频道类型 (public, encrypted)，默认 public' },
-      { name: 'description', type: 'string', required: false, description: '频道描述 (最大 1000 字符)' },
-      { name: 'creator', type: 'string', required: false, description: '创建者标识' },
-      { name: 'expiresIn', type: 'number', required: false, description: '有效期秒数 (最大 604800)，默认 86400' },
-      { name: 'metadata', type: 'object', required: false, description: '元数据 (最大 4KB)' },
+      { name: 'id', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.createChannel.params.id' },
+      { name: 'name', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.createChannel.params.name' },
+      { name: 'type', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.createChannel.params.type' },
+      { name: 'description', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.createChannel.params.description' },
+      { name: 'creator', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.createChannel.params.creator' },
+      { name: 'expiresIn', type: 'number', required: false, descriptionKey: 'apiDocs.endpoints.createChannel.params.expiresIn' },
+      { name: 'metadata', type: 'object', required: false, descriptionKey: 'apiDocs.endpoints.createChannel.params.metadata' },
     ],
     example: {
       request: {
         id: 'my-channel',
-        name: '我的频道',
-        description: '官方公告频道',
+        name: 'My Channel',
+        description: 'Official announcement channel',
         type: 'public',
         creator: 'user-123',
         expiresIn: 86400,
@@ -102,8 +102,8 @@ const endpoints: Endpoint[] = [
         success: true,
         data: {
           id: 'my-channel',
-          name: '我的频道',
-          description: '官方公告频道',
+          name: 'My Channel',
+          description: 'Official announcement channel',
           type: 'public',
           creator: 'user-123',
           createdAt: '2026-01-13T00:00:00.000Z',
@@ -117,13 +117,13 @@ const endpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/api/channels',
-    title: '查询频道',
-    description: '查询频道列表或获取特定频道信息，支持分页和类型筛选。',
+    titleKey: 'apiDocs.endpoints.listChannels.title',
+    descriptionKey: 'apiDocs.endpoints.listChannels.desc',
     params: [
-      { name: 'id', type: 'string', required: false, description: '频道 ID (精确匹配)' },
-      { name: 'type', type: 'string', required: false, description: '筛选类型：public, encrypted' },
-      { name: 'limit', type: 'number', required: false, description: '返回数量 (最大 100)，默认 50' },
-      { name: 'offset', type: 'number', required: false, description: '偏移量，默认 0' },
+      { name: 'id', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.listChannels.params.id' },
+      { name: 'type', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.listChannels.params.type' },
+      { name: 'limit', type: 'number', required: false, descriptionKey: 'apiDocs.endpoints.listChannels.params.limit' },
+      { name: 'offset', type: 'number', required: false, descriptionKey: 'apiDocs.endpoints.listChannels.params.offset' },
     ],
     example: {
       response: {
@@ -131,7 +131,7 @@ const endpoints: Endpoint[] = [
         data: [
           {
             id: 'my-channel',
-            name: '我的频道',
+            name: 'My Channel',
             type: 'public',
             creator: 'user-123',
             createdAt: '2026-01-13T00:00:00.000Z',
@@ -152,17 +152,17 @@ const endpoints: Endpoint[] = [
   {
     method: 'POST',
     path: '/api/publish',
-    title: '发布消息',
-    description: '向指定频道发布消息，支持消息优先级、加密和自动创建频道。',
+    titleKey: 'apiDocs.endpoints.publish.title',
+    descriptionKey: 'apiDocs.endpoints.publish.desc',
     params: [
-      { name: 'channel', type: 'string', required: true, description: '频道 ID' },
-      { name: 'message', type: 'string', required: true, description: '消息内容 (最大 4.5MB)' },
-      { name: 'priority', type: 'string', required: false, description: '优先级 (critical, high, normal, low, bulk)，默认 normal' },
-      { name: 'sender', type: 'string', required: false, description: '发送者标识' },
-      { name: 'cache', type: 'boolean', required: false, description: '是否缓存消息，默认 true' },
-      { name: 'encrypted', type: 'boolean', required: false, description: '是否加密消息，默认 false' },
-      { name: 'autoCreate', type: 'boolean', required: false, description: '频道不存在时自动创建，默认 true' },
-      { name: 'signature', type: 'string', required: false, description: '消息签名' },
+      { name: 'channel', type: 'string', required: true, descriptionKey: 'apiDocs.endpoints.publish.params.channel' },
+      { name: 'message', type: 'string', required: true, descriptionKey: 'apiDocs.endpoints.publish.params.message' },
+      { name: 'priority', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.publish.params.priority' },
+      { name: 'sender', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.publish.params.sender' },
+      { name: 'cache', type: 'boolean', required: false, descriptionKey: 'apiDocs.endpoints.publish.params.cache' },
+      { name: 'encrypted', type: 'boolean', required: false, descriptionKey: 'apiDocs.endpoints.publish.params.encrypted' },
+      { name: 'autoCreate', type: 'boolean', required: false, descriptionKey: 'apiDocs.endpoints.publish.params.autoCreate' },
+      { name: 'signature', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.publish.params.signature' },
     ],
     example: {
       request: {
@@ -188,11 +188,11 @@ const endpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/api/publish',
-    title: '获取消息',
-    description: '获取频道消息队列状态和历史消息。',
+    titleKey: 'apiDocs.endpoints.getMessages.title',
+    descriptionKey: 'apiDocs.endpoints.getMessages.desc',
     params: [
-      { name: 'channel', type: 'string', required: true, description: '频道 ID' },
-      { name: 'count', type: 'number', required: false, description: '获取消息数量 (最大 100)，默认 10' },
+      { name: 'channel', type: 'string', required: true, descriptionKey: 'apiDocs.endpoints.getMessages.params.channel' },
+      { name: 'count', type: 'number', required: false, descriptionKey: 'apiDocs.endpoints.getMessages.params.count' },
     ],
     example: {
       response: {
@@ -216,11 +216,11 @@ const endpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/api/subscribe',
-    title: '订阅频道 (SSE)',
-    description: '通过 Server-Sent Events (SSE) 实时接收频道消息，支持断线重连。',
+    titleKey: 'apiDocs.endpoints.subscribe.title',
+    descriptionKey: 'apiDocs.endpoints.subscribe.desc',
     params: [
-      { name: 'channel', type: 'string', required: true, description: '要订阅的频道 ID' },
-      { name: 'lastEventId', type: 'string', required: false, description: '最后接收的事件 ID，用于断线重连' },
+      { name: 'channel', type: 'string', required: true, descriptionKey: 'apiDocs.endpoints.subscribe.params.channel' },
+      { name: 'lastEventId', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.subscribe.params.lastEventId' },
     ],
     example: {
       response: {
@@ -239,13 +239,13 @@ const endpoints: Endpoint[] = [
   {
     method: 'POST',
     path: '/api/keys',
-    title: '创建 API 密钥',
-    description: '创建 API 访问密钥（需要 Master Admin Key）。',
+    titleKey: 'apiDocs.endpoints.createApiKey.title',
+    descriptionKey: 'apiDocs.endpoints.createApiKey.desc',
     params: [
-      { name: 'userId', type: 'string', required: true, description: '用户 ID' },
-      { name: 'name', type: 'string', required: false, description: '密钥名称 (最大 255 字符)' },
-      { name: 'permissions', type: 'array', required: false, description: '权限数组 (read, write, admin)，默认 ["read", "write"]' },
-      { name: 'expiresAt', type: 'string', required: false, description: '过期时间 (ISO 8601 格式)' },
+      { name: 'userId', type: 'string', required: true, descriptionKey: 'apiDocs.endpoints.createApiKey.params.userId' },
+      { name: 'name', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.createApiKey.params.name' },
+      { name: 'permissions', type: 'array', required: false, descriptionKey: 'apiDocs.endpoints.createApiKey.params.permissions' },
+      { name: 'expiresAt', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.createApiKey.params.expiresAt' },
     ],
     example: {
       request: {
@@ -271,10 +271,10 @@ const endpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/api/keys',
-    title: '列出 API 密钥',
-    description: '列出用户的 API 密钥（需要 admin 权限）。',
+    titleKey: 'apiDocs.endpoints.listApiKeys.title',
+    descriptionKey: 'apiDocs.endpoints.listApiKeys.desc',
     params: [
-      { name: 'userId', type: 'string', required: true, description: '用户 ID' },
+      { name: 'userId', type: 'string', required: true, descriptionKey: 'apiDocs.endpoints.listApiKeys.params.userId' },
     ],
     example: {
       response: {
@@ -299,10 +299,10 @@ const endpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/api/keys/:id',
-    title: '查询密钥信息',
-    description: '查询指定公钥的信息和状态。',
+    titleKey: 'apiDocs.endpoints.getKeyInfo.title',
+    descriptionKey: 'apiDocs.endpoints.getKeyInfo.desc',
     params: [
-      { name: 'id', type: 'string', required: true, description: '公钥 UUID 或频道 ID' },
+      { name: 'id', type: 'string', required: true, descriptionKey: 'apiDocs.endpoints.getKeyInfo.params.id' },
     ],
     example: {
       response: {
@@ -322,11 +322,11 @@ const endpoints: Endpoint[] = [
   {
     method: 'DELETE',
     path: '/api/keys/:id',
-    title: '撤销公钥',
-    description: '撤销指定的公钥（需要 API 密钥认证）。新版 API 使用两阶段确认流程。',
+    titleKey: 'apiDocs.endpoints.revokeKey.title',
+    descriptionKey: 'apiDocs.endpoints.revokeKey.desc',
     params: [
-      { name: 'id', type: 'string', required: true, description: '公钥 UUID 或频道 ID' },
-      { name: 'confirmationCode', type: 'string', required: false, description: '确认码 (两阶段确认模式)' },
+      { name: 'id', type: 'string', required: true, descriptionKey: 'apiDocs.endpoints.revokeKey.params.id' },
+      { name: 'confirmationCode', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.revokeKey.params.confirmationCode' },
     ],
     example: {
       response: {
@@ -344,12 +344,12 @@ const endpoints: Endpoint[] = [
   {
     method: 'POST',
     path: '/api/keys/:id/revoke',
-    title: '请求撤销公钥 (两阶段确认)',
-    description: '启动两阶段撤销流程。首次请求生成确认码，有效期 24 小时。',
+    titleKey: 'apiDocs.endpoints.requestRevoke.title',
+    descriptionKey: 'apiDocs.endpoints.requestRevoke.desc',
     params: [
-      { name: 'id', type: 'string', required: true, description: '公钥 UUID 或频道 ID' },
-      { name: 'reason', type: 'string', required: true, description: '撤销原因 (最小 10 字符)' },
-      { name: 'confirmationHours', type: 'number', required: false, description: '确认码有效期 (小时，默认 24)' },
+      { name: 'id', type: 'string', required: true, descriptionKey: 'apiDocs.endpoints.requestRevoke.params.id' },
+      { name: 'reason', type: 'string', required: true, descriptionKey: 'apiDocs.endpoints.requestRevoke.params.reason' },
+      { name: 'confirmationHours', type: 'number', required: false, descriptionKey: 'apiDocs.endpoints.requestRevoke.params.confirmationHours' },
     ],
     example: {
       request: {
@@ -371,10 +371,10 @@ const endpoints: Endpoint[] = [
   {
     method: 'POST',
     path: '/api/keys/:id/revoke/cancel',
-    title: '取消撤销请求',
-    description: '取消待确认的撤销请求。',
+    titleKey: 'apiDocs.endpoints.cancelRevoke.title',
+    descriptionKey: 'apiDocs.endpoints.cancelRevoke.desc',
     params: [
-      { name: 'id', type: 'string', required: true, description: '撤销请求 ID' },
+      { name: 'id', type: 'string', required: true, descriptionKey: 'apiDocs.endpoints.cancelRevoke.params.id' },
     ],
     example: {
       response: {
@@ -386,11 +386,11 @@ const endpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/api/keys/:id/revoke/status',
-    title: '查询撤销状态',
-    description: '查询密钥撤销的当前状态。',
+    titleKey: 'apiDocs.endpoints.revokeStatus.title',
+    descriptionKey: 'apiDocs.endpoints.revokeStatus.desc',
     params: [
-      { name: 'id', type: 'string', required: false, description: '撤销请求 ID' },
-      { name: 'keyId', type: 'string', required: false, description: '公钥 ID (查询待确认撤销)' },
+      { name: 'id', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.revokeStatus.params.id' },
+      { name: 'keyId', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.revokeStatus.params.keyId' },
     ],
     example: {
       response: {
@@ -407,10 +407,10 @@ const endpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/api/cron/cleanup-channels',
-    title: '清理过期频道',
-    description: '清理过期频道（需要 Cron Secret 和 IP 白名单）。',
+    titleKey: 'apiDocs.endpoints.cleanupChannels.title',
+    descriptionKey: 'apiDocs.endpoints.cleanupChannels.desc',
     params: [
-      { name: 'task', type: 'string', required: false, description: '任务类型 (persistent, temporary, all)，默认 all' },
+      { name: 'task', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.cleanupChannels.params.task' },
     ],
     example: {
       response: {
@@ -429,10 +429,10 @@ const endpoints: Endpoint[] = [
   {
     method: 'GET',
     path: '/api/cron/cleanup-keys',
-    title: '清理过期密钥',
-    description: '清理过期密钥、审计日志和孤立数据（需要 Cron Secret）。',
+    titleKey: 'apiDocs.endpoints.cleanupKeys.title',
+    descriptionKey: 'apiDocs.endpoints.cleanupKeys.desc',
     params: [
-      { name: 'task', type: 'string', required: false, description: '任务类型 (expired-keys, audit-logs, orphaned-keys, messages, all)，默认 all' },
+      { name: 'task', type: 'string', required: false, descriptionKey: 'apiDocs.endpoints.cleanupKeys.params.task' },
     ],
     example: {
       response: {
@@ -453,22 +453,22 @@ const endpoints: Endpoint[] = [
 ];
 
 const priorities = [
-  { value: 'CRITICAL', desc: '关键消息，立即送达 (100)', color: '#ef4444' },
-  { value: 'HIGH', desc: '高优先级消息 (75)', color: '#f59e0b' },
-  { value: 'NORMAL', desc: '普通消息 (50，默认)', color: '#10b981' },
-  { value: 'LOW', desc: '低优先级消息 (25)', color: '#06b6d4' },
-  { value: 'BULK', desc: '批量消息，最低优先级 (0)', color: '#8b5cf6' },
+  { value: 'CRITICAL', descKey: 'apiDocs.priorities.critical', color: '#ef4444' },
+  { value: 'HIGH', descKey: 'apiDocs.priorities.high', color: '#f59e0b' },
+  { value: 'NORMAL', descKey: 'apiDocs.priorities.normal', color: '#10b981' },
+  { value: 'LOW', descKey: 'apiDocs.priorities.low', color: '#06b6d4' },
+  { value: 'BULK', descKey: 'apiDocs.priorities.bulk', color: '#8b5cf6' },
 ];
 
 const channelTypes = [
-  { value: 'public', desc: '公开频道 (pub_)，无需公钥即可订阅', icon: '📢' },
-  { value: 'encrypted', desc: '加密频道 (enc_)，需要注册公钥', icon: '🔒' },
+  { value: 'public', descKey: 'apiDocs.channelTypes.public', icon: '📢' },
+  { value: 'encrypted', descKey: 'apiDocs.channelTypes.encrypted', icon: '🔒' },
 ];
 
 const authHeaders = [
-  { header: 'X-API-Key', type: 'API 密钥', desc: '日常 API 调用，根据权限访问' },
-  { header: 'X-Admin-Key', type: 'Master Key', desc: '管理员操作（创建密钥、管理权限）' },
-  { header: 'X-Cron-Secret', type: 'Cron Secret', desc: '定时任务触发' },
+  { header: 'X-API-Key', typeKey: 'apiDocs.authHeaders.apiKey.type', descKey: 'apiDocs.authHeaders.apiKey.desc' },
+  { header: 'X-Admin-Key', typeKey: 'apiDocs.authHeaders.adminKey.type', descKey: 'apiDocs.authHeaders.adminKey.desc' },
+  { header: 'X-Cron-Secret', typeKey: 'apiDocs.authHeaders.cronSecret.type', descKey: 'apiDocs.authHeaders.cronSecret.desc' },
 ];
 
 function MethodBadge({ method }: { method: string }) {
@@ -499,6 +499,7 @@ function MethodBadge({ method }: { method: string }) {
 }
 
 function EndpointCard({ endpoint }: { endpoint: Endpoint }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -534,7 +535,7 @@ function EndpointCard({ endpoint }: { endpoint: Endpoint }) {
               fontWeight: '500',
             }}
           >
-            {endpoint.title}
+            {t(endpoint.titleKey)}
           </span>
           <span
             style={{
@@ -564,7 +565,7 @@ function EndpointCard({ endpoint }: { endpoint: Endpoint }) {
               lineHeight: '1.6',
             }}
           >
-            {endpoint.description}
+            {t(endpoint.descriptionKey)}
           </p>
 
           {endpoint.params && endpoint.params.length > 0 && (
@@ -577,7 +578,7 @@ function EndpointCard({ endpoint }: { endpoint: Endpoint }) {
                   marginBottom: '12px',
                 }}
               >
-                请求参数
+                {t('apiDocs.requestParams')}
               </h4>
               <div
                 style={{
@@ -595,10 +596,10 @@ function EndpointCard({ endpoint }: { endpoint: Endpoint }) {
                 >
                   <thead>
                     <tr style={{ background: 'rgba(255,255,255,0.05)' }}>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-tertiary)', fontWeight: '500' }}>参数</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-tertiary)', fontWeight: '500' }}>类型</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-tertiary)', fontWeight: '500' }}>必填</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-tertiary)', fontWeight: '500' }}>描述</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-tertiary)', fontWeight: '500' }}>{t('apiDocs.params.name')}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-tertiary)', fontWeight: '500' }}>{t('apiDocs.params.type')}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-tertiary)', fontWeight: '500' }}>{t('apiDocs.params.required')}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', color: 'var(--text-tertiary)', fontWeight: '500' }}>{t('apiDocs.params.description')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -606,10 +607,10 @@ function EndpointCard({ endpoint }: { endpoint: Endpoint }) {
                       <tr key={param.name} style={{ borderTop: '1px solid var(--glass-border)' }}>
                         <td style={{ padding: '10px 16px', color: 'var(--accent)', fontFamily: 'monospace' }}>{param.name}</td>
                         <td style={{ padding: '10px 16px', color: 'var(--text-secondary)' }}>{param.type}</td>
-                        <td style={{ padding: '10px 16px', color: param.required ? 'var(--error)' : 'var(--text-tertiary)' }}>
-                          {param.required ? '是' : '否'}
+                        <td style={{ padding: '10px 16px', color: param.required ? 'var(--primary)' : 'var(--text-tertiary)' }}>
+                          {param.required ? t('common.yes') : t('common.no')}
                         </td>
-                        <td style={{ padding: '10px 16px', color: 'var(--text-secondary)' }}>{param.description}</td>
+                        <td style={{ padding: '10px 16px', color: 'var(--text-secondary)' }}>{t(param.descriptionKey)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -628,7 +629,7 @@ function EndpointCard({ endpoint }: { endpoint: Endpoint }) {
                   marginBottom: '12px',
                 }}
               >
-                示例
+                {t('apiDocs.example')}
               </h4>
               <div style={{ display: 'grid', gap: '12px' }}>
                 {endpoint.example.request && (
@@ -640,7 +641,7 @@ function EndpointCard({ endpoint }: { endpoint: Endpoint }) {
                         marginBottom: '8px',
                       }}
                     >
-                      请求
+                      {t('apiDocs.request')}
                     </div>
                     <pre
                       style={{
@@ -667,7 +668,7 @@ function EndpointCard({ endpoint }: { endpoint: Endpoint }) {
                         marginBottom: '8px',
                       }}
                     >
-                      响应
+                      {t('apiDocs.response')}
                     </div>
                     <pre
                       style={{
@@ -695,9 +696,10 @@ function EndpointCard({ endpoint }: { endpoint: Endpoint }) {
 }
 
 export default function ApiDocs() {
+  const { t } = useTranslation();
+
   return (
     <>
-      <StarField />
       <main
         style={{
           position: 'relative',
@@ -707,41 +709,17 @@ export default function ApiDocs() {
         }}
       >
         {/* Header */}
-        <section
-          style={{
-            textAlign: 'center',
-            marginBottom: '60px',
-            padding: '0 24px',
-          }}
-        >
-          <Link
-            href="/"
-            className="glass-card"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              marginBottom: '24px',
-              fontSize: '14px',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            ← 返回首页
-          </Link>
-
+        <div style={{ textAlign: 'center', marginBottom: '60px', padding: '0 24px' }}>
           <h1
             style={{
               fontSize: 'clamp(28px, 5vw, 48px)',
               fontWeight: '800',
               marginBottom: '16px',
-              background: 'var(--gradient-primary)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
+              color: 'var(--text-accent)',
+              textShadow: '0 0 30px rgba(56, 189, 248, 0.4)',
             }}
           >
-            API 文档
+            {t('apiDocs.title')}
           </h1>
           <p
             style={{
@@ -752,14 +730,14 @@ export default function ApiDocs() {
               lineHeight: '1.6',
             }}
           >
-            了解如何使用 SecureNotify API 实现端到端加密消息推送
+            {t('apiDocs.subtitle')}
           </p>
-        </section>
+        </div>
 
         {/* Quick Reference */}
-        <section
+        <div
           style={{
-            maxWidth: '1200px',
+            maxWidth: '1000px',
             margin: '0 auto 60px',
             padding: '0 24px',
           }}
@@ -773,7 +751,7 @@ export default function ApiDocs() {
                 marginBottom: '24px',
               }}
             >
-              📋 快速参考
+              {t('apiDocs.quickReference')}
             </h2>
 
             <div style={{ display: 'grid', gap: '32px' }}>
@@ -789,7 +767,7 @@ export default function ApiDocs() {
                     letterSpacing: '0.5px',
                   }}
                 >
-                  认证方式
+                  {t('apiDocs.authentication')}
                 </h3>
                 <div style={{ display: 'grid', gap: '12px' }}>
                   {authHeaders.map((auth) => (
@@ -808,7 +786,7 @@ export default function ApiDocs() {
                         style={{
                           fontSize: '12px',
                           padding: '4px 8px',
-                          background: 'rgba(139, 92, 246, 0.2)',
+                          background: 'rgba(56, 189, 248, 0.2)',
                           borderRadius: '4px',
                           color: 'var(--primary-hover)',
                           minWidth: '140px',
@@ -824,7 +802,7 @@ export default function ApiDocs() {
                             color: 'var(--text-primary)',
                           }}
                         >
-                          {auth.type}
+                          {t(auth.typeKey)}
                         </div>
                         <div
                           style={{
@@ -832,7 +810,7 @@ export default function ApiDocs() {
                             color: 'var(--text-tertiary)',
                           }}
                         >
-                          {auth.desc}
+                          {t(auth.descKey)}
                         </div>
                       </div>
                     </div>
@@ -852,7 +830,7 @@ export default function ApiDocs() {
                     letterSpacing: '0.5px',
                   }}
                 >
-                  频道类型
+                  {t('apiDocs.channelTypes')}
                 </h3>
                 <div style={{ display: 'grid', gap: '12px' }}>
                   {channelTypes.map((type) => (
@@ -884,7 +862,7 @@ export default function ApiDocs() {
                             color: 'var(--text-tertiary)',
                           }}
                         >
-                          {type.desc}
+                          {t(type.descKey)}
                         </div>
                       </div>
                     </div>
@@ -904,7 +882,7 @@ export default function ApiDocs() {
                     letterSpacing: '0.5px',
                   }}
                 >
-                  消息优先级
+                  {t('apiDocs.messagePriority')}
                 </h3>
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {priorities.map((p) => (
@@ -931,7 +909,7 @@ export default function ApiDocs() {
                         {p.value}
                       </code>
                       <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                        {p.desc}
+                        {t(p.descKey)}
                       </span>
                     </div>
                   ))}
@@ -939,10 +917,10 @@ export default function ApiDocs() {
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
         {/* Endpoints */}
-        <section
+        <div
           style={{
             maxWidth: '1000px',
             margin: '0 auto',
@@ -957,13 +935,13 @@ export default function ApiDocs() {
               marginBottom: '24px',
             }}
           >
-            🔌 API 端点
+            🔌 {t('apiDocs.endpoints')}
           </h2>
 
           {endpoints.map((endpoint) => (
             <EndpointCard key={`${endpoint.method}-${endpoint.path}`} endpoint={endpoint} />
           ))}
-        </section>
+        </div>
       </main>
     </>
   );

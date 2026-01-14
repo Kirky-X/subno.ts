@@ -1,0 +1,259 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "yes": "Yes",
+    "no": "No",
+    "required": "Required",
+    "optional": "Optional",
+    "github": "GitHub",
+    "version": "Version",
+    "apiDocs": "API Docs"
+  },
+  "header": {
+    "title": "SecureNotify",
+    "subtitle": "End-to-End Encrypted Push Service",
+    "home": "Home",
+    "systemStatus": "System Status",
+    "checking": "Checking...",
+    "healthy": "Healthy",
+    "unhealthy": "Unhealthy",
+    "repo": "Repository",
+    "versionNumber": "v0.1.0"
+  },
+  "home": {
+    "heroTitle": "End-to-End Encrypted Push Service",
+    "heroDesc": "True end-to-end encryption—we only relay encrypted messages, never see your data. Your messages stay private, readable only by the intended recipient.",
+    "publicServer": "Public Server",
+    "publicServerUrl": "https://subno-ts.vercel.app/",
+    "featuresTitle": "Core Features",
+    "featuresSubtitle": "Real-time message push service focused on end-to-end encryption",
+    "workflowTitle": "Workflow",
+    "step1Title": "Recipient Registers Public Key",
+    "step1Desc": "Users register their encryption public key with the server's key management system for secure hosting.",
+    "step2Title": "Publisher Encrypts Message",
+    "step2Desc": "The publisher retrieves the recipient's public key and encrypts the message content before publishing.",
+    "step3Title": "Server Forwards Encrypted Message",
+    "step3Desc": "The server receives the encrypted message and delivers it to all subscribers via SSE in real-time, without decrypting.",
+    "step4Title": "Recipient Decrypts with Private Key",
+    "step4Desc": "The recipient decrypts the message using their private key. Only users with the corresponding private key can read the content."
+  },
+  "apiDocs": {
+    "title": "API Documentation",
+    "subtitle": "Learn how to use SecureNotify API for end-to-end encrypted message push",
+    "quickReference": "Quick Reference",
+    "authentication": "Authentication",
+    "channelTypes": "Channel Types",
+    "messagePriority": "Message Priority",
+    "endpoints": "API Endpoints",
+    "requestParams": "Request Parameters",
+    "example": "Example",
+    "request": "Request",
+    "response": "Response",
+    "authMethod": "Authentication Method",
+    "channelType": "Channel Type",
+    "priority": "Priority",
+    "publicChannel": "Public Channel",
+    "publicChannelDesc": "Public channel (pub_), no public key required to subscribe",
+    "encryptedChannel": "Encrypted Channel",
+    "encryptedChannelDesc": "Encrypted channel (enc_), requires public key registration",
+    "params": {
+      "name": "Parameter",
+      "type": "Type",
+      "required": "Required",
+      "description": "Description"
+    },
+    "priorities": {
+      "critical": "Critical message, immediate delivery (100)",
+      "high": "High priority message (75)",
+      "normal": "Normal message (50, default)",
+      "low": "Low priority message (25)",
+      "bulk": "Bulk message, lowest priority (0)"
+    },
+    "channelTypes": {
+      "public": "Public channel (pub_), no public key required to subscribe",
+      "encrypted": "Encrypted channel (enc_), requires public key registration"
+    },
+    "authHeaders": {
+      "apiKey": {
+        "type": "API Key",
+        "desc": "Regular API calls, access based on permissions"
+      },
+      "adminKey": {
+        "type": "Master Key",
+        "desc": "Admin operations (key creation, permission management)"
+      },
+      "cronSecret": {
+        "type": "Cron Secret",
+        "desc": "Scheduled task trigger"
+      }
+    },
+    "endpoints": {
+      "register": {
+        "title": "Register Public Key",
+        "desc": "Register user's encryption public key with the server for secure hosting, supporting multiple encryption algorithms and auto-creating encrypted channels.",
+        "params": {
+          "publicKey": "PEM format public key (max 4KB)",
+          "algorithm": "Encryption algorithm (RSA-2048, RSA-4096, ECC-SECP256K1), default RSA-2048",
+          "expiresIn": "Expiration in seconds (max 30 days), default 604800",
+          "metadata": "Metadata (max 2KB), e.g., deviceName, appVersion"
+        }
+      },
+      "getRegister": {
+        "title": "Query Public Key Info",
+        "desc": "Query registered public key information, supports querying by channel ID or key ID.",
+        "params": {
+          "channelId": "Encrypted channel ID (enc_xxx)",
+          "keyId": "Public key UUID"
+        }
+      },
+      "createChannel": {
+        "title": "Create Channel",
+        "desc": "Create a new channel with custom ID, name, type, and metadata.",
+        "params": {
+          "id": "Channel ID (1-64 chars, alphanumeric underscore hyphen only)",
+          "name": "Channel name (max 255 chars), defaults to ID",
+          "type": "Channel type (public, encrypted), default public",
+          "description": "Channel description (max 1000 chars)",
+          "creator": "Creator identifier",
+          "expiresIn": "Expiration in seconds (max 604800), default 86400",
+          "metadata": "Metadata (max 4KB)"
+        }
+      },
+      "listChannels": {
+        "title": "Query Channels",
+        "desc": "Query channel list or get specific channel info, supports pagination and type filtering.",
+        "params": {
+          "id": "Channel ID (exact match)",
+          "type": "Filter type: public, encrypted",
+          "limit": "Return count (max 100), default 50",
+          "offset": "Offset, default 0"
+        }
+      },
+      "publish": {
+        "title": "Publish Message",
+        "desc": "Publish messages to specified channel, supports message priority, encryption, and auto channel creation.",
+        "params": {
+          "channel": "Channel ID",
+          "message": "Message content (max 4.5MB)",
+          "priority": "Priority (critical, high, normal, low, bulk), default normal",
+          "sender": "Sender identifier",
+          "cache": "Whether to cache message, default true",
+          "encrypted": "Whether to encrypt message, default false",
+          "autoCreate": "Auto-create channel if not exists, default true",
+          "signature": "Message signature"
+        }
+      },
+      "getMessages": {
+        "title": "Get Messages",
+        "desc": "Get channel message queue status and historical messages.",
+        "params": {
+          "channel": "Channel ID",
+          "count": "Message count (max 100), default 10"
+        }
+      },
+      "subscribe": {
+        "title": "Subscribe to Channel (SSE)",
+        "desc": "Receive channel messages in real-time via Server-Sent Events (SSE), supports reconnection.",
+        "params": {
+          "channel": "Channel ID to subscribe to",
+          "lastEventId": "Last received event ID, for reconnection"
+        }
+      },
+      "createApiKey": {
+        "title": "Create API Key",
+        "desc": "Create API access key (requires Master Admin Key).",
+        "params": {
+          "userId": "User ID",
+          "name": "Key name (max 255 chars)",
+          "permissions": "Permission array (read, write, admin), default [\"read\", \"write\"]",
+          "expiresAt": "Expiration time (ISO 8601 format)"
+        }
+      },
+      "listApiKeys": {
+        "title": "List API Keys",
+        "desc": "List user's API keys (requires admin permission).",
+        "params": {
+          "userId": "User ID"
+        }
+      },
+      "getKeyInfo": {
+        "title": "Query Key Info",
+        "desc": "Query specified public key information and status.",
+        "params": {
+          "id": "Public key UUID or channel ID"
+        }
+      },
+      "revokeKey": {
+        "title": "Revoke Public Key",
+        "desc": "Revoke specified public key (requires API key authentication). New API uses two-phase confirmation flow.",
+        "params": {
+          "id": "Public key UUID or channel ID",
+          "confirmationCode": "Confirmation code (two-phase confirmation mode)"
+        }
+      },
+      "requestRevoke": {
+        "title": "Request Revoke (Two-Phase)",
+        "desc": "Initiate two-phase revocation flow. First request generates confirmation code, valid for 24 hours.",
+        "params": {
+          "id": "Public key UUID or channel ID",
+          "reason": "Revocation reason (min 10 chars)",
+          "confirmationHours": "Confirmation code validity (hours, default 24)"
+        }
+      },
+      "cancelRevoke": {
+        "title": "Cancel Revoke Request",
+        "desc": "Cancel pending revocation request.",
+        "params": {
+          "id": "Revocation request ID"
+        }
+      },
+      "revokeStatus": {
+        "title": "Query Revocation Status",
+        "desc": "Query current status of key revocation.",
+        "params": {
+          "id": "Revocation request ID",
+          "keyId": "Public key ID (query pending revocation)"
+        }
+      },
+      "cleanupChannels": {
+        "title": "Cleanup Expired Channels",
+        "desc": "Clean up expired channels (requires Cron Secret and IP whitelist).",
+        "params": {
+          "task": "Task type (persistent, temporary, all), default all"
+        }
+      },
+      "cleanupKeys": {
+        "title": "Cleanup Expired Keys",
+        "desc": "Clean up expired keys, audit logs, and orphaned data (requires Cron Secret).",
+        "params": {
+          "task": "Task type (expired-keys, audit-logs, orphaned-keys, messages, all), default all"
+        }
+      }
+    }
+  },
+  "footer": {
+    "service": "Encrypted Push Notification Service"
+  },
+  "features": {
+    "publicKeyHosting": "Public Key Hosting",
+    "publicKeyHostingDesc": "Securely store users' encryption public keys with support for multiple algorithms. Subscribers use hosted public keys for end-to-end encryption, ensuring only the intended recipient can decrypt and read messages.",
+    "publicKeyHostingTags": ["RSA", "ECC", "Secure Hosting"],
+    "realtimePush": "Real-Time Push",
+    "realtimePushDesc": "Real-time message distribution based on Server-Sent Events (SSE), instantly delivered to all subscribers. Supports reconnection and message acknowledgment mechanisms.",
+    "realtimePushTags": ["SSE", "Real-Time", "Message ACK"],
+    "e2eEncryption": "End-to-End Encryption",
+    "e2eEncryptionDesc": "Publishers encrypt messages using recipients' public keys. The server cannot decrypt content. Recipients decrypt and read using their private keys, achieving true end-to-end security.",
+    "e2eEncryptionTags": ["E2E Encryption", "Private Key", "Content Privacy"],
+    "channelManagement": "Channel Management",
+    "channelManagementDesc": "Supports public channels, encrypted channels, and temporary channels. Public channels require no registration, temporary channels auto-expire, suitable for announcements and private sessions.",
+    "channelManagementTags": ["Public Channel", "Encrypted Channel", "Temporary"],
+    "messagePriority": "Message Priority",
+    "messagePriorityDesc": "Supports priority queues (CRITICAL/HIGH/NORMAL/LOW/BULK), ensuring critical messages are pushed first with efficient bulk notification distribution.",
+    "messagePriorityTags": ["Priority", "Queue Scheduling", "High Performance"],
+    "securityAuth": "Security Authentication",
+    "securityAuthDesc": "Multiple security mechanisms including API key authentication, rate limiting, and audit logs. Public key tamper protection and message leakage prevention secure the entire push pipeline.",
+    "securityAuthTags": ["API Auth", "Rate Limiting", "Audit"]
+  }
+}

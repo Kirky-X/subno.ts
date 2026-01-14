@@ -1,0 +1,171 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: ghcr.io
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run type check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm test -- --run
+
+  build:
+    name: Build & Package
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Create release package
+        run: |
+          mkdir -p release-package
+          cp -r .next release-package/
+          cp -r public release-package/
+          cp package.json release-package/
+          cp package-lock.json release-package/
+          cp next.config.ts release-package/
+          cp tsconfig.json release-package/
+          cp -r src release-package/
+          cp .env.example release-package/
+          cp drizzle.config.ts release-package/
+          echo "subno.ts" > release-package/NAME
+          echo "${{ github.ref_name }}" > release-package/VERSION
+          tar -czf subno-ts-release.tar.gz release-package/
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          path: subno-ts-release.tar.gz
+          retention-days: 5
+
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version info
+        id: version
+        run: |
+          VERSION=${{ github.ref_name }}
+          echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            const { data: commits } = await github.rest.repos.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 50
+            });
+
+            let changelog = '# Release Notes\n\n';
+            changelog += `## ${process.env.TAG_VERSION}\n\n`;
+
+            const features = [];
+            const fixes = [];
+            const docs = [];
+            const other = [];
+
+            for (const commit of commits) {
+              const msg = commit.commit.message;
+              const type = msg.split(':')[0]?.toLowerCase() || '';
+              const scope = msg.split('(')[1]?.split(')')?.[0] || '';
+              
+              if (type.includes('feat')) {
+                features.push(`- ${msg.split(':').slice(1).join(':').trim()}`);
+              } else if (type.includes('fix') || type.includes('security')) {
+                fixes.push(`- ${msg.split(':').slice(1).join(':').trim()}`);
+              } else if (type.includes('docs')) {
+                docs.push(`- ${msg.split(':').slice(1).join(':').trim()}`);
+              }
+            }
+
+            if (features.length > 0) {
+              changelog += '### Features\n' + features.join('\n') + '\n\n';
+            }
+            if (fixes.length > 0) {
+              changelog += '### Bug Fixes\n' + fixes.join('\n') + '\n\n';
+            }
+            if (docs.length > 0) {
+              changelog += '### Documentation\n' + docs.join('\n') + '\n';
+            }
+
+            return changelog;
+        env:
+          TAG_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-package
+          path: .
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: subno-ts-release.tar.gz
+          name: Release ${{ steps.version.outputs.version }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          body_path: release-body.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write release body
+        run: |
+          echo "${{ steps.changelog.outputs.result }}" > release-body.md
