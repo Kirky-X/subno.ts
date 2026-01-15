@@ -320,6 +320,63 @@ client.subscribe.set_reconnect_config(
 )
 ```
 
+### 性能优化配置
+
+```python
+from securenotify import SecureNotifyClient
+
+# 启用客户端速率限制（防止 API 滥用）
+client = SecureNotifyClient(
+    base_url="http://localhost:3000",
+    api_key="your-api-key",
+    enable_rate_limit=True  # 默认启用
+)
+
+# 启用性能监控（追踪请求延迟和成功率）
+client = SecureNotifyClient(
+    base_url="http://localhost:3000",
+    api_key="your-api-key",
+    enable_metrics=True
+)
+
+# 启用响应缓存（减少冗余 GET 请求）
+client = SecureNotifyClient(
+    base_url="http://localhost:3000",
+    api_key="your-api-key",
+    enable_cache=True
+)
+
+# 获取性能指标
+if enable_metrics:
+    summary = client.http._metrics_collector.get_summary()
+    print(f"Total requests: {summary['total_requests']}")
+    print(f"Success rate: {summary['success_rate']*100:.1f}%")
+    print(f"Average latency: {summary['endpoint_stats'].get('/api/publish', {}).get('avg_duration_ms', 0):.2f}ms")
+
+# 清理缓存
+if enable_cache:
+    client.http.clear_cache()
+    client.http.cleanup_cache()
+```
+
+### 安全配置
+
+```python
+from securenotify import SecureNotifyClient
+
+# SDK 自动强制执行以下安全措施：
+# - SSL/TLS 验证始终启用（无法禁用）
+# - 重定向限制为最多 5 次（防止 SSRF）
+# - 频道 ID 格式验证（只允许字母数字、连字符和下划线）
+# - 错误消息敏感数据脱敏
+
+# 所有配置都是安全的，无需额外设置
+client = SecureNotifyClient(
+    base_url="https://api.securenotify.dev",  # 使用 HTTPS
+    api_key="your-api-key"
+)
+```
+
 ## 开发
 
 ```bash
