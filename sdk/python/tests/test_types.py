@@ -142,12 +142,12 @@ class TestErrorTypes:
         """Test SecureNotifyApiError properties."""
         error = SecureNotifyApiError(
             status_code=400,
-            error_code=ErrorCode.REQUEST_INVALID,
+            error_code=ErrorCode.VALIDATION_ERROR,
             message="Invalid request",
             request_id="req-123"
         )
         assert error.status_code == 400
-        assert error.error_code == ErrorCode.REQUEST_INVALID
+        assert error.error_code == ErrorCode.VALIDATION_ERROR
         assert error.request_id == "req-123"
         assert not error.is_retryable
 
@@ -155,7 +155,7 @@ class TestErrorTypes:
         """Test retryable error detection."""
         error = SecureNotifyApiError(
             status_code=503,
-            error_code=ErrorCode.SERVER_UNAVAILABLE,
+            error_code=ErrorCode.SERVICE_UNAVAILABLE,
             message="Service unavailable"
         )
         assert error.is_retryable
@@ -180,6 +180,6 @@ class TestErrorTypes:
 
     def test_error_code_values(self):
         """Test ErrorCode enum values."""
-        assert ErrorCode.SUCCESS.value == 0
-        assert ErrorCode.AUTH_REQUIRED.value == 1001
-        assert ErrorCode.SERVER_INTERNAL_ERROR.value == 5001
+        assert ErrorCode.SUCCESS.value == "SUCCESS"
+        assert ErrorCode.AUTH_REQUIRED.value == "AUTH_REQUIRED"
+        assert ErrorCode.SERVICE_UNAVAILABLE.value == "SERVICE_UNAVAILABLE"

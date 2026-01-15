@@ -6,6 +6,7 @@
  * @brief Error handling implementation for SecureNotify C SDK
  */
 
+#define _POSIX_C_SOURCE 200809L
 #include <stdlib.h>
 #include <string.h>
 #include "securenotify_error.h"

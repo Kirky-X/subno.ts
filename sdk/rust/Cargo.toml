@@ -29,8 +29,11 @@ thiserror = "1.0"
 # Async traits
 async-trait = "0.1"
 
-# FFI
-uniffi = { version = "0.25", features = ["cli"] }
+# Async utilities
+futures = "0.3"
+
+# FFI (optional)
+uniffi = { version = "0.25", features = ["cli"], optional = true }
 
 # URL parsing
 url = "2.5"
@@ -44,14 +47,24 @@ time = { version = "0.3", features = ["serde", "macros"] }
 # Random for jitter
 rand = "0.8"
 
+# SHA256 for deduplication
+sha2 = "0.10"
+
+# UUID for request IDs
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# High-performance locks (optional, fallback to std)
+parking_lot = { version = "0.12", optional = true }
+
 [build-dependencies]
-uniffi-build = "0.25"
+uniffi_build = { version = "0.25", optional = true }
 
 [features]
 default = ["native-tls"]
 native-tls = ["reqwest/native-tls"]
 rustls-tls = ["reqwest/rustls-tls"]
 socks = ["reqwest/socks"]
+uniffi = ["dep:uniffi", "dep:uniffi_build"]
 
 [profile.release]
 lto = true

@@ -46,9 +46,13 @@ public class ApiKeyManager {
                 .expiresIn(expiresIn)
                 .build();
 
-        return retryHandler.execute(() ->
-                httpClient.post("api/keys", request, ApiKeyInfo.ApiKeyCreateResponse.class)
-        ).getData();
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.post("api/keys", request, ApiKeyInfo.ApiKeyCreateResponse.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).getData();
     }
 
     /**
@@ -70,9 +74,13 @@ public class ApiKeyManager {
      * @return The API key info (without the full key)
      */
     public ApiKeyInfo get(String keyId) throws Exception {
-        return retryHandler.execute(() ->
-                httpClient.get("api/keys/" + keyId, null, ApiKeyInfo.class)
-        ).getData();
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.get("api/keys/" + keyId, null, ApiKeyInfo.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).getData();
     }
 
     /**
@@ -88,9 +96,13 @@ public class ApiKeyManager {
                 .offset(offset)
                 .build();
 
-        return retryHandler.execute(() ->
-                httpClient.post("api/keys", request, ApiKeyListResponse.class)
-        ).getData();
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.post("api/keys", request, ApiKeyListResponse.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).getData();
     }
 
     /**
@@ -114,9 +126,13 @@ public class ApiKeyManager {
                 .reason(reason)
                 .build();
 
-        return retryHandler.execute(() ->
-                httpClient.delete("api/keys/" + keyId, request, Map.class)
-        );
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.delete("api/keys/" + keyId, request, Map.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     /**

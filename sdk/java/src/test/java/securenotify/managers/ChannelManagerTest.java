@@ -122,11 +122,12 @@ class ChannelManagerTest {
     @Test
     void testDelete() throws Exception {
         // Arrange
-        ApiResponse<Object> response = ApiResponse.success(null);
-        when(httpClient.delete(anyString(), eq(Map.class))).thenReturn(response);
+        Map<String, Object> deleteResult = Map.of("status", "deleted");
+        ApiResponse<Map<String, Object>> response = ApiResponse.success(deleteResult);
+        when(httpClient.delete(anyString(), eq(Map.class))).thenReturn((ApiResponse) response);
 
         // Act
-        ApiResponse<Object> result = channelManager.delete("channel-123");
+        ApiResponse<?> result = channelManager.delete("channel-123");
 
         // Assert
         assertNotNull(result);

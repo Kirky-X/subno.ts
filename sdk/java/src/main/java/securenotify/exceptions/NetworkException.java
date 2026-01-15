@@ -13,8 +13,8 @@ public class NetworkException extends SecureNotifyException {
 
     public NetworkException(String message) {
         super(message, "NETWORK_ERROR");
-        this.isTimeout = false;
-        this.isConnectionRefused = false;
+        this.isTimeout = message != null && message.toLowerCase().contains("timeout");
+        this.isConnectionRefused = message != null && message.toLowerCase().contains("connection refused");
     }
 
     public NetworkException(String message, Throwable cause) {

@@ -4,6 +4,8 @@
 package securenotify.utils;
 
 import org.junit.jupiter.api.Test;
+import securenotify.exceptions.NetworkException;
+import securenotify.exceptions.ApiException;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -61,7 +63,7 @@ class RetryHandlerTest {
         assertThrows(NetworkException.class, () ->
                 handler.execute(() -> {
                     callCount.incrementAndGet();
-                    throw new NetworkException("Permanent failure");
+                    throw new NetworkException("Connection timeout");
                 })
         );
 

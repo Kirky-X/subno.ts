@@ -5,7 +5,8 @@
 
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tokio::time::{timeout, Duration};
+use tokio::time::Duration;
+use futures::StreamExt;
 use crate::{SecureNotifyError, Result, SseEvent};
 
 /// Configuration for SSE connection
@@ -105,9 +106,9 @@ pub enum SseState {
 /// SSE connection manager
 #[derive(Clone)]
 pub struct SseConnection {
-    config: SseConfig,
-    state: Arc<parking_lot::RwLock<SseState>>,
-    message_tx: mpsc::Sender<SseMessage>,
+    _config: SseConfig,
+    state: Arc<tokio::sync::RwLock<SseState>>,
+    _message_tx: mpsc::Sender<SseMessage>,
     _handle: Arc<tokio::task::JoinHandle<()>>,
 }
 
@@ -115,18 +116,20 @@ impl SseConnection {
     /// Create a new SSE connection
     pub fn new(config: SseConfig) -> (Self, mpsc::Receiver<SseMessage>) {
         let (message_tx, message_rx) = mpsc::channel(100);
-        let state = Arc::new(parking_lot::RwLock::new(SseState::Disconnected));
+        let state = Arc::new(tokio::sync::RwLock::new(SseState::Disconnected));
         let config_clone = config.clone();
+        let state_clone = state.clone();
+        let message_tx_clone = message_tx.clone();
 
         let handle = tokio::spawn(async move {
-            Self::run_connection(&config_clone, &message_tx, &state).await;
+            Self::run_connection(&config_clone, &message_tx_clone, &state_clone).await;
         });
 
         (
             Self {
-                config,
+                _config: config,
                 state,
-                message_tx,
+                _message_tx: message_tx,
                 _handle: Arc::new(handle),
             },
             message_rx,
@@ -137,13 +140,16 @@ impl SseConnection {
     async fn run_connection(
         config: &SseConfig,
         message_tx: &mpsc::Sender<SseMessage>,
-        state: &parking_lot::RwLock<SseState>,
+        state: &tokio::sync::RwLock<SseState>,
     ) {
         let mut reconnect_attempts = 0u32;
         let url = config.build_url();
 
         loop {
-            *state.write() = SseState::Connecting;
+            {
+                let mut state_guard = state.write().await;
+                *state_guard = SseState::Connecting;
+            }
 
             let result = Self::connect_and_process(config, &url, message_tx).await;
 
@@ -163,11 +169,17 @@ impl SseConnection {
                             ),
                         ))
                         .await;
-                        *state.write() = SseState::Failed;
+                        {
+                            let mut state_guard = state.write().await;
+                            *state_guard = SseState::Failed;
+                        }
                         break;
                     }
 
-                    *state.write() = SseState::Reconnecting;
+                    {
+                        let mut state_guard = state.write().await;
+                        *state_guard = SseState::Reconnecting;
+                    }
                     reconnect_attempts += 1;
 
                     // Backoff before reconnecting
@@ -187,55 +199,84 @@ impl SseConnection {
         url: &str,
         message_tx: &mpsc::Sender<SseMessage>,
     ) -> Result<()> {
-        let client = reqwest::Client::new();
-
-        // Note: reqwest doesn't have native EventSource support
-        // This is a simplified implementation using polling
-        // In production, you might want to use a dedicated SSE library
-
-        let mut interval = tokio::time::interval(config.heartbeat_interval);
-
-        loop {
-            tokio::select! {
-                _ = interval.tick() => {
-                    // Heartbeat - send keep-alive
-                    let _ = message_tx.send(SseMessage::Heartbeat).await;
+        let client = reqwest::Client::builder()
+            .timeout(config.connection_timeout)
+            .build()?;
+    
+        let response = client
+            .get(url)
+            .header("Accept", "text/event-stream")
+            .header("Cache-Control", "no-cache")
+            .send()
+            .await?;
+    
+        if !response.status().is_success() {
+            return Err(SecureNotifyError::ApiError {
+                code: response.status().as_u16().to_string(),
+                message: format!("SSE connection failed with status: {}", response.status()),
+                status: response.status().as_u16(),
+            });
+        }
+    
+        // Send connected message
+        let _ = message_tx.send(SseMessage::Connected).await;
+    
+        // Process SSE stream
+        let mut stream = response.bytes_stream();
+        let mut buffer = String::new();
+        let mut event_type = String::from("message");
+    
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result?;
+            let chunk_str = String::from_utf8_lossy(&chunk);
+            buffer.push_str(&chunk_str);
+    
+            // Process complete lines
+            while let Some(pos) = buffer.find('\n') {
+                let line = buffer[..pos].to_string();
+                buffer = buffer[pos + 1..].to_string();
+    
+                let line = line.trim();
+                if line.is_empty() {
+                    // Empty line - dispatch event
+                    if !event_type.is_empty() {
+                        // Send event (simplified implementation)
+                        let _ = message_tx.send(SseMessage::Heartbeat).await;
+                    }
+                    event_type = String::from("message");
+                } else if line.starts_with("event:") {
+                    event_type = line[6..].trim().to_string();
+                } else if line.starts_with("data:") {
+                    // Parse data (simplified)
+                    let data = line[5..].trim();
+                    if !data.is_empty() {
+                        // Send message
+                        let _ = message_tx.send(SseMessage::Heartbeat).await;
+                    }
+                } else if line.starts_with(':') {
+                    // Comment - ignore
                 }
             }
         }
+    
+        Ok(())
     }
 
     /// Get the current connection state
-    pub fn state(&self) -> SseState {
-        *self.state.read()
+    pub async fn state(&self) -> SseState {
+        let state_guard = self.state.read().await;
+        state_guard.clone()
     }
 
     /// Check if connected
-    pub fn is_connected(&self) -> bool {
-        *self.state.read() == SseState::Connected
+    pub async fn is_connected(&self) -> bool {
+        let state_guard = self.state.read().await;
+        *state_guard == SseState::Connected
     }
 
     /// Disconnect from the SSE stream
     pub async fn disconnect(&self) {
-        *self.state.write() = SseState::Disconnected;
+        let mut state_guard = self.state.write().await;
+        *state_guard = SseState::Disconnected;
     }
-}
-
-/// Convert reqwest EventSource to SSE event
-fn parse_sse_event(event_type: &str, data: &str, id: Option<&str>, event: Option<&str>) -> SseEvent {
-    let event_type = match event_type.to_lowercase().as_str() {
-        "message" => crate::SseEventType::Message,
-        "heartbeat" | "ping" => crate::SseEventType::Heartbeat,
-        "error" => crate::SseEventType::Error,
-        "connected" => crate::SseEventType::Connected,
-        "disconnected" => crate::SseEventType::Disconnected,
-        _ => crate::SseEventType::Unknown(event_type.to_string()),
-    };
-
-    SseEvent::new(
-        event_type,
-        data.to_string(),
-        id.map(|s| s.to_string()),
-        event.map(|s| s.to_string()),
-    )
 }

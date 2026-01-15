@@ -26,7 +26,9 @@ class TestKeyManager:
     @pytest.fixture
     def key_manager(self, mock_http):
         """Create KeyManager instance."""
-        return KeyManager(mock_http)
+        from securenotify.utils.retry import RetryConfig
+        retry_config = RetryConfig(max_retries=3, initial_delay=1.0, max_delay=30.0, backoff_multiplier=2.0)
+        return KeyManager(mock_http, retry_config)
 
     @pytest.mark.asyncio
     async def test_register(self, key_manager, mock_http):
@@ -100,7 +102,9 @@ class TestChannelManager:
     @pytest.fixture
     def channel_manager(self, mock_http):
         """Create ChannelManager instance."""
-        return ChannelManager(mock_http)
+        from securenotify.utils.retry import RetryConfig
+        retry_config = RetryConfig(max_retries=3, initial_delay=1.0, max_delay=30.0, backoff_multiplier=2.0)
+        return ChannelManager(mock_http, retry_config)
 
     @pytest.mark.asyncio
     async def test_create(self, channel_manager, mock_http):
@@ -151,7 +155,9 @@ class TestPublishManager:
     @pytest.fixture
     def publish_manager(self, mock_http):
         """Create PublishManager instance."""
-        return PublishManager(mock_http)
+        from securenotify.utils.retry import RetryConfig
+        retry_config = RetryConfig(max_retries=3, initial_delay=1.0, max_delay=30.0, backoff_multiplier=2.0)
+        return PublishManager(mock_http, retry_config)
 
     @pytest.mark.asyncio
     async def test_send(self, publish_manager, mock_http):
@@ -210,12 +216,14 @@ class TestApiKeyManager:
         return MagicMock(spec=HttpClient)
 
     @pytest.fixture
-    def apikey_manager(self, mock_http):
+    def api_key_manager(self, mock_http):
         """Create ApiKeyManager instance."""
-        return ApiKeyManager(mock_http)
+        from securenotify.utils.retry import RetryConfig
+        retry_config = RetryConfig(max_retries=3, initial_delay=1.0, max_delay=30.0, backoff_multiplier=2.0)
+        return ApiKeyManager(mock_http, retry_config)
 
     @pytest.mark.asyncio
-    async def test_create(self, apikey_manager, mock_http):
+    async def test_create(self, api_key_manager, mock_http):
         """Test API key creation."""
         mock_http.create_api_key = AsyncMock(return_value=MagicMock(
             key_id="key-123",
@@ -225,7 +233,7 @@ class TestApiKeyManager:
             permissions=["publish", "subscribe"]
         ))
 
-        result = await apikey_manager.create(
+        result = await api_key_manager.create(
             name="My Key",
             permissions=["publish", "subscribe"]
         )
@@ -234,7 +242,7 @@ class TestApiKeyManager:
         assert result.key_prefix == "sk_test"
 
     @pytest.mark.asyncio
-    async def test_list(self, apikey_manager, mock_http):
+    async def test_list(self, api_key_manager, mock_http):
         """Test listing API keys."""
         mock_http.list_api_keys = AsyncMock(return_value={
             "keys": [
@@ -244,7 +252,7 @@ class TestApiKeyManager:
             ]
         })
 
-        result = await apikey_manager.list()
+        result = await api_key_manager.list()
 
         assert len(result) == 1
         assert result[0].name == "Key 1"

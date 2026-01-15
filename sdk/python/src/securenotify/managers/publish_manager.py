@@ -13,6 +13,7 @@ from securenotify.types.api import (
     QueueStatusInfo,
 )
 from .base import BaseManager
+from securenotify.utils.http import validate_channel_id
 
 
 class PublishManager(BaseManager):
@@ -43,9 +44,20 @@ class PublishManager(BaseManager):
             Message publish response with message_id.
 
         Raises:
-            ValueError: If channel or message is empty.
+            ValueError: If channel or message is empty or invalid.
             SecureNotifyApiError: On API error.
         """
+        # Validate channel ID format (SECURITY FIX)
+        if not validate_channel_id(channel):
+            raise ValueError(
+                f"Invalid channel ID '{channel}'. "
+                "Channel ID must be 1-256 characters and contain only alphanumeric characters, hyphens, and underscores."
+            )
+
+        # Validate message content
+        if not message or not isinstance(message, str):
+            raise ValueError("Message must be a non-empty string")
+
         request = MessagePublishRequest(
             channel=channel,
             message=message,

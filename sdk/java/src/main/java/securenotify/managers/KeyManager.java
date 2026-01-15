@@ -45,9 +45,13 @@ public class KeyManager {
                 .metadata(metadata)
                 .build();
 
-        return retryHandler.execute(() ->
-                httpClient.post("api/register", request, PublicKeyInfo.class)
-        ).getData();
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.post("api/register", request, PublicKeyInfo.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).getData();
     }
 
     /**
@@ -67,9 +71,13 @@ public class KeyManager {
      * @return The public key info
      */
     public PublicKeyInfo get(String keyId) throws Exception {
-        return retryHandler.execute(() ->
-                httpClient.get("api/keys/" + keyId, null, PublicKeyInfo.class)
-        ).getData();
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.get("api/keys/" + keyId, null, PublicKeyInfo.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).getData();
     }
 
     /**
@@ -79,9 +87,13 @@ public class KeyManager {
      * @return The public key info
      */
     public PublicKeyInfo getByChannel(String channelId) throws Exception {
-        return retryHandler.execute(() ->
-                httpClient.get("api/register", Map.of("channelId", channelId), PublicKeyInfo.class)
-        ).getData();
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.get("api/register", Map.of("channelId", channelId), PublicKeyInfo.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).getData();
     }
 
     /**
@@ -98,9 +110,13 @@ public class KeyManager {
                 .confirmationHours(confirmationHours)
                 .build();
 
-        return retryHandler.execute(() ->
-                httpClient.delete("api/keys/" + keyId, request, Map.class)
-        );
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.delete("api/keys/" + keyId, request, Map.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     /**

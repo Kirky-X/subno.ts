@@ -101,9 +101,9 @@ where
                     tokio::time::sleep(actual_delay).await;
 
                     // Exponential backoff
-                    delay = (delay.as_secs_f64() * config.backoff_multiplier)
+                    let delay_secs = (delay.as_secs_f64() * config.backoff_multiplier)
                         .min(config.max_delay.as_secs_f64());
-                    delay = Duration::from_secs_f64(delay);
+                    delay = Duration::from_secs_f64(delay_secs);
                 } else {
                     return Err(error);
                 }

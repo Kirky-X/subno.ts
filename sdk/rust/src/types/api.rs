@@ -4,8 +4,6 @@
 //! API type definitions for SecureNotify SDK
 
 use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;
-use crate::{MessagePriority, ChannelType, EncryptionAlgorithm};
 
 /// Request to register a public key
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -329,7 +327,7 @@ impl SseEvent {
 }
 
 /// Stream event for real-time message delivery
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreamEvent {
     /// The type of event
     pub event_type: String,

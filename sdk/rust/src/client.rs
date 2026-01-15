@@ -7,7 +7,8 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use crate::managers::*;
 use crate::utils::http::HttpClient;
-use crate::{Result, SecureNotifyError, MessagePriority, ConnectionState};
+use crate::utils::connection::SseMessage;
+use crate::{Result, SecureNotifyError, MessagePriority};
 
 /// SecureNotifyClient provides access to all SecureNotify API operations.
 ///
@@ -77,6 +78,9 @@ pub struct ClientBuilder {
     initial_delay_ms: u64,
     max_delay_ms: u64,
     backoff_multiplier: f64,
+    enable_metrics: bool,
+    enable_cache: bool,
+    enable_deduplication: bool,
 }
 
 impl Default for ClientBuilder {
@@ -96,6 +100,9 @@ impl ClientBuilder {
             initial_delay_ms: 1000,
             max_delay_ms: 30000,
             backoff_multiplier: 2.0,
+            enable_metrics: false,
+            enable_cache: false,
+            enable_deduplication: false,
         }
     }
 
@@ -158,6 +165,9 @@ impl ClientBuilder {
                 self.initial_delay_ms,
                 self.max_delay_ms,
                 self.backoff_multiplier,
+                self.enable_metrics,
+                self.enable_cache,
+                self.enable_deduplication,
             )),
         })
     }
@@ -168,23 +178,19 @@ macro_rules! implement_managers {
     ($client:ident) => {
         #[async_trait]
         impl KeyManager for $client {
-            fn http_client(&self) -> &Arc<HttpClient> {
-                &self.http_client
-            }
-
             async fn register_public_key(
                 &self,
                 channel_id: &str,
                 public_key: &str,
                 algorithm: &str,
                 metadata: Option<serde_json::Value>,
-            ) -> Result<types::api::RegisterPublicKeyResponse> {
+            ) -> Result<crate::types::api::RegisterPublicKeyResponse> {
                 KeyManagerImpl::new(self.http_client.clone())
                     .register_public_key(channel_id, public_key, algorithm, metadata)
                     .await
             }
 
-            async fn get_public_key(&self, channel_id: &str) -> Result<types::api::PublicKeyInfo> {
+            async fn get_public_key(&self, channel_id: &str) -> Result<crate::types::api::PublicKeyInfo> {
                 KeyManagerImpl::new(self.http_client.clone())
                     .get_public_key(channel_id)
                     .await
@@ -194,7 +200,7 @@ macro_rules! implement_managers {
                 &self,
                 limit: Option<u32>,
                 offset: Option<u32>,
-            ) -> Result<Vec<types::api::PublicKeyInfo>> {
+            ) -> Result<Vec<crate::types::api::PublicKeyInfo>> {
                 KeyManagerImpl::new(self.http_client.clone())
                     .list_public_keys(limit, offset)
                     .await
@@ -215,13 +221,13 @@ macro_rules! implement_managers {
                 channel_type: &str,
                 description: Option<&str>,
                 metadata: Option<serde_json::Value>,
-            ) -> Result<types::api::ChannelCreateResponse> {
+            ) -> Result<crate::types::api::ChannelCreateResponse> {
                 ChannelManagerImpl::new(self.http_client.clone())
                     .create_channel(name, channel_type, description, metadata)
                     .await
             }
 
-            async fn get_channel(&self, channel_id: &str) -> Result<types::api::ChannelInfo> {
+            async fn get_channel(&self, channel_id: &str) -> Result<crate::types::api::ChannelInfo> {
                 ChannelManagerImpl::new(self.http_client.clone())
                     .get_channel(channel_id)
                     .await
@@ -232,7 +238,7 @@ macro_rules! implement_managers {
                 channel_type: Option<&str>,
                 limit: Option<u32>,
                 offset: Option<u32>,
-            ) -> Result<Vec<types::api::ChannelInfo>> {
+            ) -> Result<Vec<crate::types::api::ChannelInfo>> {
                 ChannelManagerImpl::new(self.http_client.clone())
                     .list_channels(channel_type, limit, offset)
                     .await
@@ -256,19 +262,19 @@ macro_rules! implement_managers {
                 cache: Option<bool>,
                 encrypted: Option<bool>,
                 signature: Option<&str>,
-            ) -> Result<types::api::MessagePublishResponse> {
+            ) -> Result<crate::types::api::MessagePublishResponse> {
                 PublishManagerImpl::new(self.http_client.clone())
                     .publish_message(channel, message, priority, sender, cache, encrypted, signature)
                     .await
             }
 
-            async fn get_queue_status(&self, channel: &str) -> Result<types::api::QueueStatus> {
+            async fn get_queue_status(&self, channel: &str) -> Result<crate::types::api::QueueStatus> {
                 PublishManagerImpl::new(self.http_client.clone())
                     .get_queue_status(channel)
                     .await
             }
 
-            async fn get_message(&self, channel: &str, message_id: &str) -> Result<types::api::MessageInfo> {
+            async fn get_message(&self, channel: &str, message_id: &str) -> Result<crate::types::api::MessageInfo> {
                 PublishManagerImpl::new(self.http_client.clone())
                     .get_message(channel, message_id)
                     .await
@@ -292,7 +298,7 @@ macro_rules! implement_managers {
                     .await
             }
 
-            async fn list_subscriptions(&self) -> Result<Vec<types::api::SubscriptionInfo>> {
+            async fn list_subscriptions(&self) -> Result<Vec<crate::types::api::SubscriptionInfo>> {
                 SubscribeManagerImpl::new(self.http_client.clone())
                     .list_subscriptions()
                     .await
@@ -307,13 +313,13 @@ macro_rules! implement_managers {
                 user_id: Option<&str>,
                 permissions: Option<Vec<&str>>,
                 expires_at: Option<&str>,
-            ) -> Result<types::api::ApiKeyCreateResponse> {
+            ) -> Result<crate::types::api::ApiKeyCreateResponse> {
                 ApiKeyManagerImpl::new(self.http_client.clone())
                     .create_api_key(name, user_id, permissions, expires_at)
                     .await
             }
 
-            async fn get_api_key(&self, key_id: &str) -> Result<types::api::ApiKeyInfo> {
+            async fn get_api_key(&self, key_id: &str) -> Result<crate::types::api::ApiKeyInfo> {
                 ApiKeyManagerImpl::new(self.http_client.clone())
                     .get_api_key(key_id)
                     .await
@@ -323,7 +329,7 @@ macro_rules! implement_managers {
                 &self,
                 limit: Option<u32>,
                 offset: Option<u32>,
-            ) -> Result<Vec<types::api::ApiKeyInfo>> {
+            ) -> Result<Vec<crate::types::api::ApiKeyInfo>> {
                 ApiKeyManagerImpl::new(self.http_client.clone())
                     .list_api_keys(limit, offset)
                     .await
@@ -337,8 +343,5 @@ macro_rules! implement_managers {
         }
     };
 }
-
-use crate::types::api::*;
-use crate::utils::connection::SseMessage;
 
 implement_managers!(SecureNotifyClient);

@@ -9,6 +9,7 @@
  * using libcurl for HTTP/HTTPS requests.
  */
 
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +21,7 @@
 #define SECURENOTIFY_VERSION_MAJOR 0
 #define SECURENOTIFY_VERSION_MINOR 1
 #define SECURENOTIFY_VERSION_PATCH 0
+#define SECURENOTIFY_VERSION_STRING "0.1.0"
 
 /* Internal client structure */
 struct securenotify_client {
@@ -58,7 +60,7 @@ typedef struct {
 } response_buffer_t;
 
 /* Forward declarations */
-static size_t curl_write_callback(void* contents, size_t size, size_t nmemb, void* userdata);
+static size_t securenotify_write_callback(void* contents, size_t size, size_t nmemb, void* userdata);
 static int curl_initialize(void);
 static void curl_cleanup(void);
 static char* build_url(securenotify_client_t* client, const char* endpoint);
@@ -105,9 +107,13 @@ static bool validate_string(const char* str, size_t max_length) {
 static bool validate_channel_id(const char* channel_id) {
     if (!validate_string(channel_id, 256)) return false;
 
+    /* Channel ID must be at least 1 character */
+    size_t len = strlen(channel_id);
+    if (len < 1 || len > 256) return false;
+
     /* Channel ID should only contain alphanumeric chars, hyphens, and underscores */
-    for (size_t i = 0; channel_id[i] != '\0'; i++) {
-        char c = channel_id[i];
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = channel_id[i];
         if (!((c >= 'a' && c <= 'z') ||
               (c >= 'A' && c <= 'Z') ||
               (c >= '0' && c <= '9') ||
@@ -174,9 +180,14 @@ static bool validate_message(const char* message) {
 
 /* ========== Utility Functions ========== */
 
-static size_t curl_write_callback(void* contents, size_t size, size_t nmemb, void* userdata) {
+static size_t securenotify_write_callback(void* contents, size_t size, size_t nmemb, void* userdata) {
     size_t realsize = size * nmemb;
     response_buffer_t* buf = (response_buffer_t*)userdata;
+
+    /* Check for potential overflow */
+    if (realsize > SIZE_MAX - buf->size - 1) {
+        return 0;  /* Prevent overflow */
+    }
 
     char* ptr = realloc(buf->data, buf->size + realsize + 1);
     if (!ptr) {
@@ -320,6 +331,7 @@ static int http_request(
     /* Set headers */
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "Accept: application/json");
+    headers = curl_slist_append(headers, "User-Agent: SecureNotify-C/0.1.0");  /* Add User-Agent header */
     if (client->api_key) {
         char auth_header[512];
         snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s", client->api_key);
@@ -328,15 +340,21 @@ static int http_request(
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
     /* Set write callback */
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, securenotify_write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
 
     /* Set timeout */
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
 
-    /* Follow redirects */
+    /* Follow redirects with limit to prevent SSRF */
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L);
+
+    /* Enable SSL/TLS verification (CRITICAL SECURITY FIX) */
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+    curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
 
     /* Perform request */
     CURLcode res = curl_easy_perform(curl);
@@ -425,6 +443,12 @@ securenotify_client_t* securenotify_client_new(
         securenotify_client_free(client);
         return NULL;
     }
+
+    /* Configure connection pooling for performance (PERFORMANCE FIX) */
+    curl_easy_setopt(client->curl, CURLOPT_FORBID_REUSE, 0L);  /* Enable connection reuse */
+    curl_easy_setopt(client->curl, CURLOPT_TCP_KEEPALIVE, 1L);  /* Enable TCP keep-alive */
+    curl_easy_setopt(client->curl, CURLOPT_TCP_KEEPIDLE, 60L);  /* Keep idle connections for 60s */
+    curl_easy_setopt(client->curl, CURLOPT_TCP_KEEPINTVL, 30L);  /* Send keep-alive every 30s */
 
     return client;
 }

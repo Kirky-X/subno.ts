@@ -55,9 +55,13 @@ public class PublishManager {
                 .signature(signature)
                 .build();
 
-        return retryHandler.execute(() ->
-                httpClient.post("api/publish", request, MessageInfo.MessagePublishResponse.class)
-        ).getData();
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.post("api/publish", request, MessageInfo.MessagePublishResponse.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).getData();
     }
 
     /**
@@ -101,9 +105,13 @@ public class PublishManager {
      * @return The queue status
      */
     public MessageInfo.QueueStatusResponse getQueueStatus(String channel) throws Exception {
-        return retryHandler.execute(() ->
-                httpClient.get("api/publish", Map.of("channel", channel), MessageInfo.QueueStatusResponse.class)
-        ).getData();
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.get("api/publish", Map.of("channel", channel), MessageInfo.QueueStatusResponse.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).getData();
     }
 
     /**
@@ -113,8 +121,12 @@ public class PublishManager {
      * @return The message info
      */
     public MessageInfo getMessage(String messageId) throws Exception {
-        return retryHandler.execute(() ->
-                httpClient.get("api/publish/" + messageId, null, MessageInfo.class)
-        ).getData();
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.get("api/publish/" + messageId, null, MessageInfo.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).getData();
     }
 }

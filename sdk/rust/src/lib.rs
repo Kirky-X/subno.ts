@@ -34,7 +34,6 @@
 //! }
 //! ```
 
-use std::sync::Arc;
 #[cfg(feature = "uniffi")]
 use uniffi::prelude::*;
 
@@ -61,31 +60,41 @@ pub enum SecureNotifyError {
     Unknown(String),
 }
 
-// Make error Clone + Copy for FFI compatibility
-impl Clone for SecureNotifyError {
-    fn clone(&self) -> Self {
+// Note: SecureNotifyError implements Clone via derive macro
+// For FFI compatibility, this is sufficient
+
+impl SecureNotifyError {
+    pub fn code(&self) -> String {
         match self {
-            Self::ApiError {
-                code,
-                message,
-                status,
-            } => Self::ApiError {
-                code: code.clone(),
-                message: message.clone(),
-                status: *status,
-            },
-            Self::NetworkError(msg) => Self::NetworkError(msg.clone()),
-            Self::ConnectionError(msg) => Self::ConnectionError(msg.clone()),
-            Self::TimeoutError(msg) => Self::TimeoutError(msg.clone()),
-            Self::SerializationError(msg) => Self::SerializationError(msg.clone()),
-            Self::AuthError(msg) => Self::AuthError(msg.clone()),
-            Self::Unknown(msg) => Self::Unknown(msg.clone()),
+            Self::ApiError { code, .. } => code.clone(),
+            Self::NetworkError(msg) => format!("NETWORK_ERROR: {}", msg),
+            Self::ConnectionError(msg) => format!("CONNECTION_ERROR: {}", msg),
+            Self::TimeoutError(msg) => format!("TIMEOUT_ERROR: {}", msg),
+            Self::SerializationError(msg) => format!("SERIALIZATION_ERROR: {}", msg),
+            Self::AuthError(msg) => format!("AUTH_ERROR: {}", msg),
+            Self::Unknown(msg) => format!("UNKNOWN_ERROR: {}", msg),
         }
     }
-}
 
-// Note: SecureNotifyError cannot implement Copy trait because it contains String fields
-// For FFI compatibility, we use Clone instead
+    pub fn message(&self) -> String {
+        self.to_string()
+    }
+
+    pub fn status(&self) -> u16 {
+        match self {
+            Self::ApiError { status, .. } => *status,
+            _ => 0,
+        }
+    }
+
+    pub fn is_api_error(&self) -> bool {
+        matches!(self, Self::ApiError { .. })
+    }
+
+    pub fn is_network_error(&self) -> bool {
+        matches!(self, Self::NetworkError(..))
+    }
+}
 
 #[cfg(feature = "uniffi")]
 #[uniffi::export]
@@ -123,37 +132,6 @@ impl SecureNotifyError {
     pub fn auth_error(message: String) -> Self {
         Self::AuthError(message)
     }
-
-    pub fn code(&self) -> String {
-        match self {
-            Self::ApiError { code, .. } => code.clone(),
-            Self::NetworkError(msg) => format!("NETWORK_ERROR: {}", msg),
-            Self::ConnectionError(msg) => format!("CONNECTION_ERROR: {}", msg),
-            Self::TimeoutError(msg) => format!("TIMEOUT_ERROR: {}", msg),
-            Self::SerializationError(msg) => format!("SERIALIZATION_ERROR: {}", msg),
-            Self::AuthError(msg) => format!("AUTH_ERROR: {}", msg),
-            Self::Unknown(msg) => format!("UNKNOWN_ERROR: {}", msg),
-        }
-    }
-
-    pub fn message(&self) -> String {
-        self.to_string()
-    }
-
-    pub fn status(&self) -> u16 {
-        match self {
-            Self::ApiError { status, .. } => *status,
-            _ => 0,
-        }
-    }
-
-    pub fn is_api_error(&self) -> bool {
-        matches!(self, Self::ApiError { .. })
-    }
-
-    pub fn is_network_error(&self) -> bool {
-        matches!(self, Self::NetworkError(..))
-    }
 }
 
 /// Result type alias
@@ -169,6 +147,23 @@ pub enum MessagePriority {
     Bulk = 0,
 }
 
+impl MessagePriority {
+    pub fn value(&self) -> u8 {
+        *self as u8
+    }
+
+    pub fn from_value(value: u8) -> Self {
+        match value {
+            100 => Self::Critical,
+            75 => Self::High,
+            50 => Self::Normal,
+            25 => Self::Low,
+            _ => Self::Bulk,
+        }
+    }
+}
+
+#[cfg(feature = "uniffi")]
 #[uniffi::export]
 impl MessagePriority {
     pub fn critical() -> Self {
@@ -190,20 +185,6 @@ impl MessagePriority {
     pub fn bulk() -> Self {
         Self::Bulk
     }
-
-    pub fn value(&self) -> u8 {
-        *self as u8
-    }
-
-    pub fn from_value(value: u8) -> Self {
-        match value {
-            100 => Self::Critical,
-            75 => Self::High,
-            50 => Self::Normal,
-            25 => Self::Low,
-            _ => Self::Bulk,
-        }
-    }
 }
 
 /// Channel types
@@ -214,6 +195,17 @@ pub enum ChannelType {
     Temporary,
 }
 
+impl ChannelType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Public => "public",
+            Self::Encrypted => "encrypted",
+            Self::Temporary => "temporary",
+        }
+    }
+}
+
+#[cfg(feature = "uniffi")]
 #[uniffi::export]
 impl ChannelType {
     pub fn public() -> Self {
@@ -227,15 +219,6 @@ impl ChannelType {
     pub fn temporary() -> Self {
         Self::Temporary
     }
-
-    pub fn as_str(&self) -> String {
-        match self {
-            Self::Public => "public",
-            Self::Encrypted => "encrypted",
-            Self::Temporary => "temporary",
-        }
-        .to_string()
-    }
 }
 
 /// Encryption algorithm types
@@ -246,6 +229,17 @@ pub enum EncryptionAlgorithm {
     EccSecp256K1,
 }
 
+impl EncryptionAlgorithm {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Rsa2048 => "RSA-2048",
+            Self::Rsa4096 => "RSA-4096",
+            Self::EccSecp256K1 => "ECC-SECP256K1",
+        }
+    }
+}
+
+#[cfg(feature = "uniffi")]
 #[uniffi::export]
 impl EncryptionAlgorithm {
     pub fn rsa_2048() -> Self {
@@ -279,6 +273,18 @@ pub enum ConnectionState {
     Reconnecting,
 }
 
+impl ConnectionState {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Disconnected => "disconnected",
+            Self::Connecting => "connecting",
+            Self::Connected => "connected",
+            Self::Reconnecting => "reconnecting",
+        }
+    }
+}
+
+#[cfg(feature = "uniffi")]
 #[uniffi::export]
 impl ConnectionState {
     pub fn disconnected() -> Self {
@@ -296,37 +302,24 @@ impl ConnectionState {
     pub fn reconnecting() -> Self {
         Self::Reconnecting
     }
-
-    pub fn as_str(&self) -> String {
-        match self {
-            Self::Disconnected => "disconnected",
-            Self::Connecting => "connecting",
-            Self::Connected => "connected",
-            Self::Reconnecting => "reconnecting",
-        }
-        .to_string()
-    }
 }
 
 // Import internal modules
 pub mod types;
 pub mod managers;
 pub mod utils;
+#[macro_use]
 pub mod client;
 
-use types::api::*;
-use managers::*;
-use utils::http::HttpClient;
 
 // Re-export types from api module
 pub use types::api::{SseEvent, SseEventType};
 
-// Re-export ClientBuilder from client module
-pub use client::ClientBuilder;
+// Re-export ClientBuilder and SecureNotifyClient from client module
+pub use client::{ClientBuilder, SecureNotifyClient};
 
 // Re-export SseMessage from utils module
 pub use utils::connection::SseMessage;
-
 
 
 /// SecureNotify Client for Rust
@@ -352,45 +345,6 @@ pub use utils::connection::SseMessage;
 ///     Ok(())
 /// }
 /// ```
-#[derive(Clone)]
-pub struct SecureNotifyClient {
-    base_url: String,
-    api_key: String,
-    http_client: Arc<HttpClient>,
-}
-
-#[uniffi::export]
-impl SecureNotifyClient {
-    /// Create a new client with the specified base URL and API key
-    #[uniffi::constructor]
-    pub fn new(base_url: String, api_key: String) -> Self {
-        Self {
-            base_url,
-            api_key,
-            http_client: Arc::new(HttpClient::new(&base_url, &api_key)),
-        }
-    }
-
-    /// Get the base URL
-    pub fn base_url(&self) -> String {
-        self.base_url.clone()
-    }
-
-    /// Get the connection state (always returns disconnected for basic client)
-    pub fn connection_state(&self) -> ConnectionState {
-        ConnectionState::Disconnected
-    }
-}
-
-impl SecureNotifyClient {
-    /// Create a builder for configuring the client
-    pub fn builder() -> ClientBuilder {
-        ClientBuilder::new()
-    }
-}
-
-// Implement manager traits for SecureNotifyClient
-implement_managers!(SecureNotifyClient);
 
 /// Create a new client (convenience function for FFI)
 // #[uniffi::export]

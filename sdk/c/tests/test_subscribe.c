@@ -12,6 +12,7 @@
  * - Subscription cleanup
  */
 
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -277,7 +278,9 @@ static void test_subscription_thread_safety(void) {
             test_error_callback, test_heartbeat_callback,
             NULL, error
         );
-        ASSERT(subs[i] != NULL, "Failed to create subscription %d", i);
+        char msg[128];
+        snprintf(msg, sizeof(msg), "Failed to create subscription %d", i);
+        ASSERT(subs[i] != NULL, msg);
     }
 
     /* Wait for subscriptions to start */
@@ -286,7 +289,9 @@ static void test_subscription_thread_safety(void) {
     /* Clean up all subscriptions */
     for (int i = 0; i < 3; i++) {
         int result = securenotify_unsubscribe(subs[i], error);
-        ASSERT(result == 0, "Unsubscribe should succeed for subscription %d", i);
+        char msg[128];
+        snprintf(msg, sizeof(msg), "Unsubscribe should succeed for subscription %d", i);
+        ASSERT(result == 0, msg);
     }
     TEST_PASS();
 

@@ -4,6 +4,7 @@ Provides async SSE client with auto-reconnect and heartbeat detection.
 """
 
 import asyncio
+import io
 import json
 import re
 from typing import Optional, Callable, Dict, Any, Awaitable
@@ -15,6 +16,7 @@ from securenotify.types.errors import (
     SecureNotifyConnectionError,
     SecureNotifyTimeoutError,
 )
+from .http import validate_channel_id
 
 
 class ConnectionState(Enum):
@@ -89,9 +91,11 @@ class SSEClient:
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create HTTP client."""
         if self._client is None or self._client.is_closed:
+            # Add max_redirects to prevent SSRF attacks
             self._client = httpx.AsyncClient(
                 timeout=httpx.Timeout(self.timeout),
-                follow_redirects=True
+                follow_redirects=True,
+                max_redirects=5  # Limit redirects to prevent SSRF
             )
         return self._client
 
@@ -103,7 +107,15 @@ class SSEClient:
 
         Raises:
             SecureNotifyConnectionError: If connection fails.
+            ValueError: If channel ID is invalid.
         """
+        # Validate channel ID format (SECURITY FIX)
+        if not validate_channel_id(channel):
+            raise ValueError(
+                f"Invalid channel ID '{channel}'. "
+                "Channel ID must be 1-256 characters and contain only alphanumeric characters, hyphens, and underscores."
+            )
+
         self._stop_event = asyncio.Event()
         self._state = ConnectionState.CONNECTING
 
@@ -144,16 +156,20 @@ class SSEClient:
             response: HTTP streaming response.
             channel: Channel being subscribed to.
         """
-        event_buffer = ""
+        # Use StringIO for efficient string building (PERFORMANCE FIX)
+        event_buffer = io.StringIO()
         event_type = "message"
         event_id = None
 
         try:
             async for chunk in response.aiter_text():
-                event_buffer += chunk
+                event_buffer.write(chunk)
 
-                while "\n" in event_buffer:
-                    line, event_buffer = event_buffer.split("\n", 1)
+                # Process buffer
+                buffer_value = event_buffer.getvalue()
+                while "\n" in buffer_value:
+                    line, remaining = buffer_value.split("\n", 1)
+                    buffer_value = remaining
                     line = line.rstrip("\r")
 
                     if line.startswith(":"):
@@ -188,6 +204,9 @@ class SSEClient:
                         # Empty line, end of event
                         event_type = "message"
                         event_id = None
+
+                # Update buffer with remaining content
+                event_buffer = io.StringIO(buffer_value)
 
         except asyncio.CancelledError:
             raise

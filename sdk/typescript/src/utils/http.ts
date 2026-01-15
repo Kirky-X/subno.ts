@@ -9,6 +9,17 @@ import type {
 } from "../types/api.js";
 import { SecureNotifyError } from "../types/errors.js";
 import { withRetry, type RetryConfig } from "./retry.js";
+import { MetricsCollector, MetricsContext } from "./metrics.js";
+import { ResponseCache } from "./cache.js";
+import { RequestDeduplicator } from "./requestDeduplicator.js";
+
+// Import Agent for Node.js SSL/TLS configuration
+let Agent: any;
+try {
+  Agent = require("undici").Agent;
+} catch {
+  // undici not available, will use default fetch
+}
 
 /**
  * HTTP method types
@@ -55,6 +66,10 @@ export class HttpClient {
   private readonly apiKeyId: string | undefined;
   private readonly defaultTimeout: number;
   private readonly retryConfig: RetryConfig | undefined;
+  private readonly metricsCollector: MetricsCollector | undefined;
+  private readonly cache: ResponseCache | undefined;
+  private readonly requestDeduplicator: RequestDeduplicator | undefined;
+  private readonly enableDeduplication: boolean;
 
   /**
    * Create a new HTTP client
@@ -65,6 +80,10 @@ export class HttpClient {
     this.apiKeyId = options.apiKeyId;
     this.defaultTimeout = options.timeout ?? 30000;
     this.retryConfig = options.retry;
+    this.metricsCollector = options.enableMetrics ? new MetricsCollector(1000) : undefined;
+    this.cache = options.enableCache ? new ResponseCache(60, 1000) : undefined;
+    this.enableDeduplication = options.enableDeduplication ?? false;
+    this.requestDeduplicator = this.enableDeduplication ? new RequestDeduplicator({ ttlSeconds: 5.0 }) : undefined;
   }
 
   /**
@@ -141,6 +160,7 @@ export class HttpClient {
     const headers: HttpHeaders = {
       "Content-Type": "application/json",
       Accept: "application/json",
+      "User-Agent": "SecureNotify-TypeScript/0.1.0",  // Add User-Agent header
     };
 
     // Add API key authentication if available
@@ -174,16 +194,33 @@ export class HttpClient {
     // Merge retry options: explicit options > client config > default
     const finalRetryConfig: RetryConfig = retryOptions ?? this.retryConfig ?? {};
 
-    // Execute the request with retry logic
-    const result = await withRetry(async () => {
-      return await this.executeRequest<T>(options);
-    }, finalRetryConfig);
+    // Apply request deduplication if enabled (PERFORMANCE FIX)
+    const executeRequest = async () => {
+      const result = await withRetry(async () => {
+        return await this.executeRequest<T>(options);
+      }, finalRetryConfig);
 
-    if (!result.success) {
-      throw result.error;
+      if (!result.success) {
+        throw result.error;
+      }
+
+      return result.data;
+    };
+
+    if (this.enableDeduplication && this.requestDeduplicator) {
+      // Use deduplicator for all requests
+      const dedupKey = `${options.method ?? "GET"}:${options.path}`;
+      const dedupParams = { ...(options.body as Record<string, any> || {}), ...(options.query || {}) };
+      return await this.requestDeduplicator.execute(
+        dedupKey,
+        dedupParams,
+        executeRequest,
+        options.method === "GET"
+      );
+    } else {
+      // Execute request directly
+      return executeRequest();
     }
-
-    return result.data;
   }
 
   /**
@@ -197,16 +234,57 @@ export class HttpClient {
     const body = this.serializeBody(options.body);
     const timeout = options.timeout ?? this.defaultTimeout;
 
+    // Check cache for GET requests if enabled (PERFORMANCE FIX)
+    let cacheKey: string | undefined;
+    if (this.cache && options.method === "GET") {
+      // Create cache key from endpoint and query
+      const queryStr = options.query ? JSON.stringify(options.query) : "";
+      cacheKey = `${options.method}:${options.path}:${queryStr}`;
+      const cachedValue = this.cache.get(cacheKey);
+      if (cachedValue !== null) {
+        return {
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          data: cachedValue as T,
+          headers: {},
+          timestamp: new Date().toISOString(),
+        };
+      }
+    }
+
+    // Add request ID for tracing
+    const requestId = crypto.randomUUID();
+    headers["X-Request-ID"] = requestId;
+
+    // Create metrics context for performance monitoring (PERFORMANCE FIX)
+    const metricsCtx = this.metricsCollector
+      ? new MetricsContext(this.metricsCollector, options.path)
+      : null;
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
-      const response = await fetch(url, {
+      // Build fetch options with SSL/TLS configuration for Node.js
+      const fetchOptions: RequestInit = {
         method: options.method ?? "GET",
         headers,
         body,
         signal: controller.signal,
-      });
+      };
+
+      // Add SSL/TLS configuration for Node.js environments (CRITICAL SECURITY FIX)
+      if (Agent && typeof process !== "undefined" && process.versions?.node) {
+        fetchOptions.dispatcher = new Agent({
+          connect: {
+            rejectUnauthorized: true, // Always verify SSL certificates
+            minVersion: "TLSv1.3", // Enforce TLS 1.3
+          },
+        });
+      }
+
+      const response = await fetch(url, fetchOptions);
 
       clearTimeout(timeoutId);
 
@@ -251,6 +329,11 @@ export class HttpClient {
         );
       }
 
+      // Cache successful GET responses (PERFORMANCE FIX)
+      if (this.cache && options.method === "GET" && cacheKey) {
+        this.cache.set(cacheKey, data, 60);
+      }
+
       return {
         ok: response.ok,
         status: response.status,
@@ -260,6 +343,11 @@ export class HttpClient {
         timestamp,
       };
     } catch (error) {
+      // Record metrics for failed request (PERFORMANCE FIX)
+      if (metricsCtx) {
+        metricsCtx.record();
+      }
+
       clearTimeout(timeoutId);
 
       if (error instanceof SecureNotifyError) {
@@ -276,6 +364,12 @@ export class HttpClient {
       }
 
       throw SecureNotifyError.connection(`Request failed: ${(error as Error).message}`);
+    } finally {
+      // Record metrics for successful request (PERFORMANCE FIX)
+      if (metricsCtx && response) {
+        metricsCtx.markSuccess();
+        metricsCtx.record();
+      }
     }
   }
 
@@ -326,5 +420,150 @@ export class HttpClient {
    */
   hasApiKey(): boolean {
     return this.apiKey !== undefined && this.apiKey !== "";
+  }
+
+  /**
+   * Get performance metrics summary if enabled.
+   *
+   * @returns Metrics summary or null if metrics disabled
+   */
+  getMetricsSummary(): MetricsSummary | null {
+    return this.metricsCollector?.getSummary() ?? null;
+  }
+
+  /**
+   * Get performance statistics for a specific endpoint.
+   *
+   * @param endpoint API endpoint
+   * @returns Metric statistics or null if metrics disabled
+   */
+  getEndpointStats(endpoint: string): MetricStats | null {
+    return this.metricsCollector?.getStats(endpoint) ?? null;
+  }
+
+  /**
+   * Reset all metrics.
+   */
+  resetMetrics(): void {
+    this.metricsCollector?.reset();
+  }
+
+  // Cache management methods (PERFORMANCE FIX)
+
+  /**
+   * Clear all cached responses.
+   */
+  clearCache(): void {
+    this.cache?.clear();
+  }
+
+  /**
+   * Remove expired cache entries.
+   *
+   * @returns Number of entries removed
+   */
+  cleanupCache(): number {
+    return this.cache?.cleanupExpired() ?? 0;
+  }
+
+  /**
+   * Get cache size.
+   *
+   * @returns Number of cached entries
+   */
+  getCacheSize(): number {
+    return this?.cache?.size() ?? 0;
+  }
+
+  /**
+   * Get cache metrics.
+   *
+   * @returns Cache performance metrics or null if cache disabled
+   */
+  getCacheMetrics(): { hits: number; misses: number; entries: number; cleanupCount: number; hitRate: number } | null {
+    if (!this.cache) return null;
+    const metrics = this.cache.getMetrics();
+    return {
+      ...metrics,
+      hitRate: this.cache.getHitRate(),
+    };
+  }
+
+  /**
+   * Reset cache metrics.
+   */
+  resetCacheMetrics(): void {
+    this.cache?.resetMetrics();
+  }
+
+  // Deduplicator management methods (PERFORMANCE FIX)
+
+  /**
+   * Clear all pending duplicate requests.
+   *
+   * @returns Number of pending requests cleared
+   */
+  clearPendingRequests(): number {
+    return this.requestDeduplicator?.clearPending() ?? 0;
+  }
+
+  /**
+   * Clear all completed duplicate requests.
+   *
+   * @returns Number of completed requests cleared
+   */
+  clearCompletedRequests(): number {
+    return this.requestDeduplicator?.clearCompleted() ?? 0;
+  }
+
+  /**
+   * Clear all pending and completed duplicate requests.
+   *
+   * @returns Total number of requests cleared
+   */
+  clearAllRequests(): number {
+    return this.requestDeduplicator?.clearAll() ?? 0;
+  }
+
+  /**
+   * Remove expired entries from request deduplicator.
+   *
+   * @returns Number of entries removed
+   */
+  cleanupExpiredRequests(): number {
+    return this.requestDeduplicator?.cleanupExpired() ?? 0;
+  }
+
+  /**
+   * Get statistics about the request deduplicator.
+   *
+   * @returns Dictionary with statistics or empty object if disabled
+   */
+  getDeduplicatorStats(): { hits: number; misses: number; errors: number; hitRate: number; pendingCount: number; completedCount: number; ttlSeconds: number } {
+    return this.requestDeduplicator?.getStats() ?? {
+      hits: 0,
+      misses: 0,
+      errors: 0,
+      hitRate: 0,
+      pendingCount: 0,
+      completedCount: 0,
+      ttlSeconds: 5.0,
+    };
+  }
+
+  /**
+   * Reset deduplicator statistics counters.
+   */
+  resetDeduplicatorStats(): void {
+    this.requestDeduplicator?.resetStats();
+  }
+
+  /**
+   * Check if request deduplication is enabled.
+   *
+   * @returns True if enabled, false otherwise
+   */
+  deduplicationEnabled(): boolean {
+    return this.enableDeduplication;
   }
 }

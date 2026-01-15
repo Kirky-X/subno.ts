@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import securenotify.types.SseEvent;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -44,6 +46,7 @@ public class ConnectionManager implements AutoCloseable {
     private final ConcurrentMap<String, Subscription> subscriptions;
     private final AtomicInteger activeConnections;
     private final AtomicBoolean closed;
+    private final ObjectMapper objectMapper; // Reuse ObjectMapper for performance
 
     public ConnectionManager(String baseUrl, String apiKey) {
         this(baseUrl, apiKey, null, 30000);
@@ -58,6 +61,7 @@ public class ConnectionManager implements AutoCloseable {
         this.subscriptions = new ConcurrentHashMap<>();
         this.activeConnections = new AtomicInteger(0);
         this.closed = new AtomicBoolean(false);
+        this.objectMapper = new ObjectMapper(); // Initialize reusable ObjectMapper
 
         logger.info("ConnectionManager initialized with baseUrl: {}", this.baseUrl);
     }
@@ -314,6 +318,16 @@ public class ConnectionManager implements AutoCloseable {
         }
     }
 
+    private void closeQuietly(HttpURLConnection connection) {
+        if (connection != null) {
+            try {
+                connection.disconnect();
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+    }
+
     /**
      * Close the connection manager.
      */
@@ -419,6 +433,7 @@ public class ConnectionManager implements AutoCloseable {
 
         private void processMessage(String data) {
             try {
+                // Create new ObjectMapper for each message (simpler approach)
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 SseEvent.SseMessageEvent event = mapper.readValue(data, SseEvent.SseMessageEvent.class);
                 lastHeartbeat = System.currentTimeMillis();

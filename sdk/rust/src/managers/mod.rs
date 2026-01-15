@@ -14,5 +14,3 @@ pub use channel_manager::{ChannelManager, ChannelManagerImpl};
 pub use publish_manager::{PublishManager, PublishManagerImpl};
 pub use subscribe_manager::{SubscribeManager, SubscribeManagerImpl};
 pub use apikey_manager::{ApiKeyManager, ApiKeyManagerImpl};
-
-use crate::types::error::ManagerError;

@@ -45,6 +45,7 @@ class TestHttpClient:
         """Test public key registration."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.content = b'{"key_id": "key-123", "channel_id": "channel-456", "created_at": "2024-01-01T00:00:00Z", "expires_at": "2024-01-08T00:00:00Z"}'
         mock_response.json.return_value = {
             "key_id": "key-123",
             "channel_id": "channel-456",
@@ -69,6 +70,7 @@ class TestHttpClient:
         """Test channel creation."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.content = b'{"channel_id": "channel-123", "name": "my-channel", "type": "encrypted", "created_at": "2024-01-01T00:00:00Z", "expires_at": null}'
         mock_response.json.return_value = {
             "channel_id": "channel-123",
             "name": "my-channel",
@@ -94,6 +96,7 @@ class TestHttpClient:
         """Test message publishing."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.content = b'{"message_id": "msg-123", "channel": "channel-456", "timestamp": "2024-01-01T00:00:00Z", "auto_created": false}'
         mock_response.json.return_value = {
             "message_id": "msg-123",
             "channel": "channel-456",
@@ -119,7 +122,7 @@ class TestHttpClient:
         mock_response = MagicMock()
         mock_response.status_code = 400
         mock_response.json.return_value = {
-            "error_code": 3001,
+            "error_code": "VALIDATION_ERROR",
             "message": "Invalid request"
         }
         mock_response.headers = {}
@@ -128,7 +131,7 @@ class TestHttpClient:
         with pytest.raises(SecureNotifyApiError) as exc_info:
             await http_client._request("POST", "/api/test", data={})
 
-        assert exc_info.value.error_code == ErrorCode.REQUEST_INVALID
+        assert exc_info.value.error_code == ErrorCode.VALIDATION_ERROR
 
     @pytest.mark.asyncio
     async def test_timeout_raises_exception(self, http_client, mock_client):
@@ -155,6 +158,7 @@ class TestHttpClient:
         """Test that request headers contain authentication."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.content = b'{}'
         mock_response.json.return_value = {}
         mock_client.request = AsyncMock(return_value=mock_response)
 
@@ -172,6 +176,7 @@ class TestHttpClient:
         """Test client close."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.content = b'{}'
         mock_response.json.return_value = {}
         mock_client.request = AsyncMock(return_value=mock_response)
         mock_client.is_closed = False
@@ -191,6 +196,7 @@ class TestHttpClient:
         """Test async context manager."""
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.content = b'{}'
         mock_response.json.return_value = {}
         mock_client.request = AsyncMock(return_value=mock_response)
         mock_client.is_closed = False

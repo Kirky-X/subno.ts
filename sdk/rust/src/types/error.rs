@@ -11,7 +11,7 @@ impl From<reqwest::Error> for SecureNotifyError {
     fn from(e: reqwest::Error) -> Self {
         if e.is_timeout() {
             Self::TimeoutError(e.to_string())
-        } else if e.is_connectivity() {
+        } else if e.is_connect() {
             Self::ConnectionError(e.to_string())
         } else if e.is_status() {
             let status = e.status().unwrap_or(reqwest::StatusCode::INTERNAL_SERVER_ERROR);

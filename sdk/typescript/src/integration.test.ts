@@ -54,7 +54,7 @@ describe("Integration Tests against Real Server", () => {
       } catch (error: any) {
         console.log("API key list skipped:", error?.message || String(error));
       }
-    });
+    }, 10000); // Increase timeout to 10s
   });
 
   describe("Key Management", () => {
@@ -79,7 +79,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA_test_integration_key_${Date.now()}
       } catch (error: any) {
         console.log("Key list skipped:", error?.message || String(error));
       }
-    });
+    }, 10000); // Increase timeout to 10s
   });
 
   describe("Channel Management", () => {
@@ -94,7 +94,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA_test_integration_key_${Date.now()}
       } catch (error: any) {
         console.log("Channel creation skipped:", error?.message || String(error));
       }
-    });
+    }, 10000); // Increase timeout to 10s
 
     it("should list channels", async () => {
       try {
@@ -103,7 +103,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA_test_integration_key_${Date.now()}
       } catch (error: any) {
         console.log("Channel list skipped:", error?.message || String(error));
       }
-    });
+    }, 10000); // Increase timeout to 10s
   });
 
   describe("Message Publishing", () => {

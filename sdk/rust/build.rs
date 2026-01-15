@@ -2,5 +2,7 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 fn main() {
-    uniffi_build::generate_scaffolding("./src/uniffi.toml").unwrap();
+    // Temporarily disabled for refactoring verification
+    // uniffi_build::generate_scaffolding("./src/uniffi.udl").unwrap();
 }
+

@@ -81,7 +81,7 @@ class TestRetryConfig:
         config = RetryConfig()
         error = SecureNotifyApiError(
             status_code=404,
-            error_code=ErrorCode.RESOURCE_NOT_FOUND,
+            error_code=ErrorCode.NOT_FOUND,
             message="Not found"
         )
 
@@ -92,7 +92,7 @@ class TestRetryConfig:
         config = RetryConfig()
         error = SecureNotifyApiError(
             status_code=503,
-            error_code=ErrorCode.SERVER_UNAVAILABLE,
+            error_code=ErrorCode.SERVICE_UNAVAILABLE,
             message="Service unavailable"
         )
 

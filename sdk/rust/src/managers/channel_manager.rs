@@ -4,7 +4,7 @@
 //! Channel manager for SecureNotify SDK
 
 use async_trait::async_trait;
-use crate::{Result, SecureNotifyError};
+use crate::Result;
 use crate::types::api::*;
 
 /// Trait for channel management operations

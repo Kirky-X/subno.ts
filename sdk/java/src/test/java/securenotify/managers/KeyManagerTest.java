@@ -102,10 +102,10 @@ class KeyManagerTest {
         // Arrange
         Map<String, Object> revocationResult = Map.of("status", "confirmed");
         ApiResponse<Map<String, Object>> response = ApiResponse.success(revocationResult);
-        when(httpClient.delete(anyString(), any(), eq(Map.class))).thenReturn(response);
+        when(httpClient.delete(anyString(), any(), eq(Map.class))).thenReturn((ApiResponse) response);
 
         // Act
-        ApiResponse<Map<String, Object>> result = keyManager.revoke("key-123", "Compromised");
+        ApiResponse<?> result = keyManager.revoke("key-123", "Compromised");
 
         // Assert
         assertNotNull(result);

@@ -53,9 +53,13 @@ public class ChannelManager {
                 .metadata(metadata)
                 .build();
 
-        return retryHandler.execute(() ->
-                httpClient.post("api/channels", request, ChannelInfo.class)
-        ).getData();
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.post("api/channels", request, ChannelInfo.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).getData();
     }
 
     /**
@@ -93,9 +97,13 @@ public class ChannelManager {
      * @return The channel info
      */
     public ChannelInfo get(String channelId) throws Exception {
-        return retryHandler.execute(() ->
-                httpClient.get("api/channels/" + channelId, null, ChannelInfo.class)
-        ).getData();
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.get("api/channels/" + channelId, null, ChannelInfo.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).getData();
     }
 
     /**
@@ -111,9 +119,13 @@ public class ChannelManager {
                 .offset(offset)
                 .build();
 
-        return retryHandler.execute(() ->
-                httpClient.post("api/channels", request, ChannelListResponse.class)
-        ).getData();
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.post("api/channels", request, ChannelListResponse.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).getData();
     }
 
     /**
@@ -132,9 +144,13 @@ public class ChannelManager {
      * @return The delete response
      */
     public ApiResponse<?> delete(String channelId) throws Exception {
-        return retryHandler.execute(() ->
-                httpClient.delete("api/channels/" + channelId, Map.class)
-        );
+        return retryHandler.execute(() -> {
+            try {
+                return httpClient.delete("api/channels/" + channelId, Map.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     /**

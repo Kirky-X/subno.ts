@@ -97,54 +97,11 @@ export class PublishManager {
   }
 
   /**
-   * Get queue status for a channel
-   *
-   * @param channel - The channel ID
-   * @param count - Number of messages to retrieve
-   * @returns The queue status
-   */
-  async getQueueStatus(channel: string, count: number = 10): Promise<QueueStatus> {
-    if (!channel) {
-      throw SecureNotifyError.validation("channel is required");
-    }
-
-    const response = await this.http.get<SuccessResponse<QueueStatusResponse>>(
-      this.basePath,
-      { channel, count }
-    );
-
-    return response.data.data;
-  }
-
-/**
- * Send a priority message
- *
- * @param priority - The message priority level
- * @param channel - The channel ID
- * @param message - The message content
- * @param sender - Optional sender identifier
- * @returns The publish result
- */
-async sendPriority(
-  priority: MessagePriority,
-  channel: string,
-  message: string,
-  sender?: string
-): Promise<PublishResult> {
-  return this.send({
-    channel,
-    message,
-    priority,
-    sender,
-  });
-}
-
-  /**
-   * Send a message to multiple channels
+   * Send a message to multiple channels with batching optimization
    *
    * @param channels - Array of channel IDs
    * @param message - The message content
-   * @param options - Additional options
+   * @param options - Additional options (priority, sender, etc.)
    * @returns Array of publish results
    */
   async sendToChannels(
@@ -152,36 +109,331 @@ async sendPriority(
     message: string,
     options?: Omit<SendMessageOptions, "channel" | "message">
   ): Promise<PublishResult[]> {
-    const results = await Promise.all(
-      channels.map((channel) => this.send({ channel, message, ...options }))
-    );
+    if (!channels || channels.length === 0) {
+      throw SecureNotifyError.validation("channels array is required");
+    }
+
+    if (!message) {
+      throw SecureNotifyError.validation("message is required");
+    }
+
+    // Process in batches of 10 to optimize performance (PERFORMANCE FIX)
+    const batchSize = 10;
+    const results: PublishResult[] = [];
+
+    for (let i = 0; i < channels.length; i += batchSize) {
+      const batch = channels.slice(i, i + batchSize);
+      const batchResults = await Promise.all(
+        batch.map((channel) =>
+          this.send({
+            channel,
+            message,
+            ...options,
+          })
+        )
+      );
+      results.push(...batchResults);
+    }
+
     return results;
   }
 
   /**
-   * Broadcast a message to multiple channels
-   *
-   * @param channels - Array of channel IDs
-   * @param message - The message content
-   * @param options - Additional options
-   * @returns Array of publish results or errors
-   */
-  async broadcast(
-    channels: string[],
-    message: string,
-    options?: Omit<SendMessageOptions, "channel" | "message">
-  ): Promise<{ channel: string; result?: PublishResult; error?: Error }[]> {
-    const results = await Promise.allSettled(
-      channels.map((channel) => this.send({ channel, message, ...options }))
-    );
 
-    return channels.map((channel, index) => {
-      const result = results[index];
-      if (result.status === "fulfilled") {
-        return { channel, result: result.value };
-      } else {
-        return { channel, error: result.reason as Error };
+     * Get queue status for a channel
+
+     *
+
+     * @param channel - The channel ID
+
+     * @param count - Number of messages to retrieve
+
+     * @returns The queue status
+
+     */
+
+    async getQueueStatus(channel: string, count: number = 10): Promise<QueueStatus> {
+
+      if (!channel) {
+
+        throw SecureNotifyError.validation("channel is required");
+
       }
-    });
-  }
-}
+
+  
+
+      const response = await this.http.get<SuccessResponse<QueueStatusResponse>>(
+
+        this.basePath,
+
+        { channel, count }
+
+      );
+
+  
+
+      return response.data.data;
+
+    }
+
+  
+
+    /**
+
+     * Send a priority message
+
+     *
+
+     * @param priority - The message priority level
+
+     * @param channel - The channel ID
+
+     * @param message - The message content
+
+     * @param sender - Optional sender identifier
+
+     * @returns The publish result
+
+     */
+
+    async sendPriority(
+
+      priority: MessagePriority,
+
+      channel: string,
+
+      message: string,
+
+      sender?: string
+
+    ): Promise<PublishResult> {
+
+      return this.send({
+
+        channel,
+
+        message,
+
+        priority,
+
+        sender,
+
+      });
+
+    }
+
+  
+
+    /**
+
+     * Send a critical priority message
+
+     *
+
+     * @param channel - The channel ID
+
+     * @param message - The message content
+
+     * @param sender - Optional sender identifier
+
+     * @returns The publish result
+
+     */
+
+    async sendCritical(
+
+      channel: string,
+
+      message: string,
+
+      sender?: string
+
+    ): Promise<PublishResult> {
+
+      return this.sendPriority("critical", channel, message, sender);
+
+    }
+
+  
+
+    /**
+
+     * Send a high priority message
+
+     *
+
+     * @param channel - The channel ID
+
+     * @param message - The message content
+
+     * @param sender - Optional sender identifier
+
+     * @returns The publish result
+
+     */
+
+    async sendHigh(
+
+      channel: string,
+
+      message: string,
+
+      sender?: string
+
+    ): Promise<PublishResult> {
+
+      return this.sendPriority("high", channel, message, sender);
+
+    }
+
+  
+
+    /**
+
+     * Send a normal priority message
+
+     *
+
+     * @param channel - The channel ID
+
+     * @param message - The message content
+
+     * @param sender - Optional sender identifier
+
+     * @returns The publish result
+
+     */
+
+    async sendNormal(
+
+      channel: string,
+
+      message: string,
+
+      sender?: string
+
+    ): Promise<PublishResult> {
+
+      return this.sendPriority("normal", channel, message, sender);
+
+    }
+
+  
+
+    /**
+
+     * Send a low priority message
+
+     *
+
+     * @param channel - The channel ID
+
+     * @param message - The message content
+
+     * @param sender - Optional sender identifier
+
+     * @returns The publish result
+
+     */
+
+    async sendLow(
+
+      channel: string,
+
+      message: string,
+
+      sender?: string
+
+    ): Promise<PublishResult> {
+
+      return this.sendPriority("low", channel, message, sender);
+
+    }
+
+  
+
+    /**
+
+     * Send a bulk priority message
+
+     *
+
+     * @param channel - The channel ID
+
+     * @param message - The message content
+
+     * @param sender - Optional sender identifier
+
+     * @returns The publish result
+
+     */
+
+    async sendBulk(
+
+      channel: string,
+
+      message: string,
+
+      sender?: string
+
+    ): Promise<PublishResult> {
+
+      return this.sendPriority("bulk", channel, message, sender);
+
+        }
+
+      
+
+        /**
+
+         * Broadcast a message to multiple channels
+
+         *
+
+         * @param channels - Array of channel IDs
+
+         * @param message - The message content
+
+         * @param options - Additional options
+
+         * @returns Array of publish results or errors
+
+         */
+
+        async broadcast(
+
+          channels: string[],
+
+          message: string,
+
+          options?: Omit<SendMessageOptions, "channel" | "message">
+
+        ): Promise<{ channel: string; result?: PublishResult; error?: Error }[]> {
+
+          const results = await Promise.allSettled(
+
+            channels.map((channel) => this.send({ channel, message, ...options }))
+
+          );
+
+      
+
+          return channels.map((channel, index) => {
+
+            const result = results[index];
+
+            if (result.status === "fulfilled") {
+
+              return { channel, result: result.value };
+
+            } else {
+
+              return { channel, error: result.reason as Error };
+
+            }
+
+          });
+
+        }
+
+      }

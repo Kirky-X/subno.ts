@@ -4,10 +4,9 @@
 //! Subscribe manager for SecureNotify SDK
 
 use async_trait::async_trait;
-use crate::{Result, SecureNotifyError, SseMessage};
+use crate::{Result, SseMessage};
 use crate::types::api::*;
-use crate::utils::connection::{SseConnection, SseConfig, SseState};
-use tokio::sync::mpsc;
+use crate::utils::connection::{SseConnection, SseConfig};
 
 /// Trait for subscription operations
 #[async_trait]
@@ -50,7 +49,7 @@ impl SubscribeManager for SubscribeManagerImpl {
         );
 
         let config = SseConfig::new(url, self.http_client.config().api_key.clone());
-        let (connection, receiver) = SseConnection::new(config);
+        let (_connection, receiver) = SseConnection::new(config);
 
         // Store the connection for later cleanup
         // In a real implementation, you'd want to track these connections

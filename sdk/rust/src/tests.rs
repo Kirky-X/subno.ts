@@ -81,20 +81,20 @@ mod tests {
 
     #[test]
     fn test_error_types() {
-        let api_error = SecureNotifyError::api_error(
-            "INVALID_KEY".to_string(),
-            "The key is invalid".to_string(),
-            400,
-        );
+        let api_error = SecureNotifyError::ApiError {
+            code: "INVALID_KEY".to_string(),
+            message: "The key is invalid".to_string(),
+            status: 400,
+        };
         assert!(api_error.is_api_error());
         assert_eq!(api_error.code(), "INVALID_KEY");
         assert_eq!(api_error.status(), 400);
 
-        let network_error = SecureNotifyError::network_error("Connection refused".to_string());
+        let network_error = SecureNotifyError::NetworkError("Connection refused".to_string());
         assert!(network_error.is_network_error());
         assert!(network_error.code().starts_with("NETWORK_ERROR"));
 
-        let timeout_error = SecureNotifyError::timeout_error("Request timed out".to_string());
+        let timeout_error = SecureNotifyError::TimeoutError("Request timed out".to_string());
         assert!(timeout_error.code().starts_with("TIMEOUT_ERROR"));
     }
 }
