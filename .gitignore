@@ -48,6 +48,14 @@ Thumbs.db
 coverage/
 .nyc_output/
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
 # Logs
 *.log
 npm-debug.log*
