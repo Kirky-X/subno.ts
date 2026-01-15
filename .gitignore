@@ -1,6 +1,7 @@
 # AI Assistant directories
 .iflow/
 .trae/
+.sisyphus/
 .claude/
 .opencode/
 CLAUDE.md
