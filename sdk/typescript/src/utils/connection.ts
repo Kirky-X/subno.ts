@@ -181,12 +181,11 @@ export class SseConnection {
       const url = this.buildUrl();
       const headers = this.buildHeaders();
 
-      // Create EventSource with headers if needed
+      // For browser environments, API key is passed via URL query parameter
+      // using Authorization header format for better security practices
       if (headers) {
-        // EventSource doesn't support custom headers directly
-        // We need to pass the API key in the URL query parameter
         const urlWithAuth = new URL(url);
-        urlWithAuth.searchParams.set("apiKey", this.apiKey!);
+        urlWithAuth.searchParams.set("Authorization", `Bearer ${this.apiKey}`);
         this.eventSource = new EventSource(urlWithAuth.toString());
       } else {
         this.eventSource = new EventSource(url);

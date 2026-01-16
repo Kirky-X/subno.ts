@@ -41,10 +41,10 @@ pub struct SecureNotifyClient {
 
 impl SecureNotifyClient {
     /// Create a new client with the specified base URL and API key
-    pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Self {
-        Self {
-            http_client: Arc::new(HttpClient::new(&base_url.into(), &api_key.into())),
-        }
+    pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Result<Self> {
+        Ok(Self {
+            http_client: Arc::new(HttpClient::new(&base_url.into(), &api_key.into())?),
+        })
     }
 
     /// Create a builder for configuring the client
@@ -168,7 +168,7 @@ impl ClientBuilder {
                 self.enable_metrics,
                 self.enable_cache,
                 self.enable_deduplication,
-            )),
+            )?),
         })
     }
 }

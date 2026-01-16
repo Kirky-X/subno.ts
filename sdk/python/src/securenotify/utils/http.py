@@ -14,9 +14,11 @@ from httpx import Response
 # Try to use orjson for faster JSON parsing (PERFORMANCE FIX)
 try:
     import orjson as json_parser
+
     HAS_ORJSON = True
 except ImportError:
     import json as json_parser
+
     HAS_ORJSON = False
 
 from securenotify.utils.metrics import MetricsCollector, MetricsContext
@@ -25,7 +27,10 @@ from securenotify.utils.request_deduplicator import RequestDeduplicator
 
 
 # Channel ID validation pattern: alphanumeric, hyphens, underscores, 1-256 chars
-CHANNEL_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]{1,256}$')
+CHANNEL_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,256}$")
+
+# Key ID validation pattern: similar to channel ID
+KEY_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,256}$")
 
 
 def validate_channel_id(channel_id: str) -> bool:
@@ -40,6 +45,21 @@ def validate_channel_id(channel_id: str) -> bool:
     if not channel_id:
         return False
     return bool(CHANNEL_ID_PATTERN.match(channel_id))
+
+
+def validate_key_id(key_id: str) -> bool:
+    """Validate key ID format.
+
+    Args:
+        key_id: Key ID to validate.
+
+    Returns:
+        True if valid, False otherwise.
+    """
+    if not key_id:
+        return False
+    return bool(KEY_ID_PATTERN.match(key_id))
+
 
 from securenotify.types.errors import (
     SecureNotifyApiError,
@@ -69,7 +89,15 @@ class HttpClient:
     """HTTP client for SecureNotify API."""
 
     def __init__(
-        self, base_url: str, api_key: str, timeout: float = 30.0, verify: bool = True, enable_rate_limit: bool = True, enable_metrics: bool = False, enable_cache: bool = False, enable_deduplication: bool = False
+        self,
+        base_url: str,
+        api_key: str,
+        timeout: float = 30.0,
+        verify: bool = True,
+        enable_rate_limit: bool = True,
+        enable_metrics: bool = False,
+        enable_cache: bool = False,
+        enable_deduplication: bool = False,
     ):
         """Initialize HTTP client.
 
@@ -92,7 +120,11 @@ class HttpClient:
         self._client: Optional[httpx.AsyncClient] = None
 
         # Add rate limiter to prevent API abuse (PERFORMANCE FIX)
-        self._rate_limiter = RateLimiter(max_tokens=10, refill_rate=1.0, refill_interval=1.0) if enable_rate_limit else None
+        self._rate_limiter = (
+            RateLimiter(max_tokens=10, refill_rate=1.0, refill_interval=1.0)
+            if enable_rate_limit
+            else None
+        )
 
         # Performance metrics collector (PERFORMANCE FIX)
         self._metrics_collector = MetricsCollector() if enable_metrics else None
@@ -102,7 +134,9 @@ class HttpClient:
         self._enable_cache = enable_cache
 
         # Request deduplicator to prevent duplicate requests (PERFORMANCE FIX)
-        self._request_deduplicator = RequestDeduplicator(ttl_seconds=5.0) if enable_deduplication else None
+        self._request_deduplicator = (
+            RequestDeduplicator(ttl_seconds=5.0) if enable_deduplication else None
+        )
         self._enable_deduplication = enable_deduplication
 
     @property
@@ -120,9 +154,7 @@ class HttpClient:
         if self._client is None or self._client.is_closed:
             # Configure connection pool limits to prevent resource exhaustion
             limits = httpx.Limits(
-                max_keepalive_connections=20,
-                max_connections=100,
-                keepalive_expiry=30.0
+                max_keepalive_connections=20, max_connections=100, keepalive_expiry=30.0
             )
             # Add max_redirects to prevent SSRF attacks
             self._client = httpx.AsyncClient(
@@ -130,7 +162,7 @@ class HttpClient:
                 verify=self._verify,
                 limits=limits,
                 follow_redirects=True,
-                max_redirects=5  # Limit redirects to prevent SSRF
+                max_redirects=5,  # Limit redirects to prevent SSRF
             )
         return self._client
 
@@ -224,7 +256,7 @@ class HttpClient:
             if not acquired:
                 raise SecureNotifyRateLimitError(
                     message="Client-side rate limit exceeded. Please retry later.",
-                    retry_after=1.0
+                    retry_after=1.0,
                 )
 
         # Apply request deduplication if enabled (PERFORMANCE FIX)
@@ -251,7 +283,11 @@ class HttpClient:
             url = f"{self.base_url}{endpoint}"
 
             # Use metrics context to track request performance (PERFORMANCE FIX)
-            metrics_ctx = MetricsContext(self._metrics_collector, endpoint) if self._metrics_collector else None
+            metrics_ctx = (
+                MetricsContext(self._metrics_collector, endpoint)
+                if self._metrics_collector
+                else None
+            )
 
             try:
                 if metrics_ctx:
@@ -269,7 +305,12 @@ class HttpClient:
                         result = response.json()
 
                     # Cache successful GET responses (PERFORMANCE FIX)
-                    if self._enable_cache and self._cache and method == "GET" and cache_key:
+                    if (
+                        self._enable_cache
+                        and self._cache
+                        and method == "GET"
+                        and cache_key
+                    ):
                         self._cache.set(cache_key, result, ttl=60)
 
                     if metrics_ctx:
@@ -287,10 +328,13 @@ class HttpClient:
 
             except httpx.TimeoutException:
                 raise SecureNotifyTimeoutError(
-                    message=f"Request timed out after {self.timeout}s", timeout=self.timeout
+                    message=f"Request timed out after {self.timeout}s",
+                    timeout=self.timeout,
                 )
             except httpx.ConnectError as e:
-                raise SecureNotifyConnectionError(message=f"Connection failed: {str(e)}")
+                raise SecureNotifyConnectionError(
+                    message=f"Connection failed: {str(e)}"
+                )
             except httpx.DecodingError as e:
                 raise SecureNotifyApiError(
                     status_code=0,
@@ -303,10 +347,7 @@ class HttpClient:
             dedup_key = f"{method}:{endpoint}"
             dedup_params = {**(data or {}), **(params or {})}
             return await self._request_deduplicator.execute(
-                dedup_key,
-                dedup_params,
-                execute_request,
-                use_cache=(method == "GET")
+                dedup_key, dedup_params, execute_request, use_cache=(method == "GET")
             )
         else:
             # Execute request directly
@@ -325,7 +366,9 @@ class HttpClient:
         cache_key = None
         if self._enable_cache and self._cache and method == "GET":
             # Create cache key from endpoint and params
-            cache_key = f"{method}:{endpoint}:{str(sorted(params.items()) if params else '')}"
+            cache_key = (
+                f"{method}:{endpoint}:{str(sorted(params.items()) if params else '')}"
+            )
             cached_value = self._cache.get(cache_key)
             if cached_value is not None:
                 return cached_value
@@ -334,7 +377,11 @@ class HttpClient:
         url = f"{self.base_url}{endpoint}"
 
         # Use metrics context to track request performance (PERFORMANCE FIX)
-        metrics_ctx = MetricsContext(self._metrics_collector, endpoint) if self._metrics_collector else None
+        metrics_ctx = (
+            MetricsContext(self._metrics_collector, endpoint)
+            if self._metrics_collector
+            else None
+        )
 
         try:
             if metrics_ctx:
@@ -415,7 +462,14 @@ class HttpClient:
 
         Returns:
             Public key information.
+
+        Raises:
+            ValueError: If key_id format is invalid.
         """
+        # Validate key_id format (SECURITY FIX)
+        if not validate_key_id(key_id):
+            raise ValueError(f"Invalid key_id format: {key_id}")
+
         return await self._request("GET", f"/api/keys/{key_id}")
 
     async def list_public_keys(self) -> Dict[str, Any]:

@@ -48,21 +48,29 @@ impl<T: Clone> ResponseCache<T> {
     }
 
     /// Get a value from the cache
+    /// Returns cloned value for safety (avoids lifetime issues with locked data)
     pub fn get(&self, key: &str) -> Option<T> {
-        let mut cache = self.cache.write().unwrap();
-        let mut metrics = self.metrics.write().unwrap();
+        let cache = self.cache.read().unwrap();
 
         if let Some(entry) = cache.get(key) {
             if entry.expires_at > Instant::now() {
+                let mut metrics = self.metrics.write().unwrap();
                 metrics.hits += 1;
+                // Clone only the value we need to return
                 return Some(entry.value.clone());
             } else {
-                // Entry expired
+                // Entry expired - need to acquire write lock to remove
+                drop(cache); // Release read lock before acquiring write lock
+                let mut cache = self.cache.write().unwrap();
                 cache.remove(key);
+                let mut metrics = self.metrics.write().unwrap();
                 metrics.entries = cache.len() as u64;
+                metrics.misses += 1;
+                return None;
             }
         }
 
+        let mut metrics = self.metrics.write().unwrap();
         metrics.misses += 1;
         None
     }

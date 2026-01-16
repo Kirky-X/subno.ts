@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { pgTable, varchar, text, boolean, timestamp, uuid, jsonb, integer } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, text, boolean, timestamp, uuid, jsonb, integer, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
@@ -22,7 +22,16 @@ export const publicKeys = pgTable('public_keys', {
   revokedAt: timestamp('revoked_at'),
   revokedBy: varchar('revoked_by', { length: 255 }),
   revocationReason: text('revocation_reason'),
-});
+}, (table) => [
+  // Index for active keys by channel (used in subscribe queries)
+  index('idx_public_keys_channel').on(table.channelId),
+  // Index for cleanup of deleted keys
+  index('idx_public_keys_deleted').on(table.isDeleted, table.revokedAt),
+  // Index for finding non-deleted keys
+  index('idx_public_keys_active').on(table.isDeleted, table.createdAt),
+  // Index for algorithm-based queries
+  index('idx_public_keys_algorithm').on(table.algorithm),
+]);
 
 // Relations
 export const publicKeysRelations = relations(publicKeys, ({ many }) => ({
@@ -49,7 +58,14 @@ export const apiKeys = pgTable('api_keys', {
   revokedAt: timestamp('revoked_at'),
   revokedBy: varchar('revoked_by', { length: 255 }),
   revocationReason: text('revocation_reason'),
-});
+}, (table) => [
+  // Index for user API key queries
+  index('idx_api_keys_user_id').on(table.userId),
+  // Index for active API keys
+  index('idx_api_keys_active').on(table.isActive, table.isDeleted),
+  // Index for cleanup of deleted keys
+  index('idx_api_keys_deleted').on(table.isDeleted, table.revokedAt),
+]);
 
 // Relations
 export const apiKeysRelations = relations(apiKeys, ({ many }) => ({
@@ -69,7 +85,16 @@ export const channels = pgTable('channels', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   expiresAt: timestamp('expires_at'),
   isActive: boolean('is_active').notNull().default(true),
-});
+}, (table) => [
+  // Index for channel name lookups
+  index('idx_channels_name').on(table.name),
+  // Index for channel type filtering
+  index('idx_channels_type').on(table.type),
+  // Index for creator-based queries
+  index('idx_channels_creator').on(table.creator),
+  // Index for active channels
+  index('idx_channels_active').on(table.isActive),
+]);
 
 // ============================================================================
 // Messages Table - stores message records
@@ -85,7 +110,16 @@ export const messages = pgTable('messages', {
   signature: varchar('signature', { length: 512 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   expiresAt: timestamp('expires_at'),
-});
+}, (table) => [
+  // Index for channel-based message queries (most common operation)
+  index('idx_messages_channel_id').on(table.channelId),
+  // Index for time-based message ordering
+  index('idx_messages_created_at').on(table.createdAt),
+  // Index for priority-based message retrieval
+  index('idx_messages_priority').on(table.priority),
+  // Composite index for active channel messages
+  index('idx_messages_channel_created').on(table.channelId, table.createdAt),
+]);
 
 // ============================================================================
 // Revocation Confirmations Table - stores revocation confirmation codes
@@ -103,7 +137,18 @@ export const revocationConfirmations = pgTable('revocation_confirmations', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   confirmedAt: timestamp('confirmed_at'),
   confirmedBy: varchar('confirmed_by', { length: 255 }),
-});
+}, (table) => [
+  // Index for status-based queries (cleanup, status checks)
+  index('idx_revocations_status').on(table.status),
+  // Index for expiration-based cleanup
+  index('idx_revocations_expires').on(table.expiresAt),
+  // Index for finding confirmations by key
+  index('idx_revocations_key_id').on(table.keyId),
+  // Index for finding confirmations by API key
+  index('idx_revocations_api_key_id').on(table.apiKeyId),
+  // Composite index for status + expiration queries
+  index('idx_revocations_status_expires').on(table.status, table.expiresAt),
+]);
 
 // Relations
 export const revocationConfirmationsRelations = relations(revocationConfirmations, ({ one }) => ({
@@ -129,7 +174,18 @@ export const notificationHistory = pgTable('notification_history', {
   deliveryStatus: varchar('delivery_status', { length: 20 }), // sent, failed, partial
   errorDetails: jsonb('error_details'),
   sentAt: timestamp('sent_at').notNull().defaultNow(),
-});
+}, (table) => [
+  // Index for key-based notification lookups
+  index('idx_notifications_key_id').on(table.keyId),
+  // Index for channel-based queries
+  index('idx_notifications_channel_id').on(table.channelId),
+  // Index for notification type filtering
+  index('idx_notifications_type').on(table.notificationType),
+  // Index for delivery status queries
+  index('idx_notifications_status').on(table.deliveryStatus),
+  // Index for time-based queries
+  index('idx_notifications_sent_at').on(table.sentAt),
+]);
 
 // Relations
 export const notificationHistoryRelations = relations(notificationHistory, ({ one }) => ({
@@ -156,25 +212,18 @@ export const auditLogs = pgTable('audit_logs', {
   error: text('error'),
   metadata: jsonb('metadata').default({}),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
-
-// ============================================================================
-// Indexes for Performance
-// ============================================================================
-/*
--- Performance indexes for status queries
-CREATE INDEX IF NOT EXISTS idx_revocations_status ON revocation_confirmations(status);
-CREATE INDEX IF NOT EXISTS idx_revocations_expires ON revocation_confirmations(expires_at);
-CREATE INDEX IF NOT EXISTS idx_revocations_key_id ON revocation_confirmations(key_id);
-
--- Performance indexes for cleanup queries
-CREATE INDEX IF NOT EXISTS idx_public_keys_deleted ON public_keys(is_deleted, revoked_at);
-CREATE INDEX IF NOT EXISTS idx_api_keys_deleted ON api_keys(is_deleted, revoked_at);
-
--- Performance indexes for audit queries
-CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action, created_at);
-CREATE INDEX IF NOT EXISTS idx_audit_key_id ON audit_logs(key_id);
-*/
+}, (table) => [
+  // Index for action-based queries with time filter
+  index('idx_audit_action').on(table.action, table.createdAt),
+  // Index for finding audit logs by key
+  index('idx_audit_key_id').on(table.keyId),
+  // Index for finding audit logs by channel
+  index('idx_audit_channel_id').on(table.channelId),
+  // Index for finding audit logs by user
+  index('idx_audit_user_id').on(table.userId),
+  // Index for time-based cleanup queries
+  index('idx_audit_created_at').on(table.createdAt),
+]);
 
 // ============================================================================
 // Type Exports

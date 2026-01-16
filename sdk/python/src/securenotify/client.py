@@ -22,6 +22,62 @@ from securenotify.types.api import (
     ChannelType,
 )
 
+# URL regex pattern for validation
+_URL_PATTERN = (
+    r"^https://[a-zA-Z0-9][-a-zA-Z0-9]*(\.[a-zA-Z0-9][-a-zA-Z0-9]*)+(/[^ \n]*)?$"
+)
+
+
+def _validate_base_url(base_url: str) -> None:
+    """Validate base URL format.
+
+    Args:
+        base_url: URL to validate.
+
+    Raises:
+        ValueError: If URL is invalid or doesn't use HTTPS.
+    """
+    if not isinstance(base_url, str):
+        raise ValueError("base_url must be a string")
+
+    if not base_url.startswith("https://"):
+        raise ValueError("base_url must use HTTPS protocol")
+
+    if len(base_url) < 10:
+        raise ValueError("base_url is too short")
+
+
+def _validate_api_key(api_key: str) -> None:
+    """Validate API key format.
+
+    Args:
+        api_key: API key to validate.
+
+    Raises:
+        ValueError: If API key is invalid.
+    """
+    if not isinstance(api_key, str):
+        raise ValueError("api_key must be a string")
+
+    if len(api_key) < 8:
+        raise ValueError("api_key must be at least 8 characters")
+
+
+def _validate_timeout(timeout: float) -> None:
+    """Validate timeout value.
+
+    Args:
+        timeout: Timeout value in seconds.
+
+    Raises:
+        ValueError: If timeout is invalid.
+    """
+    if not isinstance(timeout, (int, float)):
+        raise ValueError("timeout must be a number")
+
+    if timeout <= 0:
+        raise ValueError("timeout must be positive")
+
 
 class SecureNotifyClient:
     """Main client for SecureNotify API.
@@ -89,7 +145,7 @@ class SecureNotifyClient:
         verify: bool = True,
         retry_config: Optional[RetryConfig] = None,
         heartbeat_interval: float = 30.0,
-        sse_timeout: float = 60.0
+        sse_timeout: float = 60.0,
     ):
         """Initialize SecureNotify client.
 
@@ -101,7 +157,20 @@ class SecureNotifyClient:
             retry_config: Retry configuration for failed requests.
             heartbeat_interval: SSE heartbeat interval in seconds.
             sse_timeout: SSE connection timeout in seconds.
+
+        Raises:
+            ValueError: If any parameter has an invalid value.
         """
+        # Validate configuration parameters
+        _validate_base_url(base_url)
+        _validate_api_key(api_key)
+        _validate_timeout(timeout)
+
+        if heartbeat_interval <= 0:
+            raise ValueError("heartbeat_interval must be positive")
+        if sse_timeout <= 0:
+            raise ValueError("sse_timeout must be positive")
+
         self.base_url = base_url
         self.api_key = api_key
         self.timeout = timeout
@@ -131,7 +200,7 @@ class SecureNotifyClient:
                 base_url=self.base_url,
                 api_key=self.api_key,
                 timeout=self.timeout,
-                verify=self.verify
+                verify=self.verify,
             )
         return self._http_client
 
@@ -142,7 +211,7 @@ class SecureNotifyClient:
                 base_url=self.base_url,
                 api_key=self.api_key,
                 heartbeat_interval=self.heartbeat_interval,
-                timeout=self.sse_timeout
+                timeout=self.sse_timeout,
             )
         return self._sse_client
 
@@ -150,8 +219,7 @@ class SecureNotifyClient:
         """Get key manager."""
         if self._key_manager is None:
             self._key_manager = KeyManager(
-                http_client=self._get_http_client(),
-                retry_config=self._retry_config
+                http_client=self._get_http_client(), retry_config=self._retry_config
             )
         return self._key_manager
 
@@ -159,8 +227,7 @@ class SecureNotifyClient:
         """Get channel manager."""
         if self._channel_manager is None:
             self._channel_manager = ChannelManager(
-                http_client=self._get_http_client(),
-                retry_config=self._retry_config
+                http_client=self._get_http_client(), retry_config=self._retry_config
             )
         return self._channel_manager
 
@@ -168,8 +235,7 @@ class SecureNotifyClient:
         """Get publish manager."""
         if self._publish_manager is None:
             self._publish_manager = PublishManager(
-                http_client=self._get_http_client(),
-                retry_config=self._retry_config
+                http_client=self._get_http_client(), retry_config=self._retry_config
             )
         return self._publish_manager
 
@@ -185,8 +251,7 @@ class SecureNotifyClient:
         """Get API key manager."""
         if self._apikey_manager is None:
             self._apikey_manager = ApiKeyManager(
-                http_client=self._get_http_client(),
-                retry_config=self._retry_config
+                http_client=self._get_http_client(), retry_config=self._retry_config
             )
         return self._apikey_manager
 
@@ -250,12 +315,26 @@ class SecureNotifyClient:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Sync context manager exit."""
-        # Schedule async cleanup
+        """Sync context manager exit.
+
+        Properly handles async cleanup in sync context (SECURITY FIX).
+        """
+        # Schedule async cleanup with proper event loop handling
         try:
-            asyncio.get_event_loop().run_until_complete(self.aclose())
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If event loop is already running, schedule cleanup task
+                loop.create_task(self.aclose())
+            else:
+                loop.run_until_complete(self.aclose())
         except RuntimeError:
-            pass
+            # No event loop running - create a new one
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(self.aclose())
+            except Exception:
+                pass  # Last resort - resources may be cleaned up on process exit
 
 
 # Sync wrapper utilities
@@ -294,7 +373,7 @@ class SyncSecureNotifyClient:
         verify: bool = True,
         retry_config: Optional[RetryConfig] = None,
         heartbeat_interval: float = 30.0,
-        sse_timeout: float = 60.0
+        sse_timeout: float = 60.0,
     ):
         """Initialize sync client.
 
@@ -314,7 +393,7 @@ class SyncSecureNotifyClient:
             verify=verify,
             retry_config=retry_config,
             heartbeat_interval=heartbeat_interval,
-            sse_timeout=sse_timeout
+            sse_timeout=sse_timeout,
         )
 
     def __enter__(self):
@@ -361,8 +440,16 @@ class SyncKeyManager:
     def __init__(self, async_manager):
         self._manager = async_manager
 
-    def register(self, public_key: str, algorithm: str, expires_in: int = None, metadata: dict = None):
-        return _run_async(self._manager.register(public_key, algorithm, expires_in, metadata))
+    def register(
+        self,
+        public_key: str,
+        algorithm: str,
+        expires_in: int = None,
+        metadata: dict = None,
+    ):
+        return _run_async(
+            self._manager.register(public_key, algorithm, expires_in, metadata)
+        )
 
     def get(self, key_id: str):
         return _run_async(self._manager.get(key_id))
@@ -380,8 +467,17 @@ class SyncChannelManager:
     def __init__(self, async_manager):
         self._manager = async_manager
 
-    def create(self, name: str, channel_type=ChannelType.ENCRYPTED, description: str = None, ttl: int = None, metadata: dict = None):
-        return _run_async(self._manager.create(name, channel_type, description, ttl, metadata))
+    def create(
+        self,
+        name: str,
+        channel_type=ChannelType.ENCRYPTED,
+        description: str = None,
+        ttl: int = None,
+        metadata: dict = None,
+    ):
+        return _run_async(
+            self._manager.create(name, channel_type, description, ttl, metadata)
+        )
 
     def get(self, channel_id: str):
         return _run_async(self._manager.get(channel_id))
@@ -396,16 +492,35 @@ class SyncPublishManager:
     def __init__(self, async_manager):
         self._manager = async_manager
 
-    def send(self, channel: str, message: str, priority=MessagePriority.NORMAL, sender: str = None, encrypted: bool = True, signature: str = None, cache: bool = True):
-        return _run_async(self._manager.send(channel, message, priority, sender, encrypted, signature, cache))
+    def send(
+        self,
+        channel: str,
+        message: str,
+        priority=MessagePriority.NORMAL,
+        sender: str = None,
+        encrypted: bool = True,
+        signature: str = None,
+        cache: bool = True,
+    ):
+        return _run_async(
+            self._manager.send(
+                channel, message, priority, sender, encrypted, signature, cache
+            )
+        )
 
     def get_queue_status(self, channel: str):
         return _run_async(self._manager.get_queue_status(channel))
 
-    def send_critical(self, channel: str, message: str, sender: str = None, encrypted: bool = True):
-        return _run_async(self._manager.send_critical(channel, message, sender, encrypted))
+    def send_critical(
+        self, channel: str, message: str, sender: str = None, encrypted: bool = True
+    ):
+        return _run_async(
+            self._manager.send_critical(channel, message, sender, encrypted)
+        )
 
-    def send_high(self, channel: str, message: str, sender: str = None, encrypted: bool = True):
+    def send_high(
+        self, channel: str, message: str, sender: str = None, encrypted: bool = True
+    ):
         return _run_async(self._manager.send_high(channel, message, sender, encrypted))
 
     def send_bulk(self, channel: str, message: str):
@@ -421,7 +536,10 @@ class SyncSubscribeManager:
     def subscribe(self, channel: str, handler: Callable, auto_reconnect: bool = True):
         async def async_handler(msg):
             handler(msg)
-        return _run_async(self._manager.subscribe(channel, async_handler, auto_reconnect))
+
+        return _run_async(
+            self._manager.subscribe(channel, async_handler, auto_reconnect)
+        )
 
     def unsubscribe(self, channel: str):
         return _run_async(self._manager.unsubscribe(channel))

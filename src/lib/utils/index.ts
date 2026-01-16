@@ -10,3 +10,21 @@ export {
 } from './secure-compare';
 
 export { parseEnvInt, isValidUUID } from './env.utils';
+
+export {
+  generateErrorId,
+  createError,
+  createErrorResponse,
+  handleError,
+  withErrorHandling,
+  ERROR_CODES,
+  validationError,
+  notFoundError,
+  unauthorizedError,
+  forbiddenError,
+  rateLimitError,
+  internalError,
+  type AppError,
+  type ErrorResponse,
+  type ErrorSeverity,
+} from './error.utils';

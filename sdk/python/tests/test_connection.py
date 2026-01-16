@@ -15,7 +15,7 @@ class TestSSEClient:
     def sse_client(self):
         """Create SSEClient instance."""
         return SSEClient(
-            base_url="http://localhost:3000",
+            base_url="https://localhost:3000",
             api_key="test-api-key",
             heartbeat_interval=30.0,
             reconnect_delay=1.0,

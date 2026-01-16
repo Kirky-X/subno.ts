@@ -34,7 +34,7 @@ class TestHttpClient:
     def http_client(self, mock_client):
         """Create HttpClient instance with mocked client."""
         client = HttpClient(
-            base_url="http://localhost:3000",
+            base_url="https://localhost:3000",
             api_key="test-api-key"
         )
         client._client = mock_client
@@ -215,15 +215,15 @@ class TestHttpClientProperties:
     def test_base_url_rstrip(self):
         """Test that base URL trailing slash is removed."""
         client = HttpClient(
-            base_url="http://localhost:3000/",
+            base_url="https://localhost:3000/",
             api_key="test"
         )
-        assert client.base_url == "http://localhost:3000"
+        assert client.base_url == "https://localhost:3000"
 
     def test_default_timeout(self):
         """Test default timeout value."""
         client = HttpClient(
-            base_url="http://localhost:3000",
+            base_url="https://localhost:3000",
             api_key="test"
         )
         assert client.timeout == 30.0
@@ -231,7 +231,7 @@ class TestHttpClientProperties:
     def test_custom_timeout(self):
         """Test custom timeout value."""
         client = HttpClient(
-            base_url="http://localhost:3000",
+            base_url="https://localhost:3000",
             api_key="test",
             timeout=60.0
         )

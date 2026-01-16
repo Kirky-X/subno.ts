@@ -68,13 +68,14 @@ impl SseConfig {
     }
 
     /// Build the URL with query parameters
-    pub fn build_url(&self) -> String {
-        let mut url = url::Url::parse(&self.url).expect("Invalid SSE URL");
+    pub fn build_url(&self) -> Result<String> {
+        let mut url = url::Url::parse(&self.url)
+            .map_err(|e| SecureNotifyError::ConnectionError(format!("Invalid SSE URL: {}", e)))?;
         if !self.api_key.is_empty() {
             url.query_pairs_mut()
                 .append_pair("api_key", &self.api_key);
         }
-        url.to_string()
+        Ok(url.to_string())
     }
 }
 
@@ -143,7 +144,17 @@ impl SseConnection {
         state: &tokio::sync::RwLock<SseState>,
     ) {
         let mut reconnect_attempts = 0u32;
-        let url = config.build_url();
+        let url = match config.build_url() {
+            Ok(url) => url,
+            Err(e) => {
+                let _ = message_tx.send(SseMessage::Error(e)).await;
+                {
+                    let mut state_guard = state.write().await;
+                    *state_guard = SseState::Failed;
+                }
+                return;
+            }
+        };
 
         loop {
             {

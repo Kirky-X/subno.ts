@@ -8,3 +8,11 @@ export {
   type RateLimitConfig,
   type RateLimitResult 
 } from './rate-limit';
+
+export {
+  validateApiKey,
+  requireApiKey,
+  requireApiKeyWithPermissions,
+  createApiKeyValidator,
+  type ApiKeyValidationResult,
+} from './api-key';

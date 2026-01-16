@@ -14,7 +14,7 @@ const EXCLUDED_PATHS = [
   '/api/ready',
 ];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Skip non-API paths
@@ -27,8 +27,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Apply rate limiting
-  const result = rateLimit(request);
+  // Apply rate limiting (async)
+  const result = await rateLimit(request);
 
   if (!result.success) {
     // Return rate limited response

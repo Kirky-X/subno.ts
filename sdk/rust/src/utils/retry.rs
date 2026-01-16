@@ -4,6 +4,8 @@
 //! Retry utilities for SecureNotify SDK
 
 use std::time::Duration;
+use rand::Rng;
+use rand::rngs::OsRng;
 use crate::{SecureNotifyError, Result};
 
 /// Retry configuration
@@ -89,11 +91,12 @@ where
                 if attempt < config.max_retries && is_retryable(&error) {
                     last_error = Some(error);
 
-                    // Add jitter if enabled
+                    // Add jitter if enabled (using cryptographically secure random)
                     let actual_delay = if config.jitter {
                         let jitter_range = delay.as_millis() as f64 * 0.1;
-                        let jitter = rand::random::<f64>() * jitter_range;
-                        delay + Duration::from_millis(jitter as u64)
+                        // Use OsRng for cryptographically secure random jitter
+                        let jitter = OsRng.gen_range(-jitter_range..jitter_range);
+                        delay + Duration::from_millis(jitter.abs() as u64)
                     } else {
                         delay
                     };
@@ -111,8 +114,10 @@ where
         }
     }
 
-    // biome-ignore lint: last_error is guaranteed to be Some here
-    Err(last_error.unwrap())
+    // biome-ignore lint: last_error is guaranteed to be Some here if we reach this point
+    Err(last_error.unwrap_or_else(|| {
+        SecureNotifyError::ConnectionError("Retry exhausted without error".to_string())
+    }))
 }
 
 /// Check if an error is retryable

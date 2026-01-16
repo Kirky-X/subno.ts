@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { keyRevocationService } from '@/src/lib/services';
 import { secureCompare, validateLength, KEY_MANAGEMENT_CONFIG } from '@/src/lib/utils/secure-compare';
+import { auditService } from '@/src/lib/services/audit.service';
 
 // DELETE /api/keys/:id
 // - 新模式: 带 confirmationCode 参数，执行两阶段确认删除
@@ -19,6 +20,10 @@ export async function DELETE(
     
     const apiKey = request.headers.get('X-API-Key');
     const adminKey = request.headers.get('X-Admin-Key');
+    const clientIP = request.headers.get('x-forwarded-for') || 
+                     request.headers.get('x-real-ip') || 
+                     'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
 
     // 模式1: 两阶段确认删除 (需要 API Key + 确认码)
     if (confirmationCode && apiKey) {
@@ -46,6 +51,20 @@ export async function DELETE(
         }, { status: statusCodes[result.code || ''] || 400 });
       }
 
+      // Audit log for successful revocation confirmation
+      await auditService.log({
+        action: 'key_revoke_confirmed',
+        keyId: keyId,
+        channelId: result.channelId,
+        apiKeyId: apiKey,
+        ip: clientIP,
+        userAgent: userAgent,
+        success: true,
+        metadata: {
+          deletedId: result.deletedId,
+        },
+      });
+
       return NextResponse.json({
         success: true,
         message: 'Public key revoked successfully',
@@ -64,6 +83,16 @@ export async function DELETE(
       
       // 使用安全比较防止时序攻击
       if (!envAdminKey || !secureCompare(adminKey, envAdminKey)) {
+        // Audit log for failed admin authentication attempt
+        await auditService.log({
+          action: 'key_direct_delete_attempt',
+          keyId: keyId,
+          ip: clientIP,
+          userAgent: userAgent,
+          success: false,
+          error: 'Invalid admin key',
+        });
+
         return NextResponse.json({
           success: false,
           error: {
@@ -125,6 +154,21 @@ export async function DELETE(
           },
         }, { status: 500 });
       }
+
+      // Audit log for direct deletion - CRITICAL SECURITY EVENT
+      await auditService.log({
+        action: 'key_direct_delete',
+        keyId: keyId,
+        channelId: key.channelId,
+        ip: clientIP,
+        userAgent: userAgent,
+        success: true,
+        metadata: {
+          reason: body.reason,
+          deletedId: deletedKey.id,
+          isSecurityEvent: true,
+        },
+      });
 
       return NextResponse.json({
         success: true,

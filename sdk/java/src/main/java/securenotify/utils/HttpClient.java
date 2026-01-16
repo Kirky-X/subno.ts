@@ -40,6 +40,12 @@ public class HttpClient implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpClient.class);
 
+    // Sensitive data patterns for error message sanitization (SECURITY FIX)
+    private static final java.util.regex.Pattern SENSITIVE_PATTERNS = java.util.regex.Pattern.compile(
+        "(?i)(api[_-]?key|secret|password|token|private[_-]?key|certificate|bearer|" +
+        "credential|auth[_-]?token|access[_-]?key|client[_-]?secret|session[_-]?id|jwt)"
+    );
+
     private final CloseableHttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final String baseUrl;
@@ -237,10 +243,7 @@ public class HttpClient implements AutoCloseable {
                     }
 
                     // Sanitize error message to prevent information disclosure (SECURITY FIX)
-                    if (sanitizedMessage != null && sanitizedMessage.toLowerCase().contains("password")) {
-                        sanitizedMessage = "Authentication error";
-                    }
-                    if (sanitizedMessage != null && sanitizedMessage.toLowerCase().contains("token")) {
+                    if (sanitizedMessage != null && SENSITIVE_PATTERNS.matcher(sanitizedMessage).find()) {
                         sanitizedMessage = "Authentication error";
                     }
 

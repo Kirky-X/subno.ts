@@ -12,6 +12,8 @@ export type AuditAction =
   | 'key_revoke_cancelled'
   | 'key_revoke_expired'
   | 'key_revoke_unauthorized'
+  | 'key_direct_delete'
+  | 'key_direct_delete_attempt'
   | 'message_publish'
   | 'channel_create'
   | 'channel_delete'
@@ -22,6 +24,9 @@ export type AuditAction =
   | 'cancel_revocation_unauthorized';
 
 const AUDIT_ACTIONS_TO_KEEP = ['key_revoke_confirmed', 'auth_failure'] as const;
+
+// Sensitive keys that should be redacted in logs
+const SENSITIVE_KEYS = ['password', 'secret', 'token', 'key', 'credential', 'auth', 'api_key', 'private', 'hash', 'signature'];
 
 export interface CreateAuditLog {
   action: AuditAction;
@@ -48,10 +53,58 @@ export interface AuditLogQuery {
   offset?: number;
 }
 
+/**
+ * Recursively sanitize metadata to remove sensitive information
+ */
+function sanitizeMetadata(metadata?: Record<string, unknown>): Record<string, unknown> | undefined {
+  if (!metadata) return undefined;
+  
+  const sanitized: Record<string, unknown> = {};
+  
+  for (const [key, value] of Object.entries(metadata)) {
+    // Check if key contains sensitive patterns
+    const isSensitive = SENSITIVE_KEYS.some(sk => key.toLowerCase().includes(sk));
+    
+    if (isSensitive) {
+      sanitized[key] = '[REDACTED]';
+    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      // Recursively sanitize nested objects
+      sanitized[key] = sanitizeMetadata(value as Record<string, unknown>);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  
+  return sanitized;
+}
+
+/**
+ * Sanitize error message to remove sensitive patterns
+ */
+function sanitizeError(error?: string): string | undefined {
+  if (!error) return undefined;
+  
+  // Truncate to prevent log bloat
+  const maxLength = 500;
+  let sanitized = error.substring(0, maxLength);
+  
+  // Remove potential token patterns (alphanumeric strings of 20+ chars)
+  sanitized = sanitized.replace(/[A-Za-z0-9+/]{20,}={0,2}/g, '[TOKEN_REDACTED]');
+  
+  // Remove potential key hashes
+  sanitized = sanitized.replace(/key_hash:[^\s]+/g, 'key_hash:[REDACTED]');
+  
+  return sanitized;
+}
+
 export class AuditService {
   private db = getDatabase();
 
   async log(data: CreateAuditLog): Promise<AuditLog> {
+    // Sanitize sensitive data before logging
+    const sanitizedMetadata = sanitizeMetadata(data.metadata);
+    const sanitizedError = sanitizeError(data.error);
+    
     const result = await this.db
       .insert(auditLogs)
       .values({
@@ -64,8 +117,8 @@ export class AuditService {
         ip: data.ip,
         userAgent: data.userAgent,
         success: data.success,
-        error: data.error,
-        metadata: data.metadata || {},
+        error: sanitizedError,
+        metadata: sanitizedMetadata || {},
       })
       .returning();
     return result[0];

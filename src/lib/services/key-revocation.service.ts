@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { publicKeyRepository, apiKeyRepository, revocationConfirmationRepository } from '../repositories';
+import { publicKeyRepository, apiKeyRepository, revocationConfirmationRepository, channelRepository } from '../repositories';
 import type { PublicKey } from '../../db/schema';
 import { 
   validateLength, 
@@ -19,7 +19,6 @@ export interface RevokeKeyRequest {
 export interface RevokeKeyResult {
   success: boolean;
   revocationId?: string;
-  confirmationCode?: string;
   expiresAt?: string;
   error?: string;
   code?: string;
@@ -48,7 +47,6 @@ export interface RevocationStatusResult {
 export class KeyRevocationService {
   /**
    * Validate the revocation request reason for security.
-   * Returns null if valid, or an error object if invalid.
    */
   private validateReason(reason: string): { error: string; code: string } | null {
     if (typeof reason !== 'string') {
@@ -77,7 +75,7 @@ export class KeyRevocationService {
 
   /**
    * Validate that the API key has permission to revoke keys.
-   * Also validates that the API key belongs to the key owner (unless admin).
+   * Also validates ownership - only the channel creator or admin can revoke keys.
    */
   private async validateApiKeyPermission(
     apiKeyId: string,
@@ -117,16 +115,31 @@ export class KeyRevocationService {
       };
     }
 
-    // If not admin, verify API key has key_revoke permission (ownership check not available)
-    if (!hasAdminPermission) {
-      const hasRevokePermission = permissions.includes('key_revoke');
-      if (!hasRevokePermission) {
-        return { 
-          valid: false, 
-          error: 'Insufficient permissions for key revocation', 
-          code: 'FORBIDDEN' 
-        };
-      }
+    // OWNERSHIP VERIFICATION - Critical security check
+    // Only admin or the channel creator can revoke a key
+    const targetKey = await publicKeyRepository.findById(targetKeyId);
+    if (!targetKey) {
+      return { valid: false, error: 'Target key not found', code: 'NOT_FOUND' };
+    }
+
+    // If admin permission, skip ownership check
+    if (hasAdminPermission) {
+      return { valid: true };
+    }
+
+    // Verify the API key owner is the channel creator
+    const channelAccess = await channelRepository.verifyAccess(
+      targetKey.channelId,
+      apiKey.userId,
+      true // require creator
+    );
+
+    if (!channelAccess.hasAccess) {
+      return { 
+        valid: false, 
+        error: channelAccess.error || 'Not authorized to revoke this key', 
+        code: 'FORBIDDEN' 
+      };
     }
 
     return { valid: true };
@@ -187,7 +200,6 @@ export class KeyRevocationService {
     return {
       success: true,
       revocationId: confirmation.id,
-      confirmationCode,
       expiresAt: confirmation.expiresAt.toISOString(),
     };
   }

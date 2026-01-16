@@ -52,7 +52,7 @@ pub struct HttpClient {
 
 impl HttpClient {
     /// Create a new HTTP client
-    pub fn new(base_url: &str, api_key: &str) -> Self {
+    pub fn new(base_url: &str, api_key: &str) -> Result<Self> {
         Self::with_config(
             base_url,
             api_key,
@@ -79,15 +79,16 @@ impl HttpClient {
         enable_metrics: bool,
         enable_cache: bool,
         enable_deduplication: bool,
-    ) -> Self {
-        // Configure SSL/TLS with TLS 1.2 enforcement and redirect limits (CRITICAL SECURITY FIX)
+    ) -> Result<Self> {
+        // Configure SSL/TLS with TLS 1.2 enforcement and redirect limits (SECURITY FIX)
+        // Minimum TLS 1.2 provides strong security while maintaining broad compatibility
         let client = Client::builder()
             .timeout(timeout)
             .redirect(Policy::limited(5)) // Limit redirects to prevent SSRF
             .use_native_tls()
-            .min_tls_version(reqwest::tls::Version::TLS_1_2) // Enforce TLS 1.2
+            .min_tls_version(reqwest::tls::Version::TLS_1_2)
             .build()
-            .expect("Failed to build HTTP client");
+            .map_err(|e| SecureNotifyError::ConnectionError(format!("Failed to build HTTP client: {}", e)))?;
 
         let metrics_collector = if enable_metrics {
             Some(Arc::new(MetricsCollector::default()))
@@ -107,7 +108,7 @@ impl HttpClient {
             None
         };
 
-        Self {
+        Ok(Self {
             client,
             base_url: base_url.to_string(),
             api_key: api_key.to_string(),
@@ -123,7 +124,7 @@ impl HttpClient {
             metrics_collector,
             cache,
             request_deduplicator,
-        }
+        })
     }
 
     /// Get the configuration
@@ -168,7 +169,8 @@ impl HttpClient {
             .with_backoff_multiplier(self.config.backoff_multiplier)
             .with_jitter(true);
 
-        let request = request.try_clone().unwrap();
+        let request = request.try_clone()
+            .ok_or_else(|| SecureNotifyError::ConnectionError("Failed to clone request for retry".to_string()))?;
 
         // Create metrics context if metrics are enabled
         let endpoint = request.try_clone()
@@ -182,8 +184,10 @@ impl HttpClient {
 
         let result = with_retry(
             |_attempt| {
-                let request = request.try_clone().unwrap();
+                let request = request.try_clone()
+                    .ok_or_else(|| SecureNotifyError::ConnectionError("Failed to clone request in retry loop".to_string()));
                 async move {
+                    let request = request?;
                     let response = request.send().await?;
                     self.handle_response(response).await
                 }

@@ -89,15 +89,18 @@ export class CleanupService {
 
   async cleanupExpiredRevocations(): Promise<{ count: number; errors: string[] }> {
     try {
-      // Get all expired pending confirmations
-      type ConfirmationSelect = { id: string };
+      // Get all expired pending confirmations with proper typing
       const expiredConfirmations = await this.db
         .select({ id: revocationConfirmations.id })
         .from(revocationConfirmations)
         .where(and(
           eq(revocationConfirmations.status, 'pending'),
           lt(revocationConfirmations.expiresAt, new Date())
-        )) as ConfirmationSelect[];
+        ));
+
+      // Type is inferred as { id: string }[] from Drizzle
+      type ExpiredConfirmationRow = typeof expiredConfirmations[number];
+      type ConfirmationSelect = ExpiredConfirmationRow extends { id: infer T } ? T extends string ? { id: T } : never : never;
 
       if (expiredConfirmations.length === 0) {
         return { count: 0, errors: [] };
@@ -112,6 +115,8 @@ export class CleanupService {
 
       return { count: ids.length, errors: [] };
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Cleanup expired revocations failed:', errorMessage);
       return { count: 0, errors: ['Failed to cleanup expired confirmations'] };
     }
   }
@@ -123,7 +128,7 @@ export class CleanupService {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - days);
 
-      type KeySelect = { id: string };
+      // Get keys to delete with proper typing - Drizzle infers the type correctly
       const keysToDelete = await this.db
         .select({ id: publicKeys.id })
         .from(publicKeys)
@@ -131,8 +136,9 @@ export class CleanupService {
           eq(publicKeys.isDeleted, true),
           sql`${publicKeys.revokedAt} IS NOT NULL`,
           lt(publicKeys.revokedAt!, cutoffDate)
-        )) as KeySelect[];
+        ));
 
+      // Type is inferred as { id: string }[] from Drizzle
       if (keysToDelete.length === 0) {
         return { count: 0, errors: [] };
       }
@@ -148,6 +154,8 @@ export class CleanupService {
 
       return { count: totalDeleted, errors: [] };
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Cleanup revoked keys failed:', errorMessage);
       return { count: 0, errors: ['Failed to cleanup revoked keys'] };
     }
   }

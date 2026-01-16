@@ -1,34 +1,42 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import type { NeonClient } from 'drizzle-orm/neon-serverless';
+import type { NeonDatabase } from 'drizzle-orm/neon-serverless';
 
-import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import * as schema from './schema';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let db: any = null;
+// Database instance holder
+let db: NeonDatabase<typeof schema> | null = null;
 
-export function getDatabase(): any {
+/**
+ * Get the database instance, creating it if necessary.
+ */
+export function getDatabase(): NeonDatabase<typeof schema> {
   if (!db) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error('DATABASE_URL environment variable is not set');
     }
 
-    const sql = neon(connectionString) as unknown as NeonClient;
-    db = drizzle(sql, { schema });
+    // drizzle with neon-serverless expects connection string
+    // Using type assertion to handle generic type mismatch
+    db = drizzle(connectionString, { schema }) as unknown as NeonDatabase<typeof schema>;
   }
 
   return db;
 }
 
+/**
+ * Close the database connection properly.
+ */
 export async function closeDatabase(): Promise<void> {
   db = null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function setDatabase(testDb: any): void {
+/**
+ * Set database instance (for testing purposes only)
+ */
+export function setDatabase(testDb: typeof db): void {
   db = testDb;
 }

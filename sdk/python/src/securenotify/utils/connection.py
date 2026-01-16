@@ -6,6 +6,7 @@ Provides async SSE client with auto-reconnect and heartbeat detection.
 import asyncio
 import io
 import json
+import logging
 import re
 from typing import Optional, Callable, Dict, Any, Awaitable
 from enum import Enum
@@ -41,7 +42,7 @@ class SSEClient:
         heartbeat_interval: float = 30.0,
         reconnect_delay: float = 1.0,
         max_reconnect_attempts: int = 10,
-        timeout: float = 60.0
+        timeout: float = 60.0,
     ):
         """Initialize SSE client.
 
@@ -67,6 +68,9 @@ class SSEClient:
         self._heartbeat_task: Optional[asyncio.Task] = None
         self._stop_event: Optional[asyncio.Event] = None
         self._last_event_id: Optional[str] = None
+
+        # Setup logger for security-aware logging (SECURITY FIX)
+        self._logger = logging.getLogger(__name__)
 
     @property
     def state(self) -> ConnectionState:
@@ -95,7 +99,7 @@ class SSEClient:
             self._client = httpx.AsyncClient(
                 timeout=httpx.Timeout(self.timeout),
                 follow_redirects=True,
-                max_redirects=5  # Limit redirects to prevent SSRF
+                max_redirects=5,  # Limit redirects to prevent SSRF
             )
         return self._client
 
@@ -123,7 +127,9 @@ class SSEClient:
             client = await self._get_client()
             url = f"{self.base_url}/api/subscribe?channel={channel}"
 
-            async with client.stream("GET", url, headers=self._get_headers()) as response:
+            async with client.stream(
+                "GET", url, headers=self._get_headers()
+            ) as response:
                 if response.status_code != 200:
                     raise SecureNotifyConnectionError(
                         f"Failed to subscribe: status {response.status_code}"
@@ -134,7 +140,9 @@ class SSEClient:
 
                 # Start background tasks
                 self._heartbeat_task = asyncio.create_task(self._heartbeat_monitor())
-                self._listener_task = asyncio.create_task(self._event_listener(response, channel))
+                self._listener_task = asyncio.create_task(
+                    self._event_listener(response, channel)
+                )
 
                 await self._listener_task
 
@@ -145,11 +153,7 @@ class SSEClient:
             self._state = ConnectionState.DISCONNECTED
             raise SecureNotifyConnectionError(f"Connection failed: {str(e)}") from e
 
-    async def _event_listener(
-        self,
-        response: httpx.Response,
-        channel: str
-    ) -> None:
+    async def _event_listener(self, response: httpx.Response, channel: str) -> None:
         """Listen for SSE events.
 
         Args:
@@ -190,7 +194,7 @@ class SSEClient:
                                 channel=channel,
                                 event_type=event_type,
                                 data=value,
-                                event_id=event_id
+                                event_id=event_id,
                             )
                             event_type = "message"
                             event_id = None
@@ -215,11 +219,7 @@ class SSEClient:
                 await self._reconnect(channel)
 
     async def _handle_event(
-        self,
-        channel: str,
-        event_type: str,
-        data: str,
-        event_id: Optional[str]
+        self, channel: str, event_type: str, data: str, event_id: Optional[str]
     ) -> None:
         """Handle a received SSE event.
 
@@ -252,8 +252,8 @@ class SSEClient:
                 else:
                     handler(parsed_data)
             except Exception as e:
-                # Log handler error but don't stop listening
-                print(f"Handler error: {e}")
+                # Log handler error but don't stop listening (SECURITY FIX: use logger instead of print)
+                self._logger.warning(f"Handler error for channel {channel}: {e}")
 
     async def _heartbeat_monitor(self) -> None:
         """Monitor for heartbeat messages.
@@ -306,9 +306,7 @@ class SSEClient:
         )
 
     def subscribe(
-        self,
-        channel: str,
-        handler: Callable[[Any], Awaitable[None]]
+        self, channel: str, handler: Callable[[Any], Awaitable[None]]
     ) -> None:
         """Register a handler for a channel.
 
@@ -351,7 +349,7 @@ class SSEClient:
         self,
         channel: str,
         handler: Callable[[Any], Awaitable[None]],
-        stop_event: Optional[asyncio.Event] = None
+        stop_event: Optional[asyncio.Event] = None,
     ) -> None:
         """Subscribe to a channel and wait until stopped.
 

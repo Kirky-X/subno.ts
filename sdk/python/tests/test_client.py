@@ -17,13 +17,12 @@ class TestSecureNotifyClient:
     def client(self):
         """Create client instance."""
         return SecureNotifyClient(
-            base_url="http://localhost:3000",
-            api_key="test-api-key"
+            base_url="https://localhost:3000", api_key="test-api-key"
         )
 
     def test_initialization(self, client):
         """Test client initialization."""
-        assert client.base_url == "http://localhost:3000"
+        assert client.base_url == "https://localhost:3000"
         assert client.api_key == "test-api-key"
         assert client.timeout == 30.0
         assert client._closed is False
@@ -39,7 +38,7 @@ class TestSecureNotifyClient:
             verify=False,
             retry_config=retry_config,
             heartbeat_interval=60.0,
-            sse_timeout=120.0
+            sse_timeout=120.0,
         )
 
         assert client.base_url == "https://api.example.com"
@@ -151,13 +150,12 @@ class TestSyncSecureNotifyClient:
     def sync_client(self):
         """Create sync client instance."""
         return SyncSecureNotifyClient(
-            base_url="http://localhost:3000",
-            api_key="test-api-key"
+            base_url="https://localhost:3000", api_key="test-api-key"
         )
 
     def test_initialization(self, sync_client):
         """Test sync client initialization."""
-        assert sync_client._async_client.base_url == "http://localhost:3000"
+        assert sync_client._async_client.base_url == "https://localhost:3000"
         assert sync_client._async_client.api_key == "test-api-key"
 
     def test_close(self, sync_client):

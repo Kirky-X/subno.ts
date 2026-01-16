@@ -4,7 +4,7 @@ Implements retry logic with configurable backoff strategy.
 """
 
 import asyncio
-import random
+import secrets
 import time
 from typing import Callable, TypeVar, Awaitable, Optional
 
@@ -18,6 +18,21 @@ from securenotify.types.errors import (
 T = TypeVar("T")
 
 
+def _get_crypto_jitter(range_val: float) -> float:
+    """Generate cryptographically secure random jitter within range.
+
+    Args:
+        range_val: Maximum absolute value of jitter.
+
+    Returns:
+        Random float in range [-range_val, range_val].
+    """
+    # Generate 8 random bytes and convert to float in range [0, 1)
+    random_bytes = secrets.token_bytes(8)
+    random_value = int.from_bytes(random_bytes, "big") / (2**64 - 1)
+    return (random_value * 2 * range_val) - range_val
+
+
 class RetryConfig:
     """Configuration for retry behavior."""
 
@@ -29,7 +44,7 @@ class RetryConfig:
         backoff_multiplier: float = 2.0,
         jitter: bool = True,
         retryable_exceptions: Optional[tuple] = None,
-        non_retryable_exceptions: Optional[tuple] = None
+        non_retryable_exceptions: Optional[tuple] = None,
     ):
         """Initialize retry configuration.
 
@@ -91,13 +106,13 @@ class RetryConfig:
         Returns:
             Delay in seconds.
         """
-        delay = self.initial_delay * (self.backoff_multiplier ** attempt)
+        delay = self.initial_delay * (self.backoff_multiplier**attempt)
         delay = min(delay, self.max_delay)
 
         if self.jitter:
-            # Add random jitter (±25%)
+            # Add cryptographically secure random jitter (±25%)
             jitter_range = delay * 0.25
-            delay = delay + random.uniform(-jitter_range, jitter_range)
+            delay = delay + _get_crypto_jitter(jitter_range)
 
         return max(0, delay)
 
@@ -106,8 +121,7 @@ DEFAULT_RETRY_CONFIG = RetryConfig()
 
 
 async def with_retry(
-    func: Callable[[], Awaitable[T]],
-    config: Optional[RetryConfig] = None
+    func: Callable[[], Awaitable[T]], config: Optional[RetryConfig] = None
 ) -> T:
     """Execute a function with retry logic.
 
