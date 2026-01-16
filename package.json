@@ -1,7 +1,6 @@
 {
   "name": "subno.ts",
   "version": "0.2.0",
-  "private": true,
   "description": "加密推送通知服务 - SecureNotify",
   "engines": {
     "node": ">=20.9.0"
