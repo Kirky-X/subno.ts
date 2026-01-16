@@ -4,6 +4,22 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v0.2.0, v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as prerelease'
+        required: false
+        type: boolean
+        default: false
+      create_tag:
+        description: 'Create and push git tag'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -13,8 +29,54 @@ permissions:
 env:
   NODE_VERSION: '20'
   REGISTRY: ghcr.io
+  RELEASE_VERSION: ${{ github.event.inputs.version || github.ref_name }}
 
 jobs:
+  setup:
+    name: Setup Tag
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.create_tag == true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Validate version format
+        id: validate
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must start with 'v' and be in semantic version format (e.g., v0.2.0)"
+            exit 1
+          fi
+          echo "validated_version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists
+        id: check-tag
+        run: |
+          TAG="${{ steps.validate.outputs.validated_version }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "::warning::Tag $TAG already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create and push tag
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
+          TAG="${{ steps.validate.outputs.validated_version }}"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+          echo "✅ Created and pushed tag: $TAG"
+
   validate:
     name: Validate
     runs-on: ubuntu-latest
@@ -128,9 +190,9 @@ jobs:
       - name: Get version info
         id: version
         run: |
-          VERSION=${{ github.ref_name }}
+          VERSION="${{ env.RELEASE_VERSION }}"
           echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
-          echo "tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Generate changelog
         id: changelog
@@ -196,6 +258,6 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           body_path: release-body.md
           draft: false
-          prerelease: false
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
