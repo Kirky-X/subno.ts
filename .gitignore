@@ -71,3 +71,5 @@ docker-compose.override.yml
 
 # Git hooks (Husky)
 .husky/
+.vercel
+.env*.local

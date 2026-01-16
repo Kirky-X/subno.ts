@@ -122,7 +122,7 @@ class RedisRateLimitStore {
 
       this.client = createClient({
         url: redisUrl,
-      }) as RedisClientType;
+      }) as unknown as RedisClientType;
 
       this.client.on('error', (err?: Error) => {
         console.error('Redis rate limit store error:', err?.message || 'Unknown error');
