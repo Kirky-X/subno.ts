@@ -1,8 +1,8 @@
 """Base manager class for SecureNotify managers."""
 
-from typing import Any
+from typing import Any, Optional
 from securenotify.utils.http import HttpClient
-from securenotify.utils.retry import RetryConfig, with_retry
+from securenotify.utils.retry import RetryConfig, with_retry, DEFAULT_RETRY_CONFIG
 
 
 class BaseManager:
@@ -14,15 +14,19 @@ class BaseManager:
     - Common execution method with retry support
     """
 
-    def __init__(self, http_client: HttpClient, retry_config: RetryConfig):
+    def __init__(
+        self, http_client: HttpClient, retry_config: Optional[RetryConfig] = None
+    ):
         """Initialize base manager.
 
         Args:
             http_client: HTTP client for API calls.
-            retry_config: Retry configuration.
+            retry_config: Retry configuration (optional, defaults to DEFAULT_RETRY_CONFIG).
         """
         self._http = http_client
-        self._retry_config = retry_config
+        self._retry_config = (
+            retry_config if retry_config is not None else DEFAULT_RETRY_CONFIG
+        )
 
     async def _execute(self, http_method: str, *args: Any, **kwargs: Any) -> Any:
         """Execute an HTTP method with retry.

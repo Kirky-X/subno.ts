@@ -28,6 +28,10 @@ const AUDIT_ACTIONS_TO_KEEP = ['key_revoke_confirmed', 'auth_failure'] as const;
 // Sensitive keys that should be redacted in logs
 const SENSITIVE_KEYS = ['password', 'secret', 'token', 'key', 'credential', 'auth', 'api_key', 'private', 'hash', 'signature'];
 
+// Audit log configuration constants
+const AUDIT_ERROR_MAX_LENGTH = 500;  // Maximum length for error messages in audit logs
+const AUDIT_TOKEN_PATTERN_LENGTH = 20;  // Minimum length for token pattern detection
+
 export interface CreateAuditLog {
   action: AuditAction;
   channelId?: string;
@@ -85,11 +89,11 @@ function sanitizeError(error?: string): string | undefined {
   if (!error) return undefined;
   
   // Truncate to prevent log bloat
-  const maxLength = 500;
-  let sanitized = error.substring(0, maxLength);
+  let sanitized = error.substring(0, AUDIT_ERROR_MAX_LENGTH);
   
   // Remove potential token patterns (alphanumeric strings of 20+ chars)
-  sanitized = sanitized.replace(/[A-Za-z0-9+/]{20,}={0,2}/g, '[TOKEN_REDACTED]');
+  const tokenPattern = new RegExp(`[A-Za-z0-9+/]{${AUDIT_TOKEN_PATTERN_LENGTH},}={0,2}`, 'g');
+  sanitized = sanitized.replace(tokenPattern, '[TOKEN_REDACTED]');
   
   // Remove potential key hashes
   sanitized = sanitized.replace(/key_hash:[^\s]+/g, 'key_hash:[REDACTED]');
@@ -98,7 +102,22 @@ function sanitizeError(error?: string): string | undefined {
 }
 
 export class AuditService {
-  private db = getDatabase();
+  private db: ReturnType<typeof getDatabase>;
+
+  /**
+   * Create AuditService with optional database dependency
+   * Supports dependency injection for testing
+   */
+  constructor(db?: ReturnType<typeof getDatabase>) {
+    this.db = db || getDatabase();
+  }
+
+  /**
+   * Factory method for creating AuditService with default dependencies
+   */
+  static create(db?: ReturnType<typeof getDatabase>): AuditService {
+    return new AuditService(db);
+  }
 
   async log(data: CreateAuditLog): Promise<AuditLog> {
     // Sanitize sensitive data before logging
@@ -240,6 +259,40 @@ export class AuditService {
       action: undefined, // Get all actions for this key
       limit: 50,
     });
+  }
+
+  /**
+   * Batch insert multiple audit log entries for improved performance
+   * Use this method when logging multiple events at once
+   *
+   * @param dataList - Array of audit log data to insert
+   * @returns Array of created audit logs
+   */
+  async logBatch(dataList: CreateAuditLog[]): Promise<AuditLog[]> {
+    if (dataList.length === 0) {
+      return [];
+    }
+
+    const values = dataList.map(data => ({
+      action: data.action,
+      channelId: data.channelId,
+      keyId: data.keyId,
+      apiKeyId: data.apiKeyId,
+      messageId: data.messageId,
+      userId: data.userId,
+      ip: data.ip,
+      userAgent: data.userAgent,
+      success: data.success,
+      error: sanitizeError(data.error),
+      metadata: sanitizeMetadata(data.metadata) || {},
+    }));
+
+    const result = await this.db
+      .insert(auditLogs)
+      .values(values)
+      .returning();
+
+    return result;
   }
 
   async cleanup(olderThanDays: number = 90): Promise<number> {

@@ -6,6 +6,18 @@ import { apiKeyRepository } from '../repositories';
 import { createHash } from 'crypto';
 
 /**
+ * API Key validation configuration constants
+ */
+export const API_KEY_CONFIG = {
+  /** Minimum API key length */
+  MIN_LENGTH: 16,
+  /** Maximum API key length */
+  MAX_LENGTH: 128,
+  /** Regex pattern for valid API key characters (alphanumeric and hyphens) */
+  VALID_PATTERN: /^[a-zA-Z0-9-]+$/,
+} as const;
+
+/**
  * Extended request type with API key info
  */
 interface RequestWithApiKey extends NextRequest {
@@ -26,6 +38,41 @@ export interface ApiKeyValidationResult {
   permissions?: string[];
   error?: string;
   code?: string;
+}
+
+/**
+ * Validate API key format
+ * SECURITY: Ensures API key meets minimum security requirements
+ */
+function validateApiKeyFormat(apiKey: string): { valid: boolean; error?: string; code?: string } {
+  // Check minimum length
+  if (apiKey.length < API_KEY_CONFIG.MIN_LENGTH) {
+    return {
+      valid: false,
+      error: `API key must be at least ${API_KEY_CONFIG.MIN_LENGTH} characters`,
+      code: 'INVALID_API_KEY',
+    };
+  }
+
+  // Check maximum length to prevent DoS attacks
+  if (apiKey.length > API_KEY_CONFIG.MAX_LENGTH) {
+    return {
+      valid: false,
+      error: 'API key is too long',
+      code: 'INVALID_API_KEY',
+    };
+  }
+
+  // Validate character set (alphanumeric and hyphens only)
+  if (!API_KEY_CONFIG.VALID_PATTERN.test(apiKey)) {
+    return {
+      valid: false,
+      error: 'API key contains invalid characters',
+      code: 'INVALID_API_KEY',
+    };
+  }
+
+  return { valid: true };
 }
 
 /**
@@ -51,11 +98,13 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
     };
   }
 
-  if (apiKey.length < 16) {
+  // Validate API key format (length and character set)
+  const formatValidation = validateApiKeyFormat(apiKey);
+  if (!formatValidation.valid) {
     return {
       valid: false,
-      error: 'Invalid API key format',
-      code: 'INVALID_API_KEY',
+      error: formatValidation.error,
+      code: formatValidation.code,
     };
   }
 

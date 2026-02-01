@@ -28,3 +28,15 @@ export {
   type ErrorResponse,
   type ErrorSeverity,
 } from './error.utils';
+
+export * from './validation';
+
+export {
+  isSensitiveHeader,
+  sanitizeHeaderValue,
+  sanitizeHeaders,
+  sanitizeHeadersForLog,
+  sanitizeHeaderForLog,
+  headersContainSensitiveInfo,
+  SENSITIVE_HEADERS,
+} from './header-sanitization';

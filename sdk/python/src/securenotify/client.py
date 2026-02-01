@@ -137,6 +137,27 @@ class SecureNotifyClient:
         ```
     """
 
+    # Use __slots__ to reduce memory footprint and prevent dynamic attribute addition
+    # This improves security by preventing accidental or malicious attribute creation
+    __slots__ = (
+        "base_url",
+        "_api_key",  # Private for security
+        "timeout",
+        "verify",
+        "heartbeat_interval",
+        "sse_timeout",
+        "_retry_config",
+        "_http_client",
+        "_sse_client",
+        "_closed",
+        "_key_manager",
+        "_channel_manager",
+        "_publish_manager",
+        "_subscribe_manager",
+        "_apikey_manager",
+        "_sync_lock",
+    )
+
     def __init__(
         self,
         base_url: str,
@@ -172,7 +193,7 @@ class SecureNotifyClient:
             raise ValueError("sse_timeout must be positive")
 
         self.base_url = base_url
-        self.api_key = api_key
+        self._api_key = api_key  # Store as private for security
         self.timeout = timeout
         self.verify = verify
         self.heartbeat_interval = heartbeat_interval
@@ -198,7 +219,7 @@ class SecureNotifyClient:
         if self._http_client is None:
             self._http_client = HttpClient(
                 base_url=self.base_url,
-                api_key=self.api_key,
+                api_key=self._api_key,
                 timeout=self.timeout,
                 verify=self.verify,
             )
@@ -209,7 +230,7 @@ class SecureNotifyClient:
         if self._sse_client is None:
             self._sse_client = SSEClient(
                 base_url=self.base_url,
-                api_key=self.api_key,
+                api_key=self._api_key,
                 heartbeat_interval=self.heartbeat_interval,
                 timeout=self.sse_timeout,
             )
@@ -254,6 +275,14 @@ class SecureNotifyClient:
                 http_client=self._get_http_client(), retry_config=self._retry_config
             )
         return self._apikey_manager
+
+    def has_api_key(self) -> bool:
+        """Check if API key is configured (for internal use).
+
+        Returns:
+            True if API key is set.
+        """
+        return bool(self._api_key)
 
     @property
     def keys(self) -> KeyManager:
@@ -365,6 +394,8 @@ class SyncSecureNotifyClient:
     Provides a synchronous interface to the async client.
     """
 
+    __slots__ = ("_async_client",)
+
     def __init__(
         self,
         base_url: str,
@@ -444,8 +475,8 @@ class SyncKeyManager:
         self,
         public_key: str,
         algorithm: str,
-        expires_in: int = None,
-        metadata: dict = None,
+        expires_in: Optional[int] = None,
+        metadata: Optional[dict] = None,
     ):
         return _run_async(
             self._manager.register(public_key, algorithm, expires_in, metadata)
@@ -457,7 +488,7 @@ class SyncKeyManager:
     def list(self):
         return _run_async(self._manager.list())
 
-    def revoke(self, key_id: str, reason: str = None):
+    def revoke(self, key_id: str, reason: Optional[str] = None):
         return _run_async(self._manager.revoke(key_id, reason))
 
 
@@ -471,9 +502,9 @@ class SyncChannelManager:
         self,
         name: str,
         channel_type=ChannelType.ENCRYPTED,
-        description: str = None,
-        ttl: int = None,
-        metadata: dict = None,
+        description: Optional[str] = None,
+        ttl: Optional[int] = None,
+        metadata: Optional[dict] = None,
     ):
         return _run_async(
             self._manager.create(name, channel_type, description, ttl, metadata)
@@ -497,9 +528,9 @@ class SyncPublishManager:
         channel: str,
         message: str,
         priority=MessagePriority.NORMAL,
-        sender: str = None,
+        sender: Optional[str] = None,
         encrypted: bool = True,
-        signature: str = None,
+        signature: Optional[str] = None,
         cache: bool = True,
     ):
         return _run_async(
@@ -512,14 +543,22 @@ class SyncPublishManager:
         return _run_async(self._manager.get_queue_status(channel))
 
     def send_critical(
-        self, channel: str, message: str, sender: str = None, encrypted: bool = True
+        self,
+        channel: str,
+        message: str,
+        sender: Optional[str] = None,
+        encrypted: bool = True,
     ):
         return _run_async(
             self._manager.send_critical(channel, message, sender, encrypted)
         )
 
     def send_high(
-        self, channel: str, message: str, sender: str = None, encrypted: bool = True
+        self,
+        channel: str,
+        message: str,
+        sender: Optional[str] = None,
+        encrypted: bool = True,
     ):
         return _run_async(self._manager.send_high(channel, message, sender, encrypted))
 
@@ -551,7 +590,7 @@ class SyncApiKeyManager:
     def __init__(self, async_manager):
         self._manager = async_manager
 
-    def create(self, name: str, permissions: list, expires_in: int = None):
+    def create(self, name: str, permissions: list, expires_in: Optional[int] = None):
         return _run_async(self._manager.create(name, permissions, expires_in))
 
     def get(self, key_id: str):
