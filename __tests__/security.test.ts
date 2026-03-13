@@ -52,12 +52,15 @@ describe('Security Implementation Files', () => {
   });
 
   describe('Cancel Route Permission Validation', () => {
-    it('should have FORBIDDEN status in cancel route', () => {
+    it('should have permission validation in cancel route', () => {
       const filePath = path.join(process.cwd(), 'app/api/keys/[id]/revoke/cancel/route.ts');
       const content = fs.readFileSync(filePath, 'utf-8');
       
-      expect(content).toContain('FORBIDDEN');
+      // Check for permission validation
       expect(content).toContain('validatePermission');
+      expect(content).toContain('key_revoke');
+      expect(content).toContain('AuthorizationError');
+      expect(content).toContain('INSUFFICIENT_PERMISSIONS');
       expect(content).toContain('auditService.log');
     });
   });
