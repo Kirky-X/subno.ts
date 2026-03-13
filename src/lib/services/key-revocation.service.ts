@@ -2,7 +2,6 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { publicKeyRepository, apiKeyRepository, revocationConfirmationRepository, channelRepository } from '../repositories';
-import type { PublicKey } from '../../db/schema';
 import { 
   validateLength, 
   containsInvalidCharacters, 
@@ -190,7 +189,7 @@ export class KeyRevocationService {
       };
     }
 
-    const { confirmation, confirmationCode } = await revocationConfirmationRepository.create({
+    const { confirmation } = await revocationConfirmationRepository.create({
       keyId: request.keyId,
       apiKeyId: request.apiKeyId,
       reason: request.reason,

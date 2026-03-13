@@ -4,7 +4,7 @@
 import { getDatabase } from '../../db';
 import { revocationConfirmations, type RevocationConfirmation } from '../../db/schema';
 import { eq, and, desc, lt } from 'drizzle-orm';
-import crypto, { randomBytes, timingSafeEqual } from 'crypto';
+import crypto, { timingSafeEqual } from 'crypto';
 import { SECURITY_CONFIG } from '../config/security.config';
 
 export interface CreateRevocationConfirmation {

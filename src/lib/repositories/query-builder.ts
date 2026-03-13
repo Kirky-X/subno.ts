@@ -7,7 +7,7 @@ import { SQL, and, eq, gt, inArray, isNull, AnyColumn } from 'drizzle-orm';
  * Unified query builder for repository operations
  * Reduces duplicate condition building logic
  */
-export class QueryBuilder<T> {
+export class QueryBuilder {
   private conditions: SQL[] = [];
 
   /**
@@ -84,6 +84,6 @@ export class QueryBuilder<T> {
 /**
  * Create a new query builder instance
  */
-export function createQueryBuilder<T>(): QueryBuilder<T> {
-  return new QueryBuilder<T>();
+export function createQueryBuilder(): QueryBuilder {
+  return new QueryBuilder();
 }

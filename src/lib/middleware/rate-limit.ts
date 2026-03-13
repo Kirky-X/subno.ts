@@ -2,7 +2,12 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { RATE_LIMIT_CONFIG, getRateLimitConfig as getConfig, getCleanupIntervalMs, getRateLimitWindowMs } from '../config';
+import { getRateLimitConfig as getConfig, getCleanupIntervalMs, getRateLimitWindowMs } from '../config';
+import {
+  ErrorCode,
+  RateLimitError,
+  extractRequestContext,
+} from '../utils/error-handler';
 
 // Redis client type definition with proper error handling
 interface RedisClientType {
@@ -426,21 +431,17 @@ export async function rateLimit(
 
 /**
  * Create a Next.js Response with rate limit headers
+ * Uses unified error handling
  */
 export function createRateLimitedResponse(
-  message: string,
   result: RateLimitResult
 ): NextResponse {
-  const response = NextResponse.json(
-    {
-      success: false,
-      error: {
-        message,
-        code: 'RATE_LIMITED',
-      },
-    },
-    { status: 429 }
-  );
+  const context = extractRequestContext({} as NextRequest);
+  const error = new RateLimitError(result.retryAfter || 60, {
+    requestId: context.requestId,
+  });
+  
+  const response = error.toNextResponse(context.requestId);
   
   // Add rate limit headers
   for (const [key, value] of Object.entries(createRateLimitHeaders(result))) {
@@ -461,4 +462,21 @@ export function addRateLimitHeaders(
     response.headers.set(key, value);
   }
   return response;
+}
+
+/**
+ * Check rate limit and return error response if exceeded
+ * Convenience function for use in API routes
+ */
+export async function checkRateLimit(
+  request: NextRequest,
+  endpointType?: string
+): Promise<NextResponse | null> {
+  const result = await rateLimit(request, endpointType);
+  
+  if (!result.success) {
+    return createRateLimitedResponse(result);
+  }
+  
+  return null;
 }

@@ -4,7 +4,7 @@
 import { getDatabase } from '../../db';
 import { publicKeys, revocationConfirmations } from '../../db/schema';
 import { eq, lt, sql, and, inArray } from 'drizzle-orm';
-import { sanitizeErrorMessage, secureCompare, KEY_MANAGEMENT_CONFIG } from '../utils/secure-compare';
+import { secureCompare, KEY_MANAGEMENT_CONFIG } from '../utils/secure-compare';
 
 interface CleanupResult {
   deletedKeys: number;
@@ -99,8 +99,6 @@ export class CleanupService {
         ));
 
       // Type is inferred as { id: string }[] from Drizzle
-      type ExpiredConfirmationRow = typeof expiredConfirmations[number];
-      type ConfirmationSelect = ExpiredConfirmationRow extends { id: infer T } ? T extends string ? { id: T } : never : never;
 
       if (expiredConfirmations.length === 0) {
         return { count: 0, errors: [] };

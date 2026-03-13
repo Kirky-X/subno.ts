@@ -3,7 +3,7 @@
 
 import { getDatabase } from '../../db';
 import { apiKeys, type ApiKey } from '../../db/schema';
-import { eq, and, desc, lt, isNull, gt } from 'drizzle-orm';
+import { eq, and, desc, lt } from 'drizzle-orm';
 import { KEY_MANAGEMENT_CONFIG } from '../utils/secure-compare';
 import { QueryBuilder } from './query-builder';
 
@@ -24,8 +24,8 @@ export class ApiKeyRepository {
     includeDeleted?: boolean;
     includeExpired?: boolean;
     userId?: string;
-  }): ReturnType<QueryBuilder<ApiKey>['build']> {
-    const builder = new QueryBuilder<ApiKey>();
+  }): ReturnType<QueryBuilder['build']> {
+    const builder = new QueryBuilder();
 
     if (options.userId) {
       builder.whereEqual(apiKeys.userId, options.userId);

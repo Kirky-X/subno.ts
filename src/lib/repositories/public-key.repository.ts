@@ -3,7 +3,7 @@
 
 import { getDatabase } from '../../db';
 import { publicKeys, type PublicKey } from '../../db/schema';
-import { eq, ne, and, isNull, desc, lt, gte } from 'drizzle-orm';
+import { eq, and, desc, lt } from 'drizzle-orm';
 import { channelRepository } from './channel.repository';
 
 export class PublicKeyRepository {
