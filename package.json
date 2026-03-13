@@ -15,7 +15,10 @@
     "db:migrate:revocation": "node scripts/migrate-revocation.js",
     "db:migrate:revocation:rollback": "node scripts/migrate-revocation.js rollback",
     "test": "vitest",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "dep:check": "node scripts/dependency-check.js",
+    "dep:audit": "npm audit",
+    "dep:fix": "npm audit fix"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",
