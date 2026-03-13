@@ -26,3 +26,15 @@ export {
   SECURITY_CONFIG as SECURITY_PBKDF2_CONFIG,
   getSecurityConfig,
 } from './security.config';
+
+// CORS configuration
+export {
+  type CorsConfig,
+  getCorsConfig,
+  getCorsConfigCached,
+  clearCorsConfigCache,
+  isOriginAllowed,
+  isOriginMatch,
+  createCorsHeaders,
+  createPreflightHeaders,
+} from './cors.config';
