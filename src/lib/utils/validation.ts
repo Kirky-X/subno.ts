@@ -8,16 +8,16 @@
 import { z } from 'zod';
 
 /**
- * API Key validation schema
+ * API Key validation configuration
  */
-export const apiKeyValidationSchema = z.object({
+export const API_KEY_VALIDATION_CONFIG = {
   /** Minimum API key length */
-  minLength: z.number().min(16).default(16),
+  minLength: 16,
   /** Maximum API key length to prevent DoS */
-  maxLength: z.number().min(32).max(256).default(128),
+  maxLength: 128,
   /** Valid character pattern (alphanumeric and hyphens) */
-  validPattern: z.string().regex(/^[a-zA-Z0-9-]+$/).default('^[a-zA-Z0-9-]+$'),
-});
+  validPattern: /^[a-zA-Z0-9-]+$/,
+};
 
 /**
  * Validate API key format
@@ -27,17 +27,15 @@ export function validateApiKeyFormat(apiKey: string): {
   error?: string;
   code?: string;
 } {
-  const config = apiKeyValidationSchema.parse({});
-  
-  if (apiKey.length < config.minLength) {
+  if (apiKey.length < API_KEY_VALIDATION_CONFIG.minLength) {
     return {
       valid: false,
-      error: `API key must be at least ${config.minLength} characters`,
+      error: `API key must be at least ${API_KEY_VALIDATION_CONFIG.minLength} characters`,
       code: 'INVALID_API_KEY',
     };
   }
 
-  if (apiKey.length > config.maxLength) {
+  if (apiKey.length > API_KEY_VALIDATION_CONFIG.maxLength) {
     return {
       valid: false,
       error: 'API key is too long',
@@ -45,7 +43,7 @@ export function validateApiKeyFormat(apiKey: string): {
     };
   }
 
-  if (!config.validPattern.test(apiKey)) {
+  if (!API_KEY_VALIDATION_CONFIG.validPattern.test(apiKey)) {
     return {
       valid: false,
       error: 'API key contains invalid characters',
