@@ -4,6 +4,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiKeyRepository } from '../repositories';
 import { createHash } from 'crypto';
+import {
+  ErrorCode,
+  AuthenticationError,
+  AuthorizationError,
+  extractRequestContext,
+} from '../utils/error-handler';
 
 /**
  * API Key validation configuration constants
@@ -37,20 +43,20 @@ export interface ApiKeyValidationResult {
   userId?: string;
   permissions?: string[];
   error?: string;
-  code?: string;
+  code?: ErrorCode;
 }
 
 /**
  * Validate API key format
  * SECURITY: Ensures API key meets minimum security requirements
  */
-function validateApiKeyFormat(apiKey: string): { valid: boolean; error?: string; code?: string } {
+function validateApiKeyFormat(apiKey: string): { valid: boolean; error?: string; code?: ErrorCode } {
   // Check minimum length
   if (apiKey.length < API_KEY_CONFIG.MIN_LENGTH) {
     return {
       valid: false,
       error: `API key must be at least ${API_KEY_CONFIG.MIN_LENGTH} characters`,
-      code: 'INVALID_API_KEY',
+      code: ErrorCode.INVALID_API_KEY,
     };
   }
 
@@ -59,7 +65,7 @@ function validateApiKeyFormat(apiKey: string): { valid: boolean; error?: string;
     return {
       valid: false,
       error: 'API key is too long',
-      code: 'INVALID_API_KEY',
+      code: ErrorCode.INVALID_API_KEY,
     };
   }
 
@@ -68,7 +74,7 @@ function validateApiKeyFormat(apiKey: string): { valid: boolean; error?: string;
     return {
       valid: false,
       error: 'API key contains invalid characters',
-      code: 'INVALID_API_KEY',
+      code: ErrorCode.INVALID_API_KEY,
     };
   }
 
@@ -88,13 +94,14 @@ function hashApiKey(apiKey: string): string {
  * SECURITY: Uses hashed key lookup to prevent plaintext exposure
  */
 export async function validateApiKey(request: NextRequest): Promise<ApiKeyValidationResult> {
+  const context = extractRequestContext(request);
   const apiKey = request.headers.get('X-API-Key');
   
   if (!apiKey) {
     return {
       valid: false,
       error: 'API key is required',
-      code: 'MISSING_API_KEY',
+      code: ErrorCode.MISSING_API_KEY,
     };
   }
 
@@ -118,7 +125,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
       return {
         valid: false,
         error: 'Invalid API key',
-        code: 'INVALID_API_KEY',
+        code: ErrorCode.INVALID_API_KEY,
       };
     }
 
@@ -127,7 +134,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
       return {
         valid: false,
         error: 'API key is inactive',
-        code: 'INACTIVE_API_KEY',
+        code: ErrorCode.INACTIVE_API_KEY,
       };
     }
 
@@ -136,7 +143,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
       return {
         valid: false,
         error: 'API key has been revoked',
-        code: 'REVOKED_API_KEY',
+        code: ErrorCode.REVOKED_API_KEY,
       };
     }
 
@@ -145,7 +152,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
       return {
         valid: false,
         error: 'API key has expired',
-        code: 'EXPIRED_API_KEY',
+        code: ErrorCode.EXPIRED_API_KEY,
       };
     }
 
@@ -160,7 +167,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
     return {
       valid: false,
       error: 'Failed to validate API key',
-      code: 'VALIDATION_ERROR',
+      code: ErrorCode.INTERNAL_ERROR,
     };
   }
 }
@@ -170,16 +177,18 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
  */
 export function createApiKeyValidator(requiredPermissions?: string[]) {
   return async function validate(request: NextRequest): Promise<NextResponse | null> {
+    const context = extractRequestContext(request);
     const result = await validateApiKey(request);
     
     if (!result.valid) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: result.error || 'Authentication failed',
-          code: result.code || 'AUTH_ERROR',
-        },
-      }, { status: 401 });
+      const error = new AuthenticationError(
+        result.error || '认证失败',
+        {
+          code: result.code || ErrorCode.AUTH_FAILED,
+          requestId: context.requestId,
+        }
+      );
+      return error.toNextResponse(context.requestId);
     }
 
     // Check required permissions
@@ -190,14 +199,12 @@ export function createApiKeyValidator(requiredPermissions?: string[]) {
       );
       
       if (!hasAllPermissions) {
-        return NextResponse.json({
-          success: false,
-          error: {
-            message: 'Insufficient permissions',
-            code: 'FORBIDDEN',
-            required: requiredPermissions,
-          },
-        }, { status: 403 });
+        const error = new AuthorizationError('权限不足', {
+          code: ErrorCode.INSUFFICIENT_PERMISSIONS,
+          details: { required: requiredPermissions },
+          requestId: context.requestId,
+        });
+        return error.toNextResponse(context.requestId);
       }
     }
 
@@ -244,4 +251,29 @@ export async function requireApiKeyWithPermissions(
   permissions: string[]
 ): Promise<NextResponse | null> {
   return createApiKeyValidator(permissions)(request);
+}
+
+/**
+ * Get API key info from request
+ * Returns the validated API key information without returning an error response
+ * 
+ * @param request - The Next.js request object
+ * @returns API key info if valid, null otherwise
+ */
+export async function getApiKeyInfo(request: NextRequest): Promise<{
+  keyId: string;
+  userId: string;
+  permissions: string[];
+} | null> {
+  const result = await validateApiKey(request);
+  
+  if (!result.valid) {
+    return null;
+  }
+  
+  return {
+    keyId: result.keyId!,
+    userId: result.userId!,
+    permissions: result.permissions || [],
+  };
 }
