@@ -6,7 +6,8 @@
 # Compiler settings
 CC ?= gcc
 CFLAGS ?= -Wall -Wextra -O2 -std=c99 -fPIC
-LDFLAGS ?= -lcurl -lpthread
+LDFLAGS ?= -L/opt/software/miniforge3/lib -lcurl -lpthread
+CFLAGS += -I/opt/software/miniforge3/include
 
 # Directories
 INCLUDE_DIR := include
