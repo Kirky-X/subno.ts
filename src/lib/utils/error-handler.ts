@@ -798,7 +798,7 @@ export function withErrorHandler<T = unknown, P = Record<string, string>>(
 export function successResponse<T>(
   data: T,
   message?: string,
-  requestId?: string
+  _requestId?: string
 ): StandardSuccessResponse<T> {
   return {
     success: true,

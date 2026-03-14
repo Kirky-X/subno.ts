@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { registerService } from '@/src/lib/services';
-import { checkRateLimit, addRateLimitHeaders } from '@/src/lib/middleware/rate-limit';
+import { checkRateLimit } from '@/src/lib/middleware/rate-limit';
 import { requireApiKey } from '@/src/lib/middleware';
 import {
   withErrorHandler,

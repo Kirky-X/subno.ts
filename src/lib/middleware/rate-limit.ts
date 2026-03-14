@@ -4,7 +4,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRateLimitConfig as getConfig, getCleanupIntervalMs, getRateLimitWindowMs } from '../config';
 import {
-  ErrorCode,
   RateLimitError,
   extractRequestContext,
 } from '../utils/error-handler';
