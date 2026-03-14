@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "securenotify-sdk"
-version = "0.2.0"
+version = "0.1.0"
 description = "SecureNotify Python SDK - Encrypted push notification service client"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -38,9 +38,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/subno-ts/subno.ts"
-Repository = "https://github.com/subno-ts/subno.ts"
-Issues = "https://github.com/subno-ts/subno.ts/issues"
+Homepage = "https://github.com/Kirky-X/subno.ts"
+Repository = "https://github.com/Kirky-X/subno.ts"
+Issues = "https://github.com/Kirky-X/subno.ts/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -276,6 +276,17 @@ class SecureNotifyClient:
             )
         return self._apikey_manager
 
+    @property
+    def api_key(self) -> str:
+        """Get API key (masked for security).
+
+        Returns:
+            Masked API key showing only last 4 characters.
+        """
+        if len(self._api_key) > 4:
+            return "*" * (len(self._api_key) - 4) + self._api_key[-4:]
+        return "****"
+
     def has_api_key(self) -> bool:
         """Check if API key is configured (for internal use).
 

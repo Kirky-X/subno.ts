@@ -23,7 +23,7 @@ class TestSecureNotifyClient:
     def test_initialization(self, client):
         """Test client initialization."""
         assert client.base_url == "https://localhost:3000"
-        assert client.api_key == "test-api-key"
+        assert client.api_key == "********-key"  # Masked for security
         assert client.timeout == 30.0
         assert client._closed is False
 
@@ -156,7 +156,7 @@ class TestSyncSecureNotifyClient:
     def test_initialization(self, sync_client):
         """Test sync client initialization."""
         assert sync_client._async_client.base_url == "https://localhost:3000"
-        assert sync_client._async_client.api_key == "test-api-key"
+        assert sync_client._async_client.api_key == "********-key"  # Masked for security
 
     def test_close(self, sync_client):
         """Test sync close."""
