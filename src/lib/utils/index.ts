@@ -88,3 +88,14 @@ export {
   headersContainSensitiveInfo,
   SENSITIVE_HEADERS,
 } from './header-sanitization';
+
+export {
+  mapServiceError,
+  type ServiceResult,
+} from './service-error-mapper';
+
+export {
+  validateRequestBody,
+  validateRequiredString,
+  validateOptionalString,
+} from './request-validator';

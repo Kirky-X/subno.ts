@@ -3,7 +3,7 @@
 
 import { getDatabase } from '../../db';
 import { auditLogs, type AuditLog } from '../../db/schema';
-import { eq, desc, and, gte, sql } from 'drizzle-orm';
+import { eq, desc, and, gte, lt, sql } from 'drizzle-orm';
 
 export type AuditAction =
   | 'key_register'
@@ -316,7 +316,7 @@ export class AuditService {
       .where(and(
         eq(auditLogs.success, true),
         sql`${auditLogs.action} NOT IN (${AUDIT_ACTIONS_TO_KEEP})`,
-        gte(auditLogs.createdAt, cutoffDate)
+        lt(auditLogs.createdAt, cutoffDate)
       ));
 
     const rowCount = (result as { rowCount?: number | null }).rowCount ?? 0;

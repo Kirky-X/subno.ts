@@ -3,6 +3,8 @@
 
 import { channelRepository } from '../repositories/channel.repository';
 import { auditService } from './audit.service';
+import { getRedisSubscriber } from '../utils/redis-client';
+import type { RedisClientType } from 'redis';
 
 export interface SubscribeOptions {
   channel: string;
@@ -16,10 +18,19 @@ export interface SSEMessage {
 }
 
 const KEEPALIVE_INTERVAL = 30000; // 30 seconds
+const MAX_CONNECTIONS_PER_CHANNEL = 1000;
+const MAX_TOTAL_CONNECTIONS = 10000;
+const CONNECTION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const CLEANUP_INTERVAL_MS = 60 * 1000; // 1 minute
+
+interface ConnectionInfo {
+  controller: ReadableStreamDefaultController;
+  connectedAt: number;
+}
 
 export class SubscribeService {
-  private redisClient: unknown = null;
-  private activeConnections = new Map<string, Set<ReadableStreamDefaultController>>();
+  private activeConnections = new Map<string, Set<ConnectionInfo>>();
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   async validateChannel(channelId: string): Promise<{
     valid: boolean;
@@ -52,6 +63,17 @@ export class SubscribeService {
     userAgent?: string;
   }): ReadableStream<Uint8Array> {
     const { channel } = options;
+
+    const totalConnections = this.getTotalConnectionCount();
+    if (totalConnections >= MAX_TOTAL_CONNECTIONS) {
+      throw new Error('Maximum total connections reached');
+    }
+
+    const channelConnections = this.activeConnections.get(channel)?.size || 0;
+    if (channelConnections >= MAX_CONNECTIONS_PER_CHANNEL) {
+      throw new Error('Maximum connections for this channel reached');
+    }
+
     const encoder = new TextEncoder();
     let keepaliveInterval: NodeJS.Timeout | null = null;
     let redisSubscriber: unknown = null;
@@ -61,6 +83,7 @@ export class SubscribeService {
       start: async (controller) => {
         streamController = controller;
         this.addConnection(channel, controller);
+        this.startCleanupTimer();
 
         await auditService.log({
           action: 'subscribe_started',
@@ -132,16 +155,64 @@ export class SubscribeService {
     if (!this.activeConnections.has(channel)) {
       this.activeConnections.set(channel, new Set());
     }
-    this.activeConnections.get(channel)!.add(controller);
+    this.activeConnections.get(channel)!.add({
+      controller,
+      connectedAt: Date.now(),
+    });
   }
 
   private removeConnection(channel: string, controller: ReadableStreamDefaultController): void {
     const connections = this.activeConnections.get(channel);
     if (connections) {
-      connections.delete(controller);
+      for (const info of connections) {
+        if (info.controller === controller) {
+          connections.delete(info);
+          break;
+        }
+      }
       if (connections.size === 0) {
         this.activeConnections.delete(channel);
       }
+    }
+  }
+
+  private getTotalConnectionCount(): number {
+    let total = 0;
+    for (const connections of this.activeConnections.values()) {
+      total += connections.size;
+    }
+    return total;
+  }
+
+  private startCleanupTimer(): void {
+    if (this.cleanupInterval) {
+      return;
+    }
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupStaleConnections();
+    }, CLEANUP_INTERVAL_MS);
+  }
+
+  private cleanupStaleConnections(): void {
+    const now = Date.now();
+    for (const [channel, connections] of this.activeConnections.entries()) {
+      for (const info of connections) {
+        if (now - info.connectedAt > CONNECTION_TIMEOUT_MS) {
+          try {
+            info.controller.close();
+          } catch {
+            // Controller already closed
+          }
+          connections.delete(info);
+        }
+      }
+      if (connections.size === 0) {
+        this.activeConnections.delete(channel);
+      }
+    }
+    if (this.activeConnections.size === 0 && this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
     }
   }
 
@@ -166,16 +237,12 @@ export class SubscribeService {
     callback: (message: unknown) => void
   ): Promise<unknown> {
     try {
-      const redis = await this.getRedisClient();
+      const redis = await getRedisSubscriber();
       if (!redis) {
         return null;
       }
 
-      const redisClient = redis as {
-        subscribe: (channel: string, callback: (message: string) => void) => Promise<void>;
-      };
-
-      await redisClient.subscribe(`channel:${channel}`, (message: string) => {
+      await redis.subscribe(`channel:${channel}`, (message: string) => {
         try {
           const data = JSON.parse(message);
           callback(data);
@@ -193,38 +260,11 @@ export class SubscribeService {
   private async unsubscribeFromRedis(channel: string, subscriber: unknown): Promise<void> {
     try {
       if (subscriber) {
-        const redisClient = subscriber as {
-          unsubscribe: (channel: string) => Promise<void>;
-        };
+        const redisClient = subscriber as RedisClientType;
         await redisClient.unsubscribe(`channel:${channel}`);
       }
     } catch {
       // Ignore unsubscribe errors
-    }
-  }
-
-  private async getRedisClient(): Promise<unknown> {
-    if (this.redisClient) {
-      return this.redisClient;
-    }
-
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      return null;
-    }
-
-    try {
-      const redisModule = await import('redis').catch(() => null);
-      if (!redisModule || !redisModule.createClient) {
-        return null;
-      }
-
-      const client = redisModule.createClient({ url: redisUrl });
-      await client.connect();
-      this.redisClient = client;
-      return client;
-    } catch {
-      return null;
     }
   }
 

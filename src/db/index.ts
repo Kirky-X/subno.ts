@@ -3,10 +3,16 @@
 
 import type { NeonDatabase } from 'drizzle-orm/neon-serverless';
 
+import { Pool } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import * as schema from './schema';
+import {
+  DB_POOL_SIZE,
+  DB_IDLE_TIMEOUT,
+  DB_CONNECT_TIMEOUT,
+} from '../lib/config/database.config';
 
-// Database instance holder
+let pool: Pool | null = null;
 let db: NeonDatabase<typeof schema> | null = null;
 
 /**
@@ -19,9 +25,14 @@ export function getDatabase(): NeonDatabase<typeof schema> {
       throw new Error('DATABASE_URL environment variable is not set');
     }
 
-    // drizzle with neon-serverless expects connection string
-    // Using type assertion to handle generic type mismatch
-    db = drizzle(connectionString, { schema }) as unknown as NeonDatabase<typeof schema>;
+    pool = new Pool({
+      connectionString,
+      max: DB_POOL_SIZE,
+      idleTimeoutMillis: DB_IDLE_TIMEOUT,
+      connectionTimeoutMillis: DB_CONNECT_TIMEOUT,
+    });
+
+    db = drizzle(pool, { schema }) as unknown as NeonDatabase<typeof schema>;
   }
 
   return db;
@@ -31,7 +42,11 @@ export function getDatabase(): NeonDatabase<typeof schema> {
  * Close the database connection properly.
  */
 export async function closeDatabase(): Promise<void> {
-  db = null;
+  if (pool) {
+    await pool.end();
+    pool = null;
+    db = null;
+  }
 }
 
 /**

@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { channelService } from '@/src/lib/services';
 import { checkRateLimit } from '@/src/lib/middleware/rate-limit';
+import { requireApiKey } from '@/src/lib/middleware/api-key';
 import {
   withErrorHandler,
   extractRequestContext,
@@ -27,6 +28,11 @@ const createChannelSchema = z.object({
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const context = extractRequestContext(request);
+
+  const authError = await requireApiKey(request);
+  if (authError) {
+    return authError;
+  }
 
   const rateLimitResult = await checkRateLimit(request, 'default');
   if (rateLimitResult) {

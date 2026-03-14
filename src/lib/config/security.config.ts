@@ -7,6 +7,20 @@
  */
 
 /**
+ * Validate ADMIN_MASTER_KEY strength in production environment
+ */
+function validateAdminMasterKey(): void {
+  if (process.env.NODE_ENV === 'production') {
+    const masterKey = process.env.ADMIN_MASTER_KEY;
+    if (!masterKey || masterKey.length < 32) {
+      throw new Error('ADMIN_MASTER_KEY must be at least 32 characters in production');
+    }
+  }
+}
+
+validateAdminMasterKey();
+
+/**
  * Validate and parse PBKDF2 iterations with bounds checking
  */
 function parsePbkdf2Iterations(): number {

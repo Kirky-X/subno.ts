@@ -42,6 +42,7 @@ export enum ErrorCode {
   ALREADY_EXISTS = 'ALREADY_EXISTS',
   ALREADY_REVOKED = 'ALREADY_REVOKED',
   REVOCATION_PENDING = 'REVOCATION_PENDING',
+  KEY_EXPIRED = 'KEY_EXPIRED',
 
   // 状态错误 (400)
   INVALID_STATE = 'INVALID_STATE',
@@ -103,6 +104,7 @@ export const HTTP_STATUS_MAP: Record<ErrorCode, number> = {
   [ErrorCode.ALREADY_EXISTS]: 409,
   [ErrorCode.ALREADY_REVOKED]: 409,
   [ErrorCode.REVOCATION_PENDING]: 409,
+  [ErrorCode.KEY_EXPIRED]: 410,
 
   // 400 - 状态错误
   [ErrorCode.INVALID_STATE]: 400,
@@ -160,6 +162,7 @@ const USER_FRIENDLY_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.ALREADY_EXISTS]: '资源已存在',
   [ErrorCode.ALREADY_REVOKED]: '密钥已被撤销',
   [ErrorCode.REVOCATION_PENDING]: '撤销请求正在处理中',
+  [ErrorCode.KEY_EXPIRED]: '密钥已过期',
 
   [ErrorCode.INVALID_STATE]: '无效的操作状态',
   [ErrorCode.LOCKED]: '资源已锁定，请稍后重试',
@@ -219,6 +222,7 @@ const DEFAULT_SEVERITY_MAP: Record<ErrorCode, ErrorSeverity> = {
   [ErrorCode.ALREADY_EXISTS]: 'low',
   [ErrorCode.ALREADY_REVOKED]: 'low',
   [ErrorCode.REVOCATION_PENDING]: 'low',
+  [ErrorCode.KEY_EXPIRED]: 'low',
 
   [ErrorCode.INVALID_STATE]: 'medium',
   [ErrorCode.LOCKED]: 'medium',

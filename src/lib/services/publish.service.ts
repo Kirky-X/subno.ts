@@ -6,6 +6,7 @@ import { messages, channels, type Message, type NewMessage } from '../../db/sche
 import { eq, and, desc } from 'drizzle-orm';
 import { auditService } from './audit.service';
 import { channelRepository } from '../repositories/channel.repository';
+import { getRedisClient } from '../utils/redis-client';
 
 export type MessagePriority = 'critical' | 'high' | 'normal' | 'low' | 'bulk';
 
@@ -59,7 +60,6 @@ const MAX_MESSAGE_SIZE = 1024 * 1024; // 1MB
 
 export class PublishService {
   private db = getDatabase();
-  private redisClient: unknown = null;
 
   async publish(request: PublishRequest, context?: {
     ip?: string;
@@ -245,40 +245,12 @@ export class PublishService {
 
   private async publishToRedis(channel: string, data: unknown): Promise<void> {
     try {
-      const redis = await this.getRedisClient();
+      const redis = await getRedisClient();
       if (redis) {
-        const redisClient = redis as {
-          publish: (channel: string, message: string) => Promise<number>;
-        };
-        await redisClient.publish(`channel:${channel}`, JSON.stringify(data));
+        await redis.publish(`channel:${channel}`, JSON.stringify(data));
       }
     } catch {
       // Redis publish failure is not critical - message is stored in DB
-    }
-  }
-
-  private async getRedisClient(): Promise<unknown> {
-    if (this.redisClient) {
-      return this.redisClient;
-    }
-
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      return null;
-    }
-
-    try {
-      const redisModule = await import('redis').catch(() => null);
-      if (!redisModule || !redisModule.createClient) {
-        return null;
-      }
-
-      const client = redisModule.createClient({ url: redisUrl });
-      await client.connect();
-      this.redisClient = client;
-      return client;
-    } catch {
-      return null;
     }
   }
 }

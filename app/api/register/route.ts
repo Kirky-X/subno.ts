@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { registerService } from '@/src/lib/services';
 import { checkRateLimit, addRateLimitHeaders } from '@/src/lib/middleware/rate-limit';
+import { requireApiKey } from '@/src/lib/middleware';
 import {
   withErrorHandler,
   extractRequestContext,
@@ -11,6 +12,7 @@ import {
   Errors,
   ErrorCode,
   ValidationError,
+  AuthenticationError,
 } from '@/src/lib/utils/error-handler';
 import { z } from 'zod';
 
@@ -23,6 +25,14 @@ const registerSchema = z.object({
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const context = extractRequestContext(request);
+
+  const authError = await requireApiKey(request);
+  if (authError) {
+    throw new AuthenticationError('API Key 认证失败', {
+      code: ErrorCode.AUTH_FAILED,
+      requestId: context.requestId,
+    });
+  }
 
   const rateLimitResult = await checkRateLimit(request, 'register');
   if (rateLimitResult) {

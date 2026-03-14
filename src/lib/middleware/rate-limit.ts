@@ -8,24 +8,8 @@ import {
   RateLimitError,
   extractRequestContext,
 } from '../utils/error-handler';
+import { getRedisClient } from '../utils/redis-client';
 
-// Redis client type definition with proper error handling
-interface RedisClientType {
-  connect: () => Promise<void>;
-  disconnect: () => Promise<void>;
-  zAdd: (key: string, score: number, member: string) => Promise<number>;
-  zRemRangeByScore: (key: string, min: number | string, max: number | string) => Promise<number>;
-  zCard: (key: string) => Promise<number>;
-  zRangeWithScores: (key: string, start: number, stop: number) => Promise<Array<{ score: number; value: string }>>;
-  expire: (key: string, seconds: number) => Promise<number>;
-  on: (event: string, handler: (err?: Error) => void) => void;
-  quit: () => Promise<void>;
-  eval: (script: string, options: { keys: string[] }, ...args: (string | number)[]) => Promise<unknown>;
-}
-
-/**
- * Rate limit configuration for different endpoint types
- */
 export interface RateLimitConfig {
   windowMs: number;      // Time window in milliseconds
   maxRequests: number;   // Maximum requests per window
@@ -91,96 +75,29 @@ const RATE_LIMIT_LUA_SCRIPT = `
  * Provides consistent rate limiting across multiple server instances
  */
 class RedisRateLimitStore {
-  private client: RedisClientType | null = null;
-  private connectionPromise: Promise<void> | null = null;
   private useMemoryFallback = false;
   private memoryFallback: MemoryRateLimitStore | null = null;
 
-  /**
-   * Initialize Redis connection with lazy loading
-   */
-  async initialize(): Promise<void> {
-    if (this.client || this.useMemoryFallback) {
-      return;
-    }
-
-    // Check if Redis URL is available
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      console.warn('REDIS_URL not configured, using memory fallback for rate limiting');
-      this.useMemoryFallback = true;
-      this.memoryFallback = new MemoryRateLimitStore();
-      return;
-    }
-
-    try {
-      // Dynamic import to avoid dependency issues when Redis is not installed
-      const redisModule = await import('redis').catch(() => null);
-      if (!redisModule || !redisModule.createClient) {
-        console.warn('Redis module not available, using memory fallback');
-        this.useMemoryFallback = true;
-        this.memoryFallback = new MemoryRateLimitStore();
-        return;
-      }
-
-      const createClient = redisModule.createClient;
-
-      this.client = createClient({
-        url: redisUrl,
-      }) as unknown as RedisClientType;
-
-      this.client.on('error', (err?: Error) => {
-        console.error('Redis rate limit store error:', err?.message || 'Unknown error');
-        // Switch to memory fallback on connection error
-        this.useMemoryFallback = true;
-        this.memoryFallback = new MemoryRateLimitStore();
-        this.client = null;
-      });
-
-      this.connectionPromise = this.client.connect();
-      await this.connectionPromise;
-    } catch (error) {
-      console.warn('Failed to connect to Redis, using memory fallback:', error);
-      this.useMemoryFallback = true;
-      this.memoryFallback = new MemoryRateLimitStore();
-    }
-  }
-
-  /**
-   * Check if request is within rate limit using Redis atomic operations
-   */
   async check(key: string, config: RateLimitConfig): Promise<RateLimitResult> {
-    await this.initialize();
-
     if (this.useMemoryFallback && this.memoryFallback) {
       return this.memoryFallback.check(key, config);
     }
 
-    if (!this.client) {
-      // Fail CLOSED when Redis client is not available
-      // This prevents bypassing rate limits when Redis fails
-      return {
-        success: false,
-        limit: config.maxRequests,
-        remaining: 0,
-        resetAt: Date.now() + config.windowMs,
-        retryAfter: Math.ceil(config.windowMs / 1000),
-      };
-    }
-
     try {
-      // Wait for connection
-      if (this.connectionPromise) {
-        await this.connectionPromise;
+      const client = await getRedisClient();
+      
+      if (!client) {
+        this.useMemoryFallback = true;
+        this.memoryFallback = new MemoryRateLimitStore();
+        return this.memoryFallback.check(key, config);
       }
 
-      const result = await this.client.eval(
+      const result = await client.eval(
         RATE_LIMIT_LUA_SCRIPT,
-        { keys: [`ratelimit:${key}`] },
-        config.maxRequests,
-        config.windowMs,
-        Date.now(),
-        key
+        {
+          keys: [`ratelimit:${key}`],
+          arguments: [config.maxRequests.toString(), config.windowMs.toString(), Date.now().toString(), key]
+        }
       ) as [number, number, number, number?];
 
       if (result[0] === 1) {
@@ -201,8 +118,8 @@ class RedisRateLimitStore {
       }
     } catch (error) {
       console.error('Rate limit check failed:', error);
-      // Fail CLOSED to prevent abuse when rate limiting is unavailable
-      // This is more secure than failing open
+      this.useMemoryFallback = true;
+      this.memoryFallback = new MemoryRateLimitStore();
       return {
         success: false,
         limit: config.maxRequests,
@@ -213,9 +130,6 @@ class RedisRateLimitStore {
     }
   }
 
-  /**
-   * Get current store size (for monitoring)
-   */
   async getSize(): Promise<number> {
     if (this.useMemoryFallback && this.memoryFallback) {
       return this.memoryFallback.getSize();
@@ -223,9 +137,12 @@ class RedisRateLimitStore {
     return 0;
   }
 
-  /**
-   * Clear all entries (for testing)
-   */
+  cleanup(): void {
+    if (this.useMemoryFallback && this.memoryFallback) {
+      this.memoryFallback.cleanup();
+    }
+  }
+
   async clear(): Promise<void> {
     if (this.useMemoryFallback && this.memoryFallback) {
       this.memoryFallback.clear();
@@ -325,8 +242,7 @@ if (typeof setInterval !== 'undefined') {
   setInterval(async () => {
     const size = await rateLimitStore.getSize();
     if (size > 0) {
-      // Only cleanup memory fallback if it has entries
-      await rateLimitStore.clear();
+      rateLimitStore.cleanup();
     }
   }, getCleanupIntervalMs());
 }
