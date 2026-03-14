@@ -21,11 +21,11 @@
     "dep:fix": "npm audit fix"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^0.10.0",
     "crypto-js": "^4.2.0",
     "drizzle-orm": "^0.45.1",
     "ioredis": "^5.4.0",
     "next": "^16.1.1",
+    "pg": "^8.20.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "redis": "^5.10.0",
@@ -42,6 +42,8 @@
     "@typescript-eslint/eslint-plugin": "^8.53.0",
     "@typescript-eslint/parser": "^8.53.0",
     "@vitest/coverage-v8": "^4.0.0",
+    "dotenv": "^17.3.1",
+    "drizzle-kit": "^0.31.9",
     "eslint-plugin-react": "^7.37.5",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.53.0",
