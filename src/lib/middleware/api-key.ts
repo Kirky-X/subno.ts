@@ -94,7 +94,6 @@ function hashApiKey(apiKey: string): string {
  * SECURITY: Uses hashed key lookup to prevent plaintext exposure
  */
 export async function validateApiKey(request: NextRequest): Promise<ApiKeyValidationResult> {
-  const context = extractRequestContext(request);
   const apiKey = request.headers.get('X-API-Key');
   
   if (!apiKey) {

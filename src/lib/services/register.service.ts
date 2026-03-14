@@ -2,7 +2,7 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { getDatabase } from '../../db';
-import { publicKeys, channels, type PublicKey, type NewPublicKey } from '../../db/schema';
+import { publicKeys, type NewPublicKey } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { auditService } from './audit.service';
 import { channelRepository } from '../repositories/channel.repository';
@@ -207,7 +207,7 @@ export class RegisterService {
           isExpired,
         },
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '查询失败',
@@ -250,7 +250,7 @@ export class RegisterService {
           isExpired,
         },
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '查询失败',

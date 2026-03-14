@@ -212,7 +212,7 @@ export class ChannelService {
           hasMore: channels.length === limit,
         },
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '查询失败',

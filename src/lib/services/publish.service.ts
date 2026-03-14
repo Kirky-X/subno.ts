@@ -2,8 +2,8 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { getDatabase } from '../../db';
-import { messages, channels, type Message, type NewMessage } from '../../db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { messages, type NewMessage } from '../../db/schema';
+import { eq, desc } from 'drizzle-orm';
 import { auditService } from './audit.service';
 import { channelRepository } from '../repositories/channel.repository';
 import { getRedisClient } from '../utils/redis-client';
@@ -220,7 +220,7 @@ export class PublishService {
           queueLength: totalResult.length,
         },
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: '查询失败',
@@ -229,7 +229,7 @@ export class PublishService {
     }
   }
 
-  private generateMessageId(channel: string): string {
+  private generateMessageId(_channel: string): string {
     const timestamp = Date.now();
     const random = crypto.randomUUID().split('-')[0];
     return `msg_${timestamp}_${random}`;

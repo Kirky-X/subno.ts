@@ -9,7 +9,6 @@ import {
   successResponse,
   Errors,
   ErrorCode,
-  ResourceError,
   ValidationError,
   AuthenticationError,
   AuthorizationError,
