@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import type { NeonDatabase } from 'drizzle-orm/neon-serverless';
-
-import { Pool } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 import * as schema from './schema';
 import {
   DB_POOL_SIZE,
@@ -13,12 +11,9 @@ import {
 } from '../lib/config/database.config';
 
 let pool: Pool | null = null;
-let db: NeonDatabase<typeof schema> | null = null;
+let db: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
-/**
- * Get the database instance, creating it if necessary.
- */
-export function getDatabase(): NeonDatabase<typeof schema> {
+export function getDatabase() {
   if (!db) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
@@ -32,15 +27,12 @@ export function getDatabase(): NeonDatabase<typeof schema> {
       connectionTimeoutMillis: DB_CONNECT_TIMEOUT,
     });
 
-    db = drizzle(pool, { schema }) as unknown as NeonDatabase<typeof schema>;
+    db = drizzle(pool, { schema });
   }
 
   return db;
 }
 
-/**
- * Close the database connection properly.
- */
 export async function closeDatabase(): Promise<void> {
   if (pool) {
     await pool.end();
@@ -49,9 +41,6 @@ export async function closeDatabase(): Promise<void> {
   }
 }
 
-/**
- * Set database instance (for testing purposes only)
- */
 export function setDatabase(testDb: typeof db): void {
   db = testDb;
 }
