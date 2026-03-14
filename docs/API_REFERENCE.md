@@ -37,6 +37,22 @@ interface ErrorResponse {
 
 ---
 
+## API 实现状态总览
+
+| API 端点 | 方法 | 状态 | 说明 |
+|----------|------|------|------|
+| `/api/keys/[id]` | DELETE | ✅ 已实现 | 密钥删除（两阶段确认） |
+| `/api/keys/[id]/revoke` | POST, GET | ✅ 已实现 | 请求/查询密钥撤销 |
+| `/api/keys/[id]/revoke/cancel` | POST | ✅ 已实现 | 取消撤销请求 |
+| `/api/register` | POST, GET | ✅ 已实现 | 公钥注册与查询 |
+| `/api/channels` | POST, GET | ✅ 已实现 | 频道创建与查询 |
+| `/api/publish` | POST, GET | ✅ 已实现 | 消息发布与队列状态 |
+| `/api/subscribe` | GET (SSE) | ✅ 已实现 | 实时消息订阅 |
+| `/api/cron/cleanup-channels` | GET | ✅ 已实现 | 频道清理 |
+| `/api/cron/cleanup-keys` | GET | ✅ 已实现 | 密钥清理 |
+
+---
+
 ## 公钥注册
 
 ### POST /api/register
@@ -86,6 +102,8 @@ interface ErrorResponse {
 
 ### GET /api/register
 
+> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
+
 查询已注册的公钥信息。
 
 **请求**:
@@ -117,6 +135,8 @@ GET /api/register?keyId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ## 频道管理
 
 ### POST /api/channels
+
+> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
 
 创建新频道。
 
@@ -165,6 +185,8 @@ GET /api/register?keyId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 ### GET /api/channels
 
+> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
+
 查询频道列表或获取特定频道。
 
 **请求**:
@@ -203,6 +225,8 @@ GET /api/channels?type=public
 ## 消息推送
 
 ### POST /api/publish
+
+> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
 
 发布消息到频道。
 
@@ -250,6 +274,8 @@ GET /api/channels?type=public
 
 ### GET /api/publish
 
+> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
+
 获取频道消息队列状态。
 
 **请求**:
@@ -284,6 +310,8 @@ GET /api/publish?channel=my-channel&count=10
 ## 实时订阅
 
 ### GET /api/subscribe
+
+> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
 
 通过 Server-Sent Events (SSE) 订阅频道实时消息。
 
@@ -321,7 +349,7 @@ eventSource.onerror = (error) => {
 
 ---
 
-## 密钥管理
+## 密钥管理 ✅ 已实现
 
 ### GET /api/keys/[id]
 
@@ -435,6 +463,8 @@ X-API-Key: <api-key-id>
 
 ### GET /api/cron/cleanup-channels
 
+> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
+
 清理过期频道（需要 cron secret）。
 
 **认证**: X-Cron-Secret (必需)
@@ -463,6 +493,8 @@ X-Cron-Secret: your-cron-secret
 ---
 
 ### GET /api/cron/cleanup-keys
+
+> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
 
 清理过期密钥和数据（需要 cron secret）。
 

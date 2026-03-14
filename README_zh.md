@@ -18,7 +18,7 @@
 
 ---
 
-[🚀 快速开始](#-快速开始) • [📖 API 文档](docs/API_REFERENCE.md) • [🏗️ 架构设计](docs/ARCHITECTURE.md) • [📚 用户指南](docs/USER_GUIDE.md) • [📘 README English](./README_en.md) • [📕 README 中文](./README_zh.md)
+[🚀 快速开始](#-快速开始) • [📖 API 文档](docs/API_REFERENCE.md) • [🏗️ 架构设计](docs/ARCHITECTURE.md) • [📚 用户指南](docs/USER_GUIDE.md) • [📘 README English](./README_en.md)
 
 </div>
 
@@ -34,12 +34,12 @@
 
 | 特性 | 状态 | 说明 |
 |---|---|---|
-| **🔐 公钥注册与管理** | ✅ 已实现 | 支持多种加密算法（RSA-2048、RSA-4096、ECC-SECP256K1）的公钥注册、存储和查询 |
-| **📢 频道管理** | ✅ 已实现 | 支持公开频道、加密频道和临时频道三种类型，满足不同场景需求 |
-| **⚡ 实时消息推送** | ✅ 已实现 | 基于 Server-Sent Events (SSE) 的实时消息分发，即时送达订阅者 |
-| **🔒 消息加密** | ✅ 已实现 | 采用混合加密架构（RSA + AES-256-GCM），支持端到端加密 |
+| **🔐 公钥注册与管理** | 🚧 开发中 | 支持多种加密算法（RSA-2048、RSA-4096、ECC-SECP256K1）的公钥注册、存储和查询 |
+| **📢 频道管理** | 🚧 开发中 | 支持公开频道、加密频道和临时频道三种类型，满足不同场景需求 |
+| **⚡ 实时消息推送** | 🚧 开发中 | 基于 Server-Sent Events (SSE) 的实时消息分发，即时送达订阅者 |
+| **🔒 消息加密** | 🚧 开发中 | 采用混合加密架构（RSA + AES-256-GCM），支持端到端加密 |
 | **🛡️ 安全控制** | ✅ 已实现 | API 密钥认证、请求限流、审计日志、输入验证等多重安全机制 |
-| **🎯 消息优先级** | ✅ 已实现 | 支持优先级队列（CRITICAL/HIGH/NORMAL/LOW/BULK），确保重要消息优先处理 |
+| **🎯 消息优先级** | 🚧 开发中 | 支持优先级队列（CRITICAL/HIGH/NORMAL/LOW/BULK），确保重要消息优先处理 |
 | **🔑 两阶段撤销** | ✅ 已实现 | 密钥撤销采用两阶段确认机制，防止误操作 |
 
 ---
@@ -157,12 +157,11 @@ subno.ts/
 | `/api/keys/[id]` | DELETE | ✅ 已实现 | 密钥删除（两阶段确认） |
 | `/api/keys/[id]/revoke` | POST, GET | ✅ 已实现 | 请求/查询密钥撤销 |
 | `/api/keys/[id]/revoke/cancel` | POST | ✅ 已实现 | 取消撤销请求 |
-| `/api/register` | POST, GET | ✅ 已实现 | 公钥注册与查询 |
-| `/api/channels` | POST, GET | ✅ 已实现 | 频道创建与查询 |
-| `/api/publish` | POST, GET | ✅ 已实现 | 消息发布与队列状态 |
-| `/api/subscribe` | GET (SSE) | ✅ 已实现 | 实时消息订阅 |
-| `/api/cron/cleanup-channels` | GET | ✅ 已实现 | 频道清理 |
-| `/api/cron/cleanup-keys` | GET | ✅ 已实现 | 密钥清理 |
+| `/api/register` | POST, GET | 🚧 开发中 | 公钥注册与查询 |
+| `/api/channels` | POST, GET | 🚧 开发中 | 频道创建与查询 |
+| `/api/publish` | POST, GET | 🚧 开发中 | 消息发布与队列状态 |
+| `/api/subscribe` | GET (SSE) | 🚧 开发中 | 实时消息订阅 |
+| `/api/cron/*` | GET | 🚧 开发中 | 定时清理任务 |
 
 ### 已实现 API 示例
 
