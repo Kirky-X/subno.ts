@@ -230,55 +230,29 @@ impl HttpClient {
     }
 
     /// Execute a GET request
-    pub async fn get<T: serde::de::DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
+    pub async fn get<T: serde::de::DeserializeOwned + serde::Serialize>(&self, endpoint: &str) -> Result<T> {
         // Check cache first if enabled
         if let Some(cache) = &self.cache {
             let cache_key = format!("GET:{}", endpoint);
             if let Some(cached) = cache.get(&cache_key) {
-                // Parse cached response
                 return serde_json::from_str(&cached).map_err(|e| {
                     SecureNotifyError::SerializationError(format!("Failed to parse cached response: {}", e))
                 });
             }
         }
 
-        // Apply request deduplication if enabled (PERFORMANCE FIX)
-        let execute_get = async {
-            let request = self.request(reqwest::Method::GET, endpoint);
-            let result: () = self.execute_with_retry(request).await
-                .map_err(|e| format!("Request failed: {}", e))?;
+        let request = self.request(reqwest::Method::GET, endpoint);
+        let result = self.execute_with_retry(request).await?;
 
-            // Cache successful responses
-            if let Some(cache) = &self.cache {
-                if let Ok(json) = serde_json::to_string(&result) {
-                    let cache_key = format!("GET:{}", endpoint);
-                    cache.set(cache_key, json, None);
-                }
+        // Cache successful responses
+        if let Some(cache) = &self.cache {
+            if let Ok(json) = serde_json::to_string(&result) {
+                let cache_key = format!("GET:{}", endpoint);
+                cache.set(cache_key, json, None);
             }
-
-            Ok::<String, String>(serde_json::to_string(&result).map_err(|e| format!("Serialization error: {}", e))?)
-        };
-
-        if let Some(dedup) = &self.request_deduplicator {
-            let dedup_key = format!("GET:{}", endpoint);
-            let result = dedup.execute(
-                &dedup_key,
-                None,
-                || execute_get,
-                true
-            ).await
-            .map_err(|e| SecureNotifyError::NetworkError(e))?;
-            let json_str = result;
-            serde_json::from_str::<T>(&json_str)
-                .map_err(|e| SecureNotifyError::SerializationError(format!("Failed to parse deduplicated response: {}", e)))
-        } else {
-            execute_get.await
-                .map_err(|e| SecureNotifyError::NetworkError(e))
-                .and_then(|json_str| {
-                    serde_json::from_str::<T>(&json_str)
-                        .map_err(|e| SecureNotifyError::SerializationError(format!("Failed to parse response: {}", e)))
-                })
         }
+
+        Ok(result)
     }
 
     /// Execute a POST request with a body
@@ -287,36 +261,8 @@ impl HttpClient {
         endpoint: &str,
         body: &B,
     ) -> Result<T> {
-        // Apply request deduplication if enabled (PERFORMANCE FIX)
-        let execute_post = async {
-            let body_clone = body;
-            let request = self.request(reqwest::Method::POST, endpoint).json(&body_clone);
-            let result: () = self.execute_with_retry(request).await
-                .map_err(|e| format!("Request failed: {}", e))?;
-            Ok::<String, String>(serde_json::to_string(&result).map_err(|e| format!("Serialization error: {}", e))?)
-        };
-
-        if let Some(dedup) = &self.request_deduplicator {
-            let dedup_key = format!("POST:{}", endpoint);
-            let params = serde_json::to_value(body).ok();
-            let result = dedup.execute(
-                &dedup_key,
-                params,
-                || execute_post,
-                false
-            ).await
-            .map_err(|e| SecureNotifyError::NetworkError(e))?;
-            let json_str = result;
-            serde_json::from_str::<T>(&json_str)
-                .map_err(|e| SecureNotifyError::SerializationError(format!("Failed to parse deduplicated response: {}", e)))
-        } else {
-            execute_post.await
-                .map_err(|e| SecureNotifyError::NetworkError(e))
-                .and_then(|json_str| {
-                    serde_json::from_str::<T>(&json_str)
-                        .map_err(|e| SecureNotifyError::SerializationError(format!("Failed to parse response: {}", e)))
-                })
-        }
+        let request = self.request(reqwest::Method::POST, endpoint).json(&body);
+        self.execute_with_retry(request).await
     }
 
     /// Execute a PUT request with a body
@@ -325,67 +271,14 @@ impl HttpClient {
         endpoint: &str,
         body: &B,
     ) -> Result<T> {
-        // Apply request deduplication if enabled (PERFORMANCE FIX)
-        let execute_put = async {
-            let body_clone = body;
-            let request = self.request(reqwest::Method::PUT, endpoint).json(&body_clone);
-            let result: () = self.execute_with_retry(request).await
-                .map_err(|e| format!("Request failed: {}", e))?;
-            Ok::<String, String>(serde_json::to_string(&result).map_err(|e| format!("Serialization error: {}", e))?)
-        };
-
-        if let Some(dedup) = &self.request_deduplicator {
-                let dedup_key = format!("PUT:{}", endpoint);
-                let params = serde_json::to_value(body).ok();
-                let result = dedup.execute(
-                    &dedup_key,
-                    params,
-                    || execute_put,
-                    false
-                ).await
-                .map_err(|e| SecureNotifyError::NetworkError(e))?;
-                let json_str = result;
-                serde_json::from_str::<T>(&json_str)
-                    .map_err(|e| SecureNotifyError::SerializationError(format!("Failed to parse deduplicated response: {}", e)))
-            } else {
-                execute_put.await
-                    .map_err(|e| SecureNotifyError::NetworkError(e))
-                    .and_then(|json_str| {
-                        serde_json::from_str::<T>(&json_str)
-                            .map_err(|e| SecureNotifyError::SerializationError(format!("Failed to parse response: {}", e)))
-                    })
-            }    }
+        let request = self.request(reqwest::Method::PUT, endpoint).json(&body);
+        self.execute_with_retry(request).await
+    }
 
     /// Execute a DELETE request
     pub async fn delete<T: serde::de::DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
-        // Apply request deduplication if enabled (PERFORMANCE FIX)
-        let execute_delete = async {
-            let request = self.request(reqwest::Method::DELETE, endpoint);
-            let result: () = self.execute_with_retry(request).await
-                .map_err(|e| format!("Request failed: {}", e))?;
-            Ok::<String, String>(serde_json::to_string(&result).map_err(|e| format!("Serialization error: {}", e))?)
-        };
-
-        if let Some(dedup) = &self.request_deduplicator {
-            let dedup_key = format!("DELETE:{}", endpoint);
-            let result = dedup.execute(
-                &dedup_key,
-                None,
-                || execute_delete,
-                false
-            ).await
-            .map_err(|e| SecureNotifyError::NetworkError(e))?;
-            let json_str = result;
-            serde_json::from_str::<T>(&json_str)
-                .map_err(|e| SecureNotifyError::SerializationError(format!("Failed to parse deduplicated response: {}", e)))
-        } else {
-            execute_delete.await
-                .map_err(|e| SecureNotifyError::NetworkError(e))
-                .and_then(|json_str| {
-                    serde_json::from_str::<T>(&json_str)
-                        .map_err(|e| SecureNotifyError::SerializationError(format!("Failed to parse response: {}", e)))
-                })
-        }
+        let request = self.request(reqwest::Method::DELETE, endpoint);
+        self.execute_with_retry(request).await
     }
 
     /// Execute a POST request that returns no body
