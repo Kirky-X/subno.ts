@@ -24,6 +24,7 @@ dist/
 # TypeScript incremental build
 *.tsbuildinfo
 tsconfig.tsbuildinfo
+next-env.d.ts
 
 # Environment files
 .env
