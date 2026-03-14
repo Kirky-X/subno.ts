@@ -234,6 +234,7 @@ export type ApiKey = typeof apiKeys.$inferSelect;
 export type NewApiKey = typeof apiKeys.$inferInsert;
 export type Channel = typeof channels.$inferSelect;
 export type Message = typeof messages.$inferSelect;
+export type NewMessage = typeof messages.$inferInsert;
 export type RevocationConfirmation = typeof revocationConfirmations.$inferSelect;
 export type NotificationHistory = typeof notificationHistory.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
