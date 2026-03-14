@@ -12,7 +12,7 @@
     <name>SecureNotify Java SDK</name>
     <description>Official Java SDK for SecureNotify API - Encrypted push notification service</description>
 
-    <url>https://github.com/securenotify/subno.ts</url>
+    <url>https://github.com/Kirky-X/subno.ts</url>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
