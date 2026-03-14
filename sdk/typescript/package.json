@@ -1,6 +1,6 @@
 {
   "name": "securenotify-sdk",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "SecureNotify TypeScript SDK for encrypted push notification services",
   "type": "module",
   "main": "dist/index.js",
@@ -32,10 +32,10 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/subno.ts"
+    "url": "https://github.com/Kirky-X/subno.ts"
   },
   "bugs": {
-    "url": "https://github.com/your-org/subno.ts/issues"
+    "url": "https://github.com/Kirky-X/subno.ts/issues"
   },
   "homepage": "https://securenotify.dev",
   "devDependencies": {

@@ -363,6 +363,9 @@ export interface ClientOptions {
   apiKeyId?: string;
   timeout?: number;
   retry?: RetryOptions;
+  enableMetrics?: boolean;
+  enableCache?: boolean;
+  enableDeduplication?: boolean;
 }
 
 /**
