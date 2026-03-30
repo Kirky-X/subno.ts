@@ -77,7 +77,27 @@ export {
   type ErrorSeverity as LegacyErrorSeverity,
 } from './error.utils';
 
-export * from './validation';
+export {
+  // 配置
+  API_KEY_VALIDATION_CONFIG,
+  
+  // 函数
+  validateApiKeyFormat,
+  isValidUUID,
+  
+  // Zod schemas
+  channelIdSchema,
+  messageSchema,
+  publicKeyRegistrationSchema,
+  channelCreationSchema,
+  paginationSchema,
+  apiKeyCreationSchema,
+  keyRevocationSchema,
+  
+  // 类型和工具
+  type ValidationResult,
+  validateData,
+} from './validation';
 
 export {
   isSensitiveHeader,

@@ -15,9 +15,9 @@ import {
  * API Key validation configuration constants
  */
 export const API_KEY_CONFIG = {
-  /** Minimum API key length */
-  MIN_LENGTH: 16,
-  /** Maximum API key length */
+  /** Minimum API key length (increased to 32 for better security) */
+  MIN_LENGTH: 32,
+  /** Maximum API key length to prevent DoS attacks */
   MAX_LENGTH: 128,
   /** Regex pattern for valid API key characters (alphanumeric and hyphens) */
   VALID_PATTERN: /^[a-zA-Z0-9-]+$/,

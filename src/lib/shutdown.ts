@@ -7,6 +7,7 @@
  */
 
 import { closeDatabase } from '../db';
+import { closeRedisClient } from '../utils/redis-client';
 
 type ShutdownSignal = 'SIGTERM' | 'SIGINT' | 'SIGUSR2' | 'uncaughtException' | 'unhandledRejection';
 
@@ -30,6 +31,11 @@ export function setupGracefulShutdown(): void {
       console.log('Closing database connections...');
       await closeDatabase();
       console.log('Database connections closed successfully');
+      
+      // Close Redis connections
+      console.log('Closing Redis connections...');
+      await closeRedisClient();
+      console.log('Redis connections closed successfully');
       
       // Give some time for cleanup to complete
       await new Promise(resolve => setTimeout(resolve, 100));

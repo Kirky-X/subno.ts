@@ -28,6 +28,10 @@ export const POST = withErrorHandler(async (
   
   // Validate API key and check permissions
   // Requires either 'key_revoke' or 'admin' permission
+  // SECURITY NOTE: Ownership verification is performed in the service layer
+  // The KeyRevocationService.validateApiKeyPermission method verifies that:
+  // 1. The API key has 'key_revoke' or 'admin' permission
+  // 2. For non-admin users, only keys from channels they created can be revoked
   const authError = await requireApiKeyWithPermissions(request, [Permission.KEY_REVOKE]);
   if (authError) {
     throw new AuthorizationError('权限不足以执行密钥撤销操作', {
@@ -94,7 +98,7 @@ export const POST = withErrorHandler(async (
           requestId: context.requestId,
         });
       case 'FORBIDDEN':
-        throw Errors.forbidden('权限不足', context.requestId);
+        throw Errors.forbidden('权限不足或无权撤销此密钥', context.requestId);
       default:
         throw new ServerError(result.error || '请求撤销失败', {
           requestId: context.requestId,

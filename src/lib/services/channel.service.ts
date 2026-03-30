@@ -181,19 +181,23 @@ export class ChannelService {
       let total: number;
 
       if (options?.creator) {
-        channels = await channelRepository.findByCreator(options.creator);
-        total = channels.length;
-        channels = channels.slice(offset, offset + limit);
+        // ✅ 使用数据库级别分页，避免 N+1 查询和内存分页问题
+        const result = await channelRepository.findByCreatorWithPagination(
+          options.creator,
+          limit,
+          offset
+        );
+        channels = result.channels;
+        total = result.total;
       } else {
-        channels = await channelRepository.findActive(limit + 1);
-        total = channels.length;
-        channels = channels.slice(0, limit);
-      }
-
-      if (options?.type) {
-        channels = channels.filter(c => c.type === options.type);
-        total = channels.length;
-        channels = channels.slice(0, limit);
+        // ✅ 使用数据库级别分页
+        const result = await channelRepository.findActiveWithPagination(
+          limit,
+          offset,
+          options?.type
+        );
+        channels = result.channels;
+        total = result.total;
       }
 
       return {
@@ -209,7 +213,7 @@ export class ChannelService {
           total,
           limit,
           offset,
-          hasMore: channels.length === limit,
+          hasMore: offset + channels.length < total,
         },
       };
     } catch {

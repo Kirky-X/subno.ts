@@ -2,7 +2,7 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { getDatabase } from '../../db';
-import { messages, type NewMessage } from '../../db/schema';
+import { messages, auditLogs, type NewMessage } from '../../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { auditService } from './audit.service';
 import { channelRepository } from '../repositories/channel.repository';
@@ -138,8 +138,30 @@ export class PublishService {
     };
 
     try {
-      await this.db.insert(messages).values(newMessage);
+      // 使用数据库事务确保数据一致性
+      await this.db.transaction(async (tx) => {
+        // 1. 插入消息到数据库
+        await tx.insert(messages).values(newMessage);
 
+        // 2. 记录审计日志（在事务内）
+        await tx.insert(auditLogs).values({
+          action: 'message_published',
+          channelId: request.channel,
+          messageId,
+          userId: context?.userId,
+          ip: context?.ip,
+          userAgent: context?.userAgent,
+          success: true,
+          metadata: {
+            priority,
+            encrypted: request.encrypted,
+            autoCreated,
+          },
+          createdAt: now,
+        });
+      });
+
+      // 3. 发布到 Redis（事务外，允许失败）
       await this.publishToRedis(request.channel, {
         id: messageId,
         channel: request.channel,
@@ -147,21 +169,6 @@ export class PublishService {
         sender: request.sender,
         priority,
         timestamp: now.getTime(),
-      });
-
-      await auditService.log({
-        action: 'message_published',
-        channelId: request.channel,
-        messageId,
-        userId: context?.userId,
-        ip: context?.ip,
-        userAgent: context?.userAgent,
-        success: true,
-        metadata: {
-          priority,
-          encrypted: request.encrypted,
-          autoCreated,
-        },
       });
 
       return {
@@ -172,6 +179,7 @@ export class PublishService {
         autoCreated,
       };
     } catch (error) {
+      // 事务失败会自动回滚，只需记录错误
       await auditService.log({
         action: 'message_publish_failed',
         channelId: request.channel,
@@ -192,32 +200,32 @@ export class PublishService {
 
   async getQueueStatus(channel: string, count = 10): Promise<QueueStatusResult> {
     try {
+      // 使用窗口函数一次性获取数据和总数，避免 N+1 查询问题
       const result = await this.db
-        .select()
+        .select({
+          message: messages,
+          totalCount: sql<number>`count(*) over()`.mapWith(Number),
+        })
         .from(messages)
         .where(eq(messages.channelId, channel))
         .orderBy(desc(messages.priority), desc(messages.createdAt))
         .limit(count);
 
-      const messageList = result.map(m => ({
-        id: m.id,
-        message: m.content,
-        sender: m.sender || undefined,
-        timestamp: m.createdAt.getTime(),
-        priority: this.getPriorityName(m.priority),
+      const queueLength = result[0]?.totalCount ?? 0;
+      const messageList = result.map(r => ({
+        id: r.message.id,
+        message: r.message.content,
+        sender: r.message.sender || undefined,
+        timestamp: r.message.createdAt.getTime(),
+        priority: this.getPriorityName(r.message.priority),
       }));
-
-      const totalResult = await this.db
-        .select()
-        .from(messages)
-        .where(eq(messages.channelId, channel));
 
       return {
         success: true,
         data: {
           channel,
           messages: messageList,
-          queueLength: totalResult.length,
+          queueLength,
         },
       };
     } catch {

@@ -3,7 +3,7 @@
 
 import { getDatabase } from '../../db';
 import { channels, type Channel } from '../../db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql, count } from 'drizzle-orm';
 
 export class ChannelRepository {
   private db = getDatabase();
@@ -33,7 +33,7 @@ export class ChannelRepository {
   }
 
   /**
-   * Find channels by creator
+   * Find channels by creator with pagination
    */
   async findByCreator(creator: string): Promise<Channel[]> {
     const result = await this.db
@@ -42,6 +42,34 @@ export class ChannelRepository {
       .where(eq(channels.creator, creator))
       .orderBy(desc(channels.createdAt));
     return result;
+  }
+
+  /**
+   * Find channels by creator with pagination support
+   */
+  async findByCreatorWithPagination(
+    creator: string,
+    limit: number,
+    offset: number
+  ): Promise<{ channels: Channel[]; total: number }> {
+    const [channelData, countResult] = await Promise.all([
+      this.db
+        .select()
+        .from(channels)
+        .where(and(eq(channels.creator, creator), eq(channels.isActive, true)))
+        .orderBy(desc(channels.createdAt))
+        .limit(limit)
+        .offset(offset),
+      this.db
+        .select({ count: count() })
+        .from(channels)
+        .where(and(eq(channels.creator, creator), eq(channels.isActive, true)))
+    ]);
+
+    return {
+      channels: channelData,
+      total: Number(countResult[0]?.count || 0),
+    };
   }
 
   /**
@@ -55,6 +83,39 @@ export class ChannelRepository {
       .orderBy(desc(channels.createdAt))
       .limit(limit);
     return result;
+  }
+
+  /**
+   * Find active channels with pagination support
+   */
+  async findActiveWithPagination(
+    limit: number,
+    offset: number,
+    type?: string
+  ): Promise<{ channels: Channel[]; total: number }> {
+    const conditions = [eq(channels.isActive, true)];
+    if (type) {
+      conditions.push(eq(channels.type, type));
+    }
+
+    const [channelData, countResult] = await Promise.all([
+      this.db
+        .select()
+        .from(channels)
+        .where(and(...conditions))
+        .orderBy(desc(channels.createdAt))
+        .limit(limit)
+        .offset(offset),
+      this.db
+        .select({ count: count() })
+        .from(channels)
+        .where(and(...conditions))
+    ]);
+
+    return {
+      channels: channelData,
+      total: Number(countResult[0]?.count || 0),
+    };
   }
 
   /**

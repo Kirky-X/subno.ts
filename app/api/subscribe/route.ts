@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { subscribeService } from '@/src/lib/services';
 import { checkRateLimit } from '@/src/lib/middleware/rate-limit';
+import { requireApiKey } from '@/src/lib/middleware/api-key';
 import {
   withErrorHandler,
   extractRequestContext,
@@ -13,6 +14,10 @@ import {
 } from '@/src/lib/utils/error-handler';
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
+  // 首先验证 API Key 认证
+  const authError = await requireApiKey(request);
+  if (authError) return authError;
+
   const context = extractRequestContext(request);
   const searchParams = request.nextUrl.searchParams;
 

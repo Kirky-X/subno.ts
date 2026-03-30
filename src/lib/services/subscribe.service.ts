@@ -22,6 +22,8 @@ const MAX_CONNECTIONS_PER_CHANNEL = 1000;
 const MAX_TOTAL_CONNECTIONS = 10000;
 const CONNECTION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const CLEANUP_INTERVAL_MS = 60 * 1000; // 1 minute
+const MAX_CHANNELS = 5000; // 最大频道数量，防止内存泄漏
+const MESSAGE_QUEUE_SIZE_LIMIT = 1000; // 每个频道的消息队列限制
 
 interface ConnectionInfo {
   controller: ReadableStreamDefaultController;
@@ -195,24 +197,60 @@ export class SubscribeService {
 
   private cleanupStaleConnections(): void {
     const now = Date.now();
+    const channelsToRemove: string[] = [];
+
     for (const [channel, connections] of this.activeConnections.entries()) {
+      let hasActiveConnections = false;
+
       for (const info of connections) {
+        // 清理超时连接
         if (now - info.connectedAt > CONNECTION_TIMEOUT_MS) {
           try {
             info.controller.close();
           } catch {
-            // Controller already closed
+            // 已关闭
           }
           connections.delete(info);
+        } else {
+          hasActiveConnections = true;
         }
       }
-      if (connections.size === 0) {
-        this.activeConnections.delete(channel);
+
+      // 标记空频道以便删除
+      if (!hasActiveConnections) {
+        channelsToRemove.push(channel);
       }
     }
+
+    // 批量删除空频道
+    for (const channel of channelsToRemove) {
+      this.activeConnections.delete(channel);
+    }
+
+    // ✅ 强制限制频道数量，防止内存泄漏
+    if (this.activeConnections.size > MAX_CHANNELS) {
+      this.enforceChannelLimit();
+    }
+
+    // 如果没有连接且定时器存在，停止定时器
     if (this.activeConnections.size === 0 && this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
+    }
+  }
+
+  /**
+   * 强制限制频道数量，清理最早的空闲频道
+   */
+  private enforceChannelLimit(): void {
+    const channels = Array.from(this.activeConnections.keys());
+    const channelsToRemove = channels.slice(0, channels.length - MAX_CHANNELS);
+
+    for (const channel of channelsToRemove) {
+      const connections = this.activeConnections.get(channel);
+      if (connections && connections.size === 0) {
+        this.activeConnections.delete(channel);
+      }
     }
   }
 
