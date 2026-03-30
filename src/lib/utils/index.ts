@@ -99,6 +99,16 @@ export {
   validateData,
 } from './validation';
 
+// Export enums for centralized access
+export {
+  ChannelType,
+  ChannelStatus,
+  isValidChannelType,
+  isValidChannelStatus,
+  getChannelTypeLabel,
+  getChannelStatusLabel,
+} from '../enums/channel.enums';
+
 export {
   isSensitiveHeader,
   sanitizeHeaderValue,

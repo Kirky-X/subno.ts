@@ -4,12 +4,13 @@
 import { channelRepository } from '../repositories/channel.repository';
 import { auditService } from './audit.service';
 import type { Channel } from '../../db/schema';
+import { ChannelType } from '../enums/channel.enums';
 
 export interface CreateChannelRequest {
   id?: string;
   name?: string;
   description?: string;
-  type?: 'public' | 'encrypted' | 'temporary';
+  type?: ChannelType | 'public' | 'encrypted' | 'temporary';
   creator?: string;
   expiresIn?: number;
   metadata?: Record<string, unknown>;
@@ -50,12 +51,49 @@ export interface QueryChannelsResult {
 
 const MAX_EXPIRATION_SECONDS = 30 * 24 * 60 * 60;
 
+/**
+ * Validate and normalize channel type
+ */
+function validateChannelType(type: string | undefined): { valid: boolean; normalizedType: ChannelType; error?: string } {
+  const defaultType = ChannelType.PUBLIC;
+  
+  if (!type) {
+    return { valid: true, normalizedType: defaultType };
+  }
+
+  // If already a ChannelType enum value
+  if (Object.values(ChannelType).includes(type as ChannelType)) {
+    return { valid: true, normalizedType: type as ChannelType };
+  }
+
+  // Validate string value
+  if (isValidChannelType(type)) {
+    return { valid: true, normalizedType: type as ChannelType };
+  }
+
+  return { 
+    valid: false, 
+    normalizedType: defaultType, 
+    error: `Invalid channel type. Must be one of: ${Object.values(ChannelType).join(', ')}` 
+  };
+}
+
 export class ChannelService {
   async create(request: CreateChannelRequest, context?: {
     ip?: string;
     userAgent?: string;
   }): Promise<CreateChannelResult> {
-    const type = request.type || 'public';
+    // Validate and normalize channel type using enum
+    const typeValidation = validateChannelType(request.type);
+    if (!typeValidation.valid) {
+      return {
+        success: false,
+        error: typeValidation.error,
+        code: 'INVALID_CHANNEL_TYPE',
+      };
+    }
+    
+    const type = typeValidation.normalizedType;
     const channelId = request.id || this.generateChannelId(type);
     const name = request.name || `Channel ${channelId}`;
 
@@ -71,7 +109,7 @@ export class ChannelService {
       expiresAt = new Date(Date.now() + request.expiresIn * 1000);
     }
 
-    if (type === 'temporary' && !expiresAt) {
+    if (type === ChannelType.TEMPORARY && !expiresAt) {
       expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     }
 
