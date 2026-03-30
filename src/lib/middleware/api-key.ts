@@ -11,6 +11,7 @@ import {
   extractRequestContext,
 } from '../utils/error-handler';
 import { apiKeyCache } from '../utils/cache';
+import { ApiKeyPermission, hasPermission, hasAnyPermission } from '../enums/permission.enums';
 
 /**
  * API Key validation configuration constants
@@ -224,14 +225,17 @@ export function createApiKeyValidator(requiredPermissions?: string[]) {
       return error.toNextResponse(context.requestId);
     }
 
-    // Check required permissions
+    // Check required permissions using enum-based validation
     if (requiredPermissions && requiredPermissions.length > 0) {
       const keyPermissions = result.permissions || [];
-      const hasAllPermissions = requiredPermissions.every(
-        permission => keyPermissions.includes(permission)
+      
+      // Convert string permissions to enum and check
+      const hasPermissionCheck = hasAllPermissions(
+        keyPermissions as ApiKeyPermission[],
+        requiredPermissions as ApiKeyPermission[]
       );
       
-      if (!hasAllPermissions) {
+      if (!hasPermissionCheck) {
         const error = new AuthorizationError('权限不足', {
           code: ErrorCode.INSUFFICIENT_PERMISSIONS,
           details: { required: requiredPermissions },
@@ -273,17 +277,17 @@ export async function requireApiKey(request: NextRequest): Promise<NextResponse 
 /**
  * Require API key with specific permissions
  * 
- * @param permissions - Array of required permission strings
+ * @param permissions - Array of required ApiKeyPermission enum values
  * @example
  * ```typescript
- * const authError = await requireApiKeyWithPermissions(request, ['write', 'key_revoke']);
+ * const authError = await requireApiKeyWithPermissions(request, [ApiKeyPermission.WRITE, ApiKeyPermission.REVOKE]);
  * ```
  */
 export async function requireApiKeyWithPermissions(
   request: NextRequest,
-  permissions: string[]
+  permissions: ApiKeyPermission[]
 ): Promise<NextResponse | null> {
-  return createApiKeyValidator(permissions)(request);
+  return createApiKeyValidator(permissions as unknown as string[])(request);
 }
 
 /**

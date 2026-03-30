@@ -1,0 +1,159 @@
+# GitHub Actions CI/CD 集成示例
+# 用于自动化模块安全审计
+
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # 每周运行一次安全检查
+    - cron: '0 0 * * 0'
+
+jobs:
+  module-exports-check:
+    name: Module Exports Security Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run export check
+        run: npm run security:check-exports
+        continue-on-error: false
+        
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: export-check-report
+          path: export-check-report.json
+          
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('export-check-report.json', 'utf-8'));
+            
+            const summary = report.summary;
+            const hasErrors = summary.errors > 0;
+            const hasWarnings = summary.warnings > 0;
+            
+            const emoji = hasErrors ? '❌' : (hasWarnings ? '⚠️' : '✅');
+            
+            let body = `${emoji} **Module Exports Security Check**\n\n`;
+            body += `### Summary\n`;
+            body += `- Files checked: ${summary.filesChecked}\n`;
+            body += `- Total exports: ${summary.totalExports}\n`;
+            body += `- Errors: ${summary.errors}\n`;
+            body += `- Warnings: ${summary.warnings}\n`;
+            body += `- Suggestions: ${summary.suggestions}\n\n`;
+            
+            if (hasErrors) {
+              body += `**Action Required**: Please fix the errors before merging.\n`;
+            } else if (hasWarnings) {
+              body += `**Note**: Consider addressing the warnings to improve code quality.\n`;
+            } else {
+              body += `**Great job!** All checks passed.\n`;
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+  typescript-sdk-check:
+    name: TypeScript SDK Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install SDK dependencies
+        working-directory: ./sdk/typescript
+        run: npm ci
+        
+      - name: Build SDK
+        working-directory: ./sdk/typescript
+        run: npm run build
+        
+      - name: Check SDK exports
+        working-directory: ./sdk/typescript
+        run: |
+          node -e "
+          const sdk = require('./dist/index.js');
+          const exports = Object.keys(sdk);
+          console.log('SDK exports:', exports);
+          console.log('Total exports:', exports.length);
+          
+          // Check for unexpected exports
+          const unexpectedExports = exports.filter(e => 
+            e.startsWith('_') || 
+            e.toLowerCase().includes('internal') ||
+            e.toLowerCase().includes('helper')
+          );
+          
+          if (unexpectedExports.length > 0) {
+            console.error('Unexpected exports found:', unexpectedExports);
+            process.exit(1);
+          }
+          "
+
+  lint-and-type-check:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run ESLint
+        run: npm run lint
+        
+      - name: Run TypeScript compiler
+        run: npx tsc --noEmit
+
+  security-audit-summary:
+    name: Security Audit Summary
+    runs-on: ubuntu-latest
+    needs: [module-exports-check, typescript-sdk-check, lint-and-type-check]
+    
+    if: always()
+    
+    steps:
+      - name: Check all jobs status
+        run: |
+          echo "All security checks completed"
+          echo "Check individual job results for details"

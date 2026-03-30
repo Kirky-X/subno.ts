@@ -110,6 +110,17 @@ export {
 } from '../enums/channel.enums';
 
 export {
+  ApiKeyPermission,
+  PermissionGroup,
+  PERMISSION_GROUPS,
+  isValidApiKeyPermission,
+  hasPermission,
+  hasAnyPermission,
+  hasAllPermissions,
+  getPermissionLabel,
+} from '../enums/permission.enums';
+
+export {
   isSensitiveHeader,
   sanitizeHeaderValue,
   sanitizeHeaders,
@@ -129,3 +140,7 @@ export {
   validateRequiredString,
   validateOptionalString,
 } from './request-validator';
+
+// Export new utility modules
+export * from './datetime';
+export * from './crypto';
