@@ -12,8 +12,11 @@ describe('Security Implementation Files', () => {
       expect(fs.existsSync(filePath)).toBe(true);
       
       const content = fs.readFileSync(filePath, 'utf-8');
+      // Check for new implementation using rate-limiter-flexible library
       expect(content).toContain('rateLimit');
-      expect(content).toContain('RateLimitStore');
+      expect(content).toContain('rate-limiter-flexible');
+      expect(content).toContain('RateLimiterRedis');
+      expect(content).toContain('RateLimiterMemory');
       expect(content).toContain('X-RateLimit-Limit');
       expect(content).toContain('X-RateLimit-Remaining');
     });

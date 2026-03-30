@@ -2,6 +2,11 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  RateLimiterRedis,
+  RateLimiterMemory,
+  type IRateLimiterStoreOptions,
+} from 'rate-limiter-flexible';
 import { getRateLimitConfig as getConfig, getCleanupIntervalMs, getRateLimitWindowMs } from '../config';
 import {
   RateLimitError,
@@ -23,237 +28,42 @@ export interface RateLimitResult {
 }
 
 /**
- * Lua script for atomic rate limiting with Redis
- * Uses Redis INCR for unique member generation instead of math.random()
- * This ensures thread-safety and atomicity across distributed deployments
+ * Rate limiter configuration factory
+ * Creates appropriate rate limiter based on Redis availability
  */
-const RATE_LIMIT_LUA_SCRIPT = `
-  local key = KEYS[1]
-  local limit = tonumber(ARGV[1])
-  local window = tonumber(ARGV[2])
-  local now = tonumber(ARGV[3])
-  local identifier = ARGV[4]
+function createRateLimiter(endpointType: string) {
+  const config = getRateLimitConfig(endpointType);
+  
+  // Common options for both Redis and Memory limiters
+  const commonOptions: IRateLimiterStoreOptions = {
+    points: config.maxRequests,
+    duration: Math.ceil(config.windowMs / 1000), // Convert to seconds
+    blockDuration: 0, // Don't block, just reject
+  };
 
-  -- Generate unique member using Redis INCR (atomic and distributed-safe)
-  local counterKey = key .. ':counter'
-  local memberId = redis.call('INCR', counterKey)
-  local member = identifier .. ':' .. memberId
-
-  -- Remove expired entries (older than window)
-  redis.call('ZREMRANGEBYSCORE', key, '-inf', now - window)
-
-  -- Set expiry on counter to auto-cleanup (window + buffer)
-  redis.call('EXPIRE', counterKey, math.ceil(window / 1000) + 120)
-
-  -- Count current requests in window
-  local count = redis.call('ZCARD', key)
-
-  if count < limit then
-    -- Add new request with current timestamp as score
-    redis.call('ZADD', key, now, member)
-    -- Set expiry slightly longer than window to auto-cleanup
-    redis.call('EXPIRE', key, math.ceil(window / 1000) + 60)
-    -- Return success with remaining count
-    return {1, limit - count - 1, now + window}
-  else
-    -- Get oldest entry to calculate reset time
-    local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
-    local resetAt = 0
-    if oldest and #oldest >= 2 then
-      resetAt = tonumber(oldest[2]) + window
-    else
-      resetAt = now + window
-    end
-    local retryAfter = math.max(1, math.ceil((resetAt - now) / 1000))
-    return {0, 0, resetAt, retryAfter}
-  end
-`;
-
-/**
- * Redis-based distributed rate limiting store
- * Provides consistent rate limiting across multiple server instances
- */
-class RedisRateLimitStore {
-  private useMemoryFallback = false;
-  private memoryFallback: MemoryRateLimitStore | null = null;
-
-  async check(key: string, config: RateLimitConfig): Promise<RateLimitResult> {
-    if (this.useMemoryFallback && this.memoryFallback) {
-      return this.memoryFallback.check(key, config);
-    }
-
+  // Try to use Redis first, fallback to memory
+  return async (key: string): Promise<{
+    limiter: RateLimiterRedis | RateLimiterMemory;
+    isRedis: boolean;
+  }> => {
     try {
       const client = await getRedisClient();
       
-      if (!client) {
-        this.useMemoryFallback = true;
-        this.memoryFallback = new MemoryRateLimitStore();
-        return this.memoryFallback.check(key, config);
-      }
-
-      const result = await client.eval(
-        RATE_LIMIT_LUA_SCRIPT,
-        {
-          keys: [`ratelimit:${key}`],
-          arguments: [config.maxRequests.toString(), config.windowMs.toString(), Date.now().toString(), key]
-        }
-      ) as [number, number, number, number?];
-
-      if (result[0] === 1) {
-        return {
-          success: true,
-          limit: config.maxRequests,
-          remaining: result[1],
-          resetAt: result[2],
-        };
-      } else {
-        return {
-          success: false,
-          limit: config.maxRequests,
-          remaining: 0,
-          resetAt: result[2],
-          retryAfter: result[3],
-        };
+      if (client) {
+        const redisLimiter = new RateLimiterRedis({
+          ...commonOptions,
+          storeClient: client,
+          keyPrefix: `rl:${endpointType}:`,
+        });
+        return { limiter: redisLimiter, isRedis: true };
       }
     } catch (error) {
-      console.error('Rate limit check failed:', error);
-      this.useMemoryFallback = true;
-      this.memoryFallback = new MemoryRateLimitStore();
-      return {
-        success: false,
-        limit: config.maxRequests,
-        remaining: 0,
-        resetAt: Date.now() + config.windowMs,
-        retryAfter: Math.ceil(config.windowMs / 1000),
-      };
-    }
-  }
-
-  async getSize(): Promise<number> {
-    if (this.useMemoryFallback && this.memoryFallback) {
-      return this.memoryFallback.getSize();
-    }
-    return 0;
-  }
-
-  cleanup(): void {
-    if (this.useMemoryFallback && this.memoryFallback) {
-      this.memoryFallback.cleanup();
-    }
-  }
-
-  async clear(): Promise<void> {
-    if (this.useMemoryFallback && this.memoryFallback) {
-      this.memoryFallback.clear();
-    }
-  }
-}
-
-/**
- * Memory-based fallback store for when Redis is unavailable
- * Provides basic rate limiting for single-instance deployments
- */
-class MemoryRateLimitStore {
-  private store: Map<string, number[]> = new Map();
-  private readonly MAX_ENTRIES = 10000;
-
-  /**
-   * Remove oldest entry when cache is full (LRU strategy)
-   */
-  private evictOldest(): void {
-    if (this.store.size >= this.MAX_ENTRIES) {
-      const firstKey = this.store.keys().next().value;
-      if (firstKey !== undefined) {
-        this.store.delete(firstKey);
-      }
-    }
-  }
-
-  /**
-   * Clean up expired entries to prevent memory leaks
-   */
-  cleanup(): void {
-    const now = Date.now();
-    const maxWindow = 3600000; // 1 hour max window
-    for (const [key, timestamps] of this.store.entries()) {
-      const filtered = timestamps.filter(t => now - t < maxWindow);
-      if (filtered.length === 0) {
-        this.store.delete(key);
-      } else {
-        this.store.set(key, filtered);
-      }
-    }
-  }
-
-  /**
-   * Check if request is within rate limit
-   */
-  check(key: string, config: RateLimitConfig): RateLimitResult {
-    const now = Date.now();
-    const windowStart = now - config.windowMs;
-
-    // LRU eviction: ensure we have room for new entries
-    if (!this.store.has(key) && this.store.size >= this.MAX_ENTRIES) {
-      this.evictOldest();
+      console.warn('Redis rate limiter failed, falling back to memory:', error);
     }
 
-    const timestamps = this.store.get(key) || [];
-    const windowTimestamps = timestamps.filter(t => t > windowStart);
-
-    if (windowTimestamps.length < config.maxRequests) {
-      windowTimestamps.push(now);
-      this.store.set(key, windowTimestamps);
-
-      return {
-        success: true,
-        limit: config.maxRequests,
-        remaining: config.maxRequests - windowTimestamps.length,
-        resetAt: now + config.windowMs,
-      };
-    }
-
-    const oldestTimestamp = windowTimestamps[0];
-    const retryAfter = Math.ceil((oldestTimestamp + config.windowMs - now) / 1000);
-
-    return {
-      success: false,
-      limit: config.maxRequests,
-      remaining: 0,
-      resetAt: oldestTimestamp + config.windowMs,
-      retryAfter,
-    };
-  }
-
-  getSize(): number {
-    return this.store.size;
-  }
-
-  clear(): void {
-    this.store.clear();
-  }
-}
-
-// Singleton store instance (Redis with memory fallback)
-const rateLimitStore = new RedisRateLimitStore();
-
-// Cleanup for memory fallback (Redis doesn't need periodic cleanup)
-if (typeof setInterval !== 'undefined') {
-  setInterval(async () => {
-    const size = await rateLimitStore.getSize();
-    if (size > 0) {
-      rateLimitStore.cleanup();
-    }
-  }, getCleanupIntervalMs());
-}
-
-/**
- * Get rate limit configuration for a specific endpoint type
- * Uses cached configuration from config module
- */
-function getRateLimitConfig(endpointType: string): RateLimitConfig {
-  return {
-    windowMs: getRateLimitWindowMs(),
-    maxRequests: getConfig(endpointType),
+    // Fallback to memory limiter
+    const memoryLimiter = new RateLimiterMemory(commonOptions);
+    return { limiter: memoryLimiter, isRedis: false };
   };
 }
 
@@ -316,18 +126,22 @@ function getEndpointType(request: NextRequest): string {
 /**
  * Create rate limit response headers
  */
-function createRateLimitHeaders(result: RateLimitResult): Record<string, string> {
+function createRateLimitHeaders(
+  points: number,
+  remainingPoints: number,
+  msBeforeNext: number
+): Record<string, string> {
   return {
-    'X-RateLimit-Limit': result.limit.toString(),
-    'X-RateLimit-Remaining': result.remaining.toString(),
-    'X-RateLimit-Reset': Math.ceil(result.resetAt / 1000).toString(),
-    ...(result.retryAfter && { 'Retry-After': result.retryAfter.toString() }),
+    'X-RateLimit-Limit': points.toString(),
+    'X-RateLimit-Remaining': Math.max(0, remainingPoints).toString(),
+    'X-RateLimit-Reset': Math.ceil((Date.now() + msBeforeNext) / 1000).toString(),
+    ...(msBeforeNext > 0 && { 'Retry-After': Math.ceil(msBeforeNext / 1000).toString() }),
   };
 }
 
 /**
  * Rate limit middleware function
- * Use this in your middleware or API routes
+ * Uses rate-limiter-flexible library for robust distributed rate limiting
  * 
  * @param request - Next.js request object
  * @param endpointType - Type of endpoint (default, publish, register, subscribe, revoke)
@@ -341,7 +155,50 @@ export async function rateLimit(
   const config = getRateLimitConfig(type);
   const clientIP = getClientIP(request);
   
-  return rateLimitStore.check(clientIP, config);
+  try {
+    const limiterFactory = createRateLimiter(type);
+    const { limiter, isRedis } = await limiterFactory(clientIP);
+    
+    const result = await limiter.consume(clientIP);
+    
+    return {
+      success: true,
+      limit: result.totalPoints,
+      remaining: result.remainingPoints,
+      resetAt: Date.now() + result.msBeforeNext,
+    };
+  } catch (error: any) {
+    if (error.remainingPoints !== undefined) {
+      // Rate limit exceeded - this is expected
+      return {
+        success: false,
+        limit: error.totalPoints || config.maxRequests,
+        remaining: 0,
+        resetAt: Date.now() + error.msBeforeNext,
+        retryAfter: Math.ceil(error.msBeforeNext / 1000),
+      };
+    }
+    
+    // Unexpected error - log and allow request (fail open)
+    console.error('Rate limiting error:', error);
+    return {
+      success: true,
+      limit: config.maxRequests,
+      remaining: config.maxRequests,
+      resetAt: Date.now() + config.windowMs,
+    };
+  }
+}
+
+/**
+ * Get rate limit configuration for a specific endpoint type
+ * Uses cached configuration from config module
+ */
+function getRateLimitConfig(endpointType: string): RateLimitConfig {
+  return {
+    windowMs: getRateLimitWindowMs(),
+    maxRequests: getConfig(endpointType),
+  };
 }
 
 /**
@@ -359,7 +216,11 @@ export function createRateLimitedResponse(
   const response = error.toNextResponse(context.requestId);
   
   // Add rate limit headers
-  for (const [key, value] of Object.entries(createRateLimitHeaders(result))) {
+  for (const [key, value] of Object.entries(createRateLimitHeaders(
+    result.limit,
+    result.remaining,
+    result.resetAt - Date.now()
+  ))) {
     response.headers.set(key, value);
   }
   
@@ -373,7 +234,11 @@ export function addRateLimitHeaders(
   response: NextResponse,
   result: RateLimitResult
 ): NextResponse {
-  for (const [key, value] of Object.entries(createRateLimitHeaders(result))) {
+  for (const [key, value] of Object.entries(createRateLimitHeaders(
+    result.limit,
+    result.remaining,
+    result.resetAt - Date.now()
+  ))) {
     response.headers.set(key, value);
   }
   return response;
