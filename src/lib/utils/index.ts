@@ -9,7 +9,7 @@ export {
   KEY_MANAGEMENT_CONFIG,
 } from './secure-compare';
 
-export { parseEnvInt, isValidUUID } from './env.utils';
+export { parseEnvInt } from './env.utils';
 
 // 统一错误处理 - 主要导出
 export {
@@ -83,7 +83,6 @@ export {
   
   // 函数
   validateApiKeyFormat,
-  isValidUUID,
   
   // Zod schemas
   channelIdSchema,
@@ -97,6 +96,7 @@ export {
   // 类型和工具
   type ValidationResult,
   validateData,
+  isValidUUID,
 } from './validation';
 
 // Export enums for centralized access

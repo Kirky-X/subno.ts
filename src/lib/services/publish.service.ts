@@ -3,7 +3,7 @@
 
 import { getDatabase } from '../../db';
 import { messages, auditLogs, type NewMessage } from '../../db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { auditService } from './audit.service';
 import { channelRepository } from '../repositories/channel.repository';
 import { getRedisClient } from '../utils/redis-client';

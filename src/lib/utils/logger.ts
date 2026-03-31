@@ -40,13 +40,13 @@ export const logger = pino({
   timestamp: () => `,"time":"${new Date().toISOString()}"`,
   // Enable error serialization
   formatters: {
-    level: (label) => ({ level: label.toUpperCase() }),
-    err: (err) => ({
+    level: (label: string) => ({ level: label.toUpperCase() }),
+    err: (err: Error) => ({
       message: err.message,
       stack: err.stack,
       name: err.name,
     }),
-  },
+  } as any,
 });
 
 /**

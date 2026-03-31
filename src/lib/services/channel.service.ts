@@ -67,7 +67,7 @@ function validateChannelType(type: string | undefined): { valid: boolean; normal
   }
 
   // Validate string value
-  if (isValidChannelType(type)) {
+  if (validateChannelType(type).valid) {
     return { valid: true, normalizedType: type as ChannelType };
   }
 

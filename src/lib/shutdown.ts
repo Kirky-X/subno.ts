@@ -7,7 +7,7 @@
  */
 
 import { closeDatabase } from '../db';
-import { closeRedisClient } from '../utils/redis-client';
+import { closeRedisClient } from './utils/redis-client';
 
 type ShutdownSignal = 'SIGTERM' | 'SIGINT' | 'SIGUSR2' | 'uncaughtException' | 'unhandledRejection';
 

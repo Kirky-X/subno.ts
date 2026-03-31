@@ -39,7 +39,7 @@ export interface CacheConfig<K, V> {
  * High-performance LRU cache wrapper with TTL support
  * Uses lru-cache library for optimal memory management
  */
-export class Cache<K, V> {
+export class Cache<K extends string | number, V> {
   private cache: LRUCache<K, CacheEntry<V>>;
   private hits = 0;
   private misses = 0;
@@ -217,6 +217,6 @@ export const rateLimitStateCache = new Cache<string, { count: number; windowStar
 /**
  * Create a custom cache instance
  */
-export function createCache<K, V>(config: CacheConfig<K, V>): Cache<K, V> {
+export function createCache<K extends string | number, V>(config: CacheConfig<K, V>): Cache<K, V> {
   return new Cache(config);
 }
