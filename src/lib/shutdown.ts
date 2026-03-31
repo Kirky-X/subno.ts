@@ -25,21 +25,21 @@ export function setupGracefulShutdown(): void {
 
   const shutdown = async (signal: ShutdownSignal) => {
     console.log(`Received ${signal}, starting graceful shutdown...`);
-    
+
     try {
       // Close database connections
       console.log('Closing database connections...');
       await closeDatabase();
       console.log('Database connections closed successfully');
-      
+
       // Close Redis connections
       console.log('Closing Redis connections...');
       await closeRedisClient();
       console.log('Redis connections closed successfully');
-      
+
       // Give some time for cleanup to complete
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       console.log('Graceful shutdown completed');
       process.exit(0);
     } catch (error) {
@@ -51,14 +51,14 @@ export function setupGracefulShutdown(): void {
   // Register shutdown handlers
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
-  
+
   // Handle uncaught exceptions
-  process.on('uncaughtException', async (error) => {
+  process.on('uncaughtException', async error => {
     console.error('Uncaught exception:', error);
     await shutdown('uncaughtException');
   });
-  
-  process.on('unhandledRejection', async (reason) => {
+
+  process.on('unhandledRejection', async reason => {
     console.error('Unhandled rejection:', reason);
     await shutdown('unhandledRejection');
   });

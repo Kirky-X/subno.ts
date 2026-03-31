@@ -4,4 +4,7 @@
 export { publicKeyRepository, PublicKeyRepository } from './public-key.repository';
 export { apiKeyRepository, ApiKeyRepository } from './api-key.repository';
 export { channelRepository, ChannelRepository } from './channel.repository';
-export { revocationConfirmationRepository, RevocationConfirmationRepository } from './revocation-confirmation.repository';
+export {
+  revocationConfirmationRepository,
+  RevocationConfirmationRepository,
+} from './revocation-confirmation.repository';

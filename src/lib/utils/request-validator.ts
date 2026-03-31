@@ -8,7 +8,7 @@ import { ValidationError, ErrorCode } from './error-handler';
 export async function validateRequestBody<T>(
   request: NextRequest,
   schema: z.ZodSchema<T>,
-  requestId: string
+  requestId: string,
 ): Promise<T> {
   let body: unknown;
 
@@ -24,14 +24,11 @@ export async function validateRequestBody<T>(
   const result = schema.safeParse(body);
   if (!result.success) {
     const firstError = result.error.errors[0];
-    throw new ValidationError(
-      firstError?.message || '参数验证失败',
-      {
-        code: ErrorCode.VALIDATION_ERROR,
-        details: { errors: result.error.errors },
-        requestId,
-      }
-    );
+    throw new ValidationError(firstError?.message || '参数验证失败', {
+      code: ErrorCode.VALIDATION_ERROR,
+      details: { errors: result.error.errors },
+      requestId,
+    });
   }
 
   return result.data;
@@ -40,7 +37,7 @@ export async function validateRequestBody<T>(
 export function validateRequiredString(
   value: unknown,
   fieldName: string,
-  requestId: string
+  requestId: string,
 ): string {
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new ValidationError(`${fieldName} 不能为空`, {
@@ -53,7 +50,7 @@ export function validateRequiredString(
 
 export function validateOptionalString(
   value: unknown,
-  maxLength: number = 1000
+  maxLength: number = 1000,
 ): string | undefined {
   if (value === undefined || value === null) {
     return undefined;

@@ -30,20 +30,20 @@ export const RedisClientManager = (() => {
     if (!redisUrl) return null;
 
     connectionPromise = (async () => {
-      const client = createClient({ 
+      const client = createClient({
         url: redisUrl,
         socket: {
-          reconnectStrategy: (retries) => Math.min(retries * 50, 5000),
+          reconnectStrategy: retries => Math.min(retries * 50, 5000),
           connectTimeout: 10000,
         },
       });
-      
-      client.on('error', (err) => {
+
+      client.on('error', err => {
         console.error('Redis client error:', err);
         redisClient = null;
         connectionPromise = null;
       });
-      
+
       await client.connect();
       redisClient = client;
     })();
@@ -66,20 +66,20 @@ export const RedisClientManager = (() => {
     if (!redisUrl) return null;
 
     subscriberConnectionPromise = (async () => {
-      const client = createClient({ 
+      const client = createClient({
         url: redisUrl,
         socket: {
-          reconnectStrategy: (retries) => Math.min(retries * 50, 5000),
+          reconnectStrategy: retries => Math.min(retries * 50, 5000),
           connectTimeout: 10000,
         },
       });
-      
-      client.on('error', (err) => {
+
+      client.on('error', err => {
         console.error('Redis subscriber error:', err);
         redisSubscriber = null;
         subscriberConnectionPromise = null;
       });
-      
+
       await client.connect();
       redisSubscriber = client;
     })();
@@ -93,21 +93,25 @@ export const RedisClientManager = (() => {
    */
   async function closeAll(): Promise<void> {
     const closePromises: Promise<void>[] = [];
-    
+
     if (redisClient) {
-      closePromises.push(redisClient.quit().then(() => {
-        redisClient = null;
-        connectionPromise = null;
-      }));
+      closePromises.push(
+        redisClient.quit().then(() => {
+          redisClient = null;
+          connectionPromise = null;
+        }),
+      );
     }
-    
+
     if (redisSubscriber) {
-      closePromises.push(redisSubscriber.quit().then(() => {
-        redisSubscriber = null;
-        subscriberConnectionPromise = null;
-      }));
+      closePromises.push(
+        redisSubscriber.quit().then(() => {
+          redisSubscriber = null;
+          subscriberConnectionPromise = null;
+        }),
+      );
     }
-    
+
     await Promise.all(closePromises);
   }
 

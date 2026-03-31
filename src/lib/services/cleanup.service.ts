@@ -50,9 +50,11 @@ export class CleanupService {
       'cron-secret',
       'secret',
     ];
-    if (defaultSecrets.some(defaultSecret => 
-      cronSecret.toLowerCase().includes(defaultSecret.toLowerCase())
-    )) {
+    if (
+      defaultSecrets.some(defaultSecret =>
+        cronSecret.toLowerCase().includes(defaultSecret.toLowerCase()),
+      )
+    ) {
       return { valid: false, error: 'CRON_SECRET cannot be a default/placeholder value' };
     }
 
@@ -61,8 +63,9 @@ export class CleanupService {
       return { valid: false, error: 'CRON_SECRET must be at least 32 characters long' };
     }
 
-    const requestSecret = request.headers.get('X-Cron-Secret') ||
-                          request.headers.get('Authorization')?.replace('Bearer ', '');
+    const requestSecret =
+      request.headers.get('X-Cron-Secret') ||
+      request.headers.get('Authorization')?.replace('Bearer ', '');
 
     if (!requestSecret) {
       return { valid: false, error: 'Cron secret required' };
@@ -78,7 +81,7 @@ export class CleanupService {
 
   private async batchProcess<T>(
     items: T[],
-    processor: (batch: T[]) => Promise<void>
+    processor: (batch: T[]) => Promise<void>,
   ): Promise<void> {
     const batchSize = KEY_MANAGEMENT_CONFIG.BATCH_SIZE;
     for (let i = 0; i < items.length; i += batchSize) {
@@ -93,10 +96,12 @@ export class CleanupService {
       const expiredConfirmations = await this.db
         .select({ id: revocationConfirmations.id })
         .from(revocationConfirmations)
-        .where(and(
-          eq(revocationConfirmations.status, 'pending'),
-          lt(revocationConfirmations.expiresAt, new Date())
-        ));
+        .where(
+          and(
+            eq(revocationConfirmations.status, 'pending'),
+            lt(revocationConfirmations.expiresAt, new Date()),
+          ),
+        );
 
       // Type is inferred as { id: string }[] from Drizzle
 
@@ -105,7 +110,7 @@ export class CleanupService {
       }
 
       // Batch update all expired confirmations
-      const ids = expiredConfirmations.map((c) => c.id);
+      const ids = expiredConfirmations.map(c => c.id);
       await this.db
         .update(revocationConfirmations)
         .set({ status: 'expired' })
@@ -130,11 +135,13 @@ export class CleanupService {
       const keysToDelete = await this.db
         .select({ id: publicKeys.id })
         .from(publicKeys)
-        .where(and(
-          eq(publicKeys.isDeleted, true),
-          sql`${publicKeys.revokedAt} IS NOT NULL`,
-          lt(publicKeys.revokedAt!, cutoffDate)
-        ));
+        .where(
+          and(
+            eq(publicKeys.isDeleted, true),
+            sql`${publicKeys.revokedAt} IS NOT NULL`,
+            lt(publicKeys.revokedAt!, cutoffDate),
+          ),
+        );
 
       // Type is inferred as { id: string }[] from Drizzle
       if (keysToDelete.length === 0) {
@@ -142,11 +149,9 @@ export class CleanupService {
       }
 
       let totalDeleted = 0;
-      await this.batchProcess(keysToDelete, async (batch) => {
+      await this.batchProcess(keysToDelete, async batch => {
         const batchIds = batch.map(k => k.id);
-        await this.db
-          .delete(publicKeys)
-          .where(inArray(publicKeys.id, batchIds));
+        await this.db.delete(publicKeys).where(inArray(publicKeys.id, batchIds));
         totalDeleted += batchIds.length;
       });
 
@@ -196,11 +201,13 @@ export class CleanupService {
     const [revocableKeys] = await this.db
       .select({ count: sql<number>`count(*)` })
       .from(publicKeys)
-      .where(and(
-        eq(publicKeys.isDeleted, true),
-        sql`${publicKeys.revokedAt} IS NOT NULL`,
-        lt(publicKeys.revokedAt!, cutoffDate)
-      ));
+      .where(
+        and(
+          eq(publicKeys.isDeleted, true),
+          sql`${publicKeys.revokedAt} IS NOT NULL`,
+          lt(publicKeys.revokedAt!, cutoffDate),
+        ),
+      );
 
     return {
       pendingConfirmations: Number(pendingConfirmations?.count || 0),

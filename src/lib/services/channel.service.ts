@@ -54,9 +54,13 @@ const MAX_EXPIRATION_SECONDS = 30 * 24 * 60 * 60;
 /**
  * Validate and normalize channel type
  */
-function validateChannelType(type: string | undefined): { valid: boolean; normalizedType: ChannelType; error?: string } {
+function validateChannelType(type: string | undefined): {
+  valid: boolean;
+  normalizedType: ChannelType;
+  error?: string;
+} {
   const defaultType = ChannelType.PUBLIC;
-  
+
   if (!type) {
     return { valid: true, normalizedType: defaultType };
   }
@@ -71,18 +75,21 @@ function validateChannelType(type: string | undefined): { valid: boolean; normal
     return { valid: true, normalizedType: type as ChannelType };
   }
 
-  return { 
-    valid: false, 
-    normalizedType: defaultType, 
-    error: `Invalid channel type. Must be one of: ${Object.values(ChannelType).join(', ')}` 
+  return {
+    valid: false,
+    normalizedType: defaultType,
+    error: `Invalid channel type. Must be one of: ${Object.values(ChannelType).join(', ')}`,
   };
 }
 
 export class ChannelService {
-  async create(request: CreateChannelRequest, context?: {
-    ip?: string;
-    userAgent?: string;
-  }): Promise<CreateChannelResult> {
+  async create(
+    request: CreateChannelRequest,
+    context?: {
+      ip?: string;
+      userAgent?: string;
+    },
+  ): Promise<CreateChannelResult> {
     // Validate and normalize channel type using enum
     const typeValidation = validateChannelType(request.type);
     if (!typeValidation.valid) {
@@ -92,7 +99,7 @@ export class ChannelService {
         code: 'INVALID_CHANNEL_TYPE',
       };
     }
-    
+
     const type = typeValidation.normalizedType;
     const channelId = request.id || this.generateChannelId(type);
     const name = request.name || `Channel ${channelId}`;
@@ -199,13 +206,15 @@ export class ChannelService {
 
         return {
           success: true,
-          data: [{
-            id: channel.id,
-            name: channel.name,
-            type: channel.type,
-            createdAt: channel.createdAt.toISOString(),
-            isActive: channel.isActive,
-          }],
+          data: [
+            {
+              id: channel.id,
+              name: channel.name,
+              type: channel.type,
+              createdAt: channel.createdAt.toISOString(),
+              isActive: channel.isActive,
+            },
+          ],
           pagination: {
             total: 1,
             limit,
@@ -223,7 +232,7 @@ export class ChannelService {
         const result = await channelRepository.findByCreatorWithPagination(
           options.creator,
           limit,
-          offset
+          offset,
         );
         channels = result.channels;
         total = result.total;
@@ -232,7 +241,7 @@ export class ChannelService {
         const result = await channelRepository.findActiveWithPagination(
           limit,
           offset,
-          options?.type
+          options?.type,
         );
         channels = result.channels;
         total = result.total;
@@ -264,8 +273,7 @@ export class ChannelService {
   }
 
   private generateChannelId(type: string): string {
-    const prefix = type === 'encrypted' ? 'enc_' : 
-                   type === 'temporary' ? 'tmp_' : 'pub_';
+    const prefix = type === 'encrypted' ? 'enc_' : type === 'temporary' ? 'tmp_' : 'pub_';
     const randomBytes = crypto.randomUUID().split('-')[0];
     return `${prefix}${randomBytes}`;
   }

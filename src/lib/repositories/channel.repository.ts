@@ -12,11 +12,7 @@ export class ChannelRepository {
    * Find channel by ID
    */
   async findById(id: string): Promise<Channel | null> {
-    const result = await this.db
-      .select()
-      .from(channels)
-      .where(eq(channels.id, id))
-      .limit(1);
+    const result = await this.db.select().from(channels).where(eq(channels.id, id)).limit(1);
     return result[0] ?? null;
   }
 
@@ -24,11 +20,7 @@ export class ChannelRepository {
    * Find channel by name
    */
   async findByName(name: string): Promise<Channel | null> {
-    const result = await this.db
-      .select()
-      .from(channels)
-      .where(eq(channels.name, name))
-      .limit(1);
+    const result = await this.db.select().from(channels).where(eq(channels.name, name)).limit(1);
     return result[0] ?? null;
   }
 
@@ -50,7 +42,7 @@ export class ChannelRepository {
   async findByCreatorWithPagination(
     creator: string,
     limit: number,
-    offset: number
+    offset: number,
   ): Promise<{ channels: Channel[]; total: number }> {
     const [channelData, countResult] = await Promise.all([
       this.db
@@ -63,7 +55,7 @@ export class ChannelRepository {
       this.db
         .select({ count: count() })
         .from(channels)
-        .where(and(eq(channels.creator, creator), eq(channels.isActive, true)))
+        .where(and(eq(channels.creator, creator), eq(channels.isActive, true))),
     ]);
 
     return {
@@ -91,7 +83,7 @@ export class ChannelRepository {
   async findActiveWithPagination(
     limit: number,
     offset: number,
-    type?: string
+    type?: string,
   ): Promise<{ channels: Channel[]; total: number }> {
     const conditions = [eq(channels.isActive, true)];
     if (type) {
@@ -109,7 +101,7 @@ export class ChannelRepository {
       this.db
         .select({ count: count() })
         .from(channels)
-        .where(and(...conditions))
+        .where(and(...conditions)),
     ]);
 
     return {
@@ -156,13 +148,9 @@ export class ChannelRepository {
       type: string;
       metadata: Record<string, unknown>;
       isActive: boolean;
-    }>
+    }>,
   ): Promise<Channel | null> {
-    const result = await this.db
-      .update(channels)
-      .set(data)
-      .where(eq(channels.id, id))
-      .returning();
+    const result = await this.db.update(channels).set(data).where(eq(channels.id, id)).returning();
     return result[0] ?? null;
   }
 
@@ -173,10 +161,7 @@ export class ChannelRepository {
     const result = await this.db
       .update(channels)
       .set({ isActive: false })
-      .where(and(
-        eq(channels.id, id),
-        eq(channels.isActive, true)
-      ))
+      .where(and(eq(channels.id, id), eq(channels.isActive, true)))
       .returning();
     return result[0] ?? null;
   }
@@ -196,10 +181,10 @@ export class ChannelRepository {
   async verifyAccess(
     channelId: string,
     userId: string,
-    requireCreator = true
+    requireCreator = true,
   ): Promise<{ hasAccess: boolean; channel?: Channel; error?: string }> {
     const channel = await this.findById(channelId);
-    
+
     if (!channel) {
       return { hasAccess: false, error: 'Channel not found' };
     }

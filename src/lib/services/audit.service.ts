@@ -38,11 +38,22 @@ export type AuditAction =
 const AUDIT_ACTIONS_TO_KEEP = ['key_revoke_confirmed', 'auth_failure'] as const;
 
 // Sensitive keys that should be redacted in logs
-const SENSITIVE_KEYS = ['password', 'secret', 'token', 'key', 'credential', 'auth', 'api_key', 'private', 'hash', 'signature'];
+const SENSITIVE_KEYS = [
+  'password',
+  'secret',
+  'token',
+  'key',
+  'credential',
+  'auth',
+  'api_key',
+  'private',
+  'hash',
+  'signature',
+];
 
 // Audit log configuration constants
-const AUDIT_ERROR_MAX_LENGTH = 500;  // Maximum length for error messages in audit logs
-const AUDIT_TOKEN_PATTERN_LENGTH = 20;  // Minimum length for token pattern detection
+const AUDIT_ERROR_MAX_LENGTH = 500; // Maximum length for error messages in audit logs
+const AUDIT_TOKEN_PATTERN_LENGTH = 20; // Minimum length for token pattern detection
 
 export interface CreateAuditLog {
   action: AuditAction;
@@ -74,13 +85,13 @@ export interface AuditLogQuery {
  */
 function sanitizeMetadata(metadata?: Record<string, unknown>): Record<string, unknown> | undefined {
   if (!metadata) return undefined;
-  
+
   const sanitized: Record<string, unknown> = {};
-  
+
   for (const [key, value] of Object.entries(metadata)) {
     // Check if key contains sensitive patterns
     const isSensitive = SENSITIVE_KEYS.some(sk => key.toLowerCase().includes(sk));
-    
+
     if (isSensitive) {
       sanitized[key] = '[REDACTED]';
     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
@@ -90,7 +101,7 @@ function sanitizeMetadata(metadata?: Record<string, unknown>): Record<string, un
       sanitized[key] = value;
     }
   }
-  
+
   return sanitized;
 }
 
@@ -99,17 +110,17 @@ function sanitizeMetadata(metadata?: Record<string, unknown>): Record<string, un
  */
 function sanitizeError(error?: string): string | undefined {
   if (!error) return undefined;
-  
+
   // Truncate to prevent log bloat
   let sanitized = error.substring(0, AUDIT_ERROR_MAX_LENGTH);
-  
+
   // Remove potential token patterns (alphanumeric strings of 20+ chars)
   const tokenPattern = new RegExp(`[A-Za-z0-9+/]{${AUDIT_TOKEN_PATTERN_LENGTH},}={0,2}`, 'g');
   sanitized = sanitized.replace(tokenPattern, '[TOKEN_REDACTED]');
-  
+
   // Remove potential key hashes
   sanitized = sanitized.replace(/key_hash:[^\s]+/g, 'key_hash:[REDACTED]');
-  
+
   return sanitized;
 }
 
@@ -135,7 +146,7 @@ export class AuditService {
     // Sanitize sensitive data before logging
     const sanitizedMetadata = sanitizeMetadata(data.metadata);
     const sanitizedError = sanitizeError(data.error);
-    
+
     const result = await this.db
       .insert(auditLogs)
       .values({
@@ -161,7 +172,7 @@ export class AuditService {
     userId: string,
     ip: string | undefined,
     userAgent: string | undefined,
-    reason: string
+    reason: string,
   ): Promise<AuditLog> {
     return this.log({
       action: 'key_revoke_request',
@@ -180,7 +191,7 @@ export class AuditService {
     channelId: string | undefined,
     userId: string,
     ip: string | undefined,
-    snapshot: Record<string, unknown>
+    snapshot: Record<string, unknown>,
   ): Promise<AuditLog> {
     return this.log({
       action: 'key_revoke_confirmed',
@@ -196,7 +207,7 @@ export class AuditService {
   async logKeyRevokeCancelled(
     keyId: string,
     userId: string,
-    ip: string | undefined
+    ip: string | undefined,
   ): Promise<AuditLog> {
     return this.log({
       action: 'key_revoke_cancelled',
@@ -211,7 +222,7 @@ export class AuditService {
     action: string,
     ip: string | undefined,
     userAgent: string | undefined,
-    keyId?: string
+    keyId?: string,
   ): Promise<AuditLog> {
     return this.log({
       action: 'auth_failure',
@@ -224,17 +235,13 @@ export class AuditService {
   }
 
   async findById(id: string): Promise<AuditLog | null> {
-    const result = await this.db
-      .select()
-      .from(auditLogs)
-      .where(eq(auditLogs.id, id))
-      .limit(1);
+    const result = await this.db.select().from(auditLogs).where(eq(auditLogs.id, id)).limit(1);
     return result[0] || null;
   }
 
   async find(query: AuditLogQuery): Promise<AuditLog[]> {
     const conditions = [];
-    
+
     if (query.action) {
       conditions.push(eq(auditLogs.action, query.action));
     }
@@ -299,10 +306,7 @@ export class AuditService {
       metadata: sanitizeMetadata(data.metadata) || {},
     }));
 
-    const result = await this.db
-      .insert(auditLogs)
-      .values(values)
-      .returning();
+    const result = await this.db.insert(auditLogs).values(values).returning();
 
     return result;
   }
@@ -313,11 +317,13 @@ export class AuditService {
 
     const result = await this.db
       .delete(auditLogs)
-      .where(and(
-        eq(auditLogs.success, true),
-        sql`${auditLogs.action} NOT IN (${AUDIT_ACTIONS_TO_KEEP})`,
-        lt(auditLogs.createdAt, cutoffDate)
-      ));
+      .where(
+        and(
+          eq(auditLogs.success, true),
+          sql`${auditLogs.action} NOT IN (${AUDIT_ACTIONS_TO_KEEP})`,
+          lt(auditLogs.createdAt, cutoffDate),
+        ),
+      );
 
     const rowCount = (result as { rowCount?: number | null }).rowCount ?? 0;
     return rowCount;

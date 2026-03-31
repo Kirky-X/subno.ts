@@ -7,16 +7,16 @@
 export enum RateLimitEndpointType {
   /** 默认类型 */
   DEFAULT = 'default',
-  
+
   /** 发布端点 */
   PUBLISH = 'publish',
-  
+
   /** 注册端点 */
   REGISTER = 'register',
-  
+
   /** 订阅端点 */
   SUBSCRIBE = 'subscribe',
-  
+
   /** 撤销端点 */
   REVOKE = 'revoke',
 }

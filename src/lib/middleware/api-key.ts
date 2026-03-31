@@ -11,7 +11,12 @@ import {
   extractRequestContext,
 } from '../utils/error-handler';
 import { apiKeyCache } from '../utils/cache';
-import { ApiKeyPermission, hasPermission, hasAnyPermission, hasAllPermissions } from '../enums/permission.enums';
+import {
+  ApiKeyPermission,
+  hasPermission,
+  hasAnyPermission,
+  hasAllPermissions,
+} from '../enums/permission.enums';
 
 /**
  * API Key validation configuration constants
@@ -52,7 +57,11 @@ export interface ApiKeyValidationResult {
  * Validate API key format
  * SECURITY: Ensures API key meets minimum security requirements
  */
-function validateApiKeyFormat(apiKey: string): { valid: boolean; error?: string; code?: ErrorCode } {
+function validateApiKeyFormat(apiKey: string): {
+  valid: boolean;
+  error?: string;
+  code?: ErrorCode;
+} {
   // Check minimum length
   if (apiKey.length < API_KEY_CONFIG.MIN_LENGTH) {
     return {
@@ -97,7 +106,7 @@ function hashApiKey(apiKey: string): string {
  */
 export async function validateApiKey(request: NextRequest): Promise<ApiKeyValidationResult> {
   const apiKey = request.headers.get('X-API-Key');
-  
+
   if (!apiKey) {
     return {
       valid: false,
@@ -120,7 +129,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
     // Hash the provided API key for lookup
     // This ensures plaintext keys are never logged or stored
     const keyHash = hashApiKey(apiKey);
-    
+
     // Check cache first for better performance
     const cached = apiKeyCache.get(keyHash);
     if (cached) {
@@ -138,10 +147,10 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
         permissions: cached.permissions,
       };
     }
-    
+
     // Cache miss - query database
     const key = await apiKeyRepository.findByKeyHash(keyHash);
-    
+
     if (!key) {
       // Cache negative result for 1 minute to prevent brute force
       apiKeyCache.set(keyHash, { userId: '', permissions: [], isValid: false }, 60 * 1000);
@@ -213,28 +222,25 @@ export function createApiKeyValidator(requiredPermissions?: string[]) {
   return async function validate(request: NextRequest): Promise<NextResponse | null> {
     const context = extractRequestContext(request);
     const result = await validateApiKey(request);
-    
+
     if (!result.valid) {
-      const error = new AuthenticationError(
-        result.error || '认证失败',
-        {
-          code: result.code || ErrorCode.AUTH_FAILED,
-          requestId: context.requestId,
-        }
-      );
+      const error = new AuthenticationError(result.error || '认证失败', {
+        code: result.code || ErrorCode.AUTH_FAILED,
+        requestId: context.requestId,
+      });
       return error.toNextResponse(context.requestId);
     }
 
     // Check required permissions using enum-based validation
     if (requiredPermissions && requiredPermissions.length > 0) {
       const keyPermissions = result.permissions || [];
-      
+
       // Convert string permissions to enum and check
       const hasPermissionCheck = hasAllPermissions(
         keyPermissions as ApiKeyPermission[],
-        requiredPermissions as ApiKeyPermission[]
+        requiredPermissions as ApiKeyPermission[],
       );
-      
+
       if (!hasPermissionCheck) {
         const error = new AuthorizationError('权限不足', {
           code: ErrorCode.INSUFFICIENT_PERMISSIONS,
@@ -260,7 +266,7 @@ export function createApiKeyValidator(requiredPermissions?: string[]) {
 /**
  * Require API key middleware
  * Use this to protect API routes that require authentication
- * 
+ *
  * @example
  * ```typescript
  * export async function GET(request: NextRequest) {
@@ -276,7 +282,7 @@ export async function requireApiKey(request: NextRequest): Promise<NextResponse 
 
 /**
  * Require API key with specific permissions
- * 
+ *
  * @param permissions - Array of required ApiKeyPermission enum values
  * @example
  * ```typescript
@@ -285,7 +291,7 @@ export async function requireApiKey(request: NextRequest): Promise<NextResponse 
  */
 export async function requireApiKeyWithPermissions(
   request: NextRequest,
-  permissions: ApiKeyPermission[]
+  permissions: ApiKeyPermission[],
 ): Promise<NextResponse | null> {
   return createApiKeyValidator(permissions as unknown as string[])(request);
 }
@@ -293,7 +299,7 @@ export async function requireApiKeyWithPermissions(
 /**
  * Get API key info from request
  * Returns the validated API key information without returning an error response
- * 
+ *
  * @param request - The Next.js request object
  * @returns API key info if valid, null otherwise
  */
@@ -303,11 +309,11 @@ export async function getApiKeyInfo(request: NextRequest): Promise<{
   permissions: string[];
 } | null> {
   const result = await validateApiKey(request);
-  
+
   if (!result.valid) {
     return null;
   }
-  
+
   return {
     keyId: result.keyId!,
     userId: result.userId!,

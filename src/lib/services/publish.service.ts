@@ -61,11 +61,14 @@ const MAX_MESSAGE_SIZE = 1024 * 1024; // 1MB
 export class PublishService {
   private db = getDatabase();
 
-  async publish(request: PublishRequest, context?: {
-    ip?: string;
-    userAgent?: string;
-    userId?: string;
-  }): Promise<PublishResult> {
+  async publish(
+    request: PublishRequest,
+    context?: {
+      ip?: string;
+      userAgent?: string;
+      userId?: string;
+    },
+  ): Promise<PublishResult> {
     if (!request.channel) {
       return {
         success: false,
@@ -139,7 +142,7 @@ export class PublishService {
 
     try {
       // 使用数据库事务确保数据一致性
-      await this.db.transaction(async (tx) => {
+      await this.db.transaction(async tx => {
         // 1. 插入消息到数据库
         await tx.insert(messages).values(newMessage);
 

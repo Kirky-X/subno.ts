@@ -70,7 +70,7 @@ yarn-error.log*
 # Docker
 docker-compose.override.yml
 
-# Git hooks (Husky)
-.husky/
+# Git hooks (Husky) - 保留 husky.sh 但忽略其他临时文件
+.husky/_/
 .vercel
 .env*.local

@@ -35,7 +35,7 @@ export class RevocationConfirmationRepository {
         (err, derivedKey) => {
           if (err) reject(err);
           resolve(salt + ':' + derivedKey.toString('hex'));
-        }
+        },
       );
     });
   }
@@ -71,12 +71,9 @@ export class RevocationConfirmationRepository {
   }
 
   private calculateExpiryDate(expiresInHours?: number): Date {
-    const minHours = 1;  // Minimum 1 hour
-    const maxHours = 24 * 365;  // Maximum 1 year
-    const validatedHours = Math.min(
-      Math.max(expiresInHours || 24, minHours),
-      maxHours
-    );
+    const minHours = 1; // Minimum 1 hour
+    const maxHours = 24 * 365; // Maximum 1 year
+    const validatedHours = Math.min(Math.max(expiresInHours || 24, minHours), maxHours);
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + validatedHours);
     return expiresAt;
@@ -135,10 +132,12 @@ export class RevocationConfirmationRepository {
     const result = await this.db
       .select()
       .from(revocationConfirmations)
-      .where(and(
-        eq(revocationConfirmations.keyId, keyId),
-        eq(revocationConfirmations.status, 'pending')
-      ))
+      .where(
+        and(
+          eq(revocationConfirmations.keyId, keyId),
+          eq(revocationConfirmations.status, 'pending'),
+        ),
+      )
       .orderBy(desc(revocationConfirmations.createdAt))
       .limit(1);
     return result[0] ?? null;
@@ -146,7 +145,7 @@ export class RevocationConfirmationRepository {
 
   async verifyConfirmationCode(
     id: string,
-    code: string
+    code: string,
   ): Promise<{ valid: boolean; confirmation: RevocationConfirmation | null; isLocked: boolean }> {
     const confirmation = await this.findById(id);
     if (!confirmation) {
@@ -184,7 +183,7 @@ export class RevocationConfirmationRepository {
   async updateStatus(
     id: string,
     status: 'pending' | 'confirmed' | 'cancelled' | 'expired',
-    confirmedBy?: string
+    confirmedBy?: string,
   ): Promise<RevocationConfirmation | null> {
     const updates: Record<string, unknown> = { status };
 
@@ -205,10 +204,12 @@ export class RevocationConfirmationRepository {
     const result = await this.db
       .select()
       .from(revocationConfirmations)
-      .where(and(
-        eq(revocationConfirmations.status, 'pending'),
-        lt(revocationConfirmations.expiresAt, new Date())
-      ));
+      .where(
+        and(
+          eq(revocationConfirmations.status, 'pending'),
+          lt(revocationConfirmations.expiresAt, new Date()),
+        ),
+      );
     return result;
   }
 

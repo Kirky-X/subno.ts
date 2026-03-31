@@ -68,7 +68,7 @@ export class Cache<K extends string | number, V> {
    */
   get(key: K): V | undefined {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       this.misses++;
       return undefined;
@@ -191,19 +191,28 @@ export class Cache<K extends string | number, V> {
  */
 
 // API Key validation cache (frequently accessed)
-export const apiKeyCache = new Cache<string, { userId: string; permissions: string[]; isValid: boolean }>({
+export const apiKeyCache = new Cache<
+  string,
+  { userId: string; permissions: string[]; isValid: boolean }
+>({
   max: 5000,
   ttl: 5 * 60 * 1000, // 5 minutes
 });
 
 // Channel lookup cache (moderately accessed)
-export const channelCache = new Cache<string, { id: string; name: string; type: string; creator?: string }>({
+export const channelCache = new Cache<
+  string,
+  { id: string; name: string; type: string; creator?: string }
+>({
   max: 2000,
   ttl: 10 * 60 * 1000, // 10 minutes
 });
 
 // Public key cache (security-sensitive, shorter TTL)
-export const publicKeyCache = new Cache<string, { id: string; channelId: string; algorithm: string; expiresAt?: Date }>({
+export const publicKeyCache = new Cache<
+  string,
+  { id: string; channelId: string; algorithm: string; expiresAt?: Date }
+>({
   max: 3000,
   ttl: 2 * 60 * 1000, // 2 minutes
 });

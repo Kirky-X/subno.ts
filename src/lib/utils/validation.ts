@@ -69,17 +69,22 @@ export function isValidUUID(value: string): boolean {
 /**
  * Channel ID validation schema
  */
-export const channelIdSchema = z.string()
+export const channelIdSchema = z
+  .string()
   .min(1, 'Channel ID cannot be empty')
   .max(100, 'Channel ID is too long')
-  .regex(/^[a-zA-Z0-9-_]+$/, 'Channel ID can only contain alphanumeric characters, hyphens, and underscores');
+  .regex(
+    /^[a-zA-Z0-9-_]+$/,
+    'Channel ID can only contain alphanumeric characters, hyphens, and underscores',
+  );
 
 /**
  * Message validation schema
  */
 export const messageSchema = z.object({
   /** Message content */
-  content: z.string()
+  content: z
+    .string()
     .min(1, 'Message cannot be empty')
     .max(10000, 'Message is too long (max 10000 characters)'),
   /** Optional sender identifier */
@@ -95,9 +100,7 @@ export const messageSchema = z.object({
  */
 export const publicKeyRegistrationSchema = z.object({
   /** PEM formatted public key */
-  publicKey: z.string()
-    .min(1, 'Public key cannot be empty')
-    .max(10000, 'Public key is too long'),
+  publicKey: z.string().min(1, 'Public key cannot be empty').max(10000, 'Public key is too long'),
   /** Encryption algorithm */
   algorithm: z.enum(['RSA-2048', 'RSA-4096', 'ECC-SECP256K1']),
   /** Optional expiry in seconds */
@@ -111,9 +114,7 @@ export const publicKeyRegistrationSchema = z.object({
  */
 export const channelCreationSchema = z.object({
   /** Channel name */
-  name: z.string()
-    .min(1, 'Channel name cannot be empty')
-    .max(100, 'Channel name is too long'),
+  name: z.string().min(1, 'Channel name cannot be empty').max(100, 'Channel name is too long'),
   /** Channel description */
   description: z.string().max(500).optional(),
   /** Channel type */
@@ -137,9 +138,7 @@ export const paginationSchema = z.object({
  */
 export const apiKeyCreationSchema = z.object({
   /** Name for the API key */
-  name: z.string()
-    .min(1, 'Name cannot be empty')
-    .max(100, 'Name is too long'),
+  name: z.string().min(1, 'Name cannot be empty').max(100, 'Name is too long'),
   /** User ID associated with the key */
   userId: z.string().min(1, 'User ID cannot be empty'),
   /** Permission list */
@@ -153,7 +152,8 @@ export const apiKeyCreationSchema = z.object({
  */
 export const keyRevocationSchema = z.object({
   /** Reason for revocation */
-  reason: z.string()
+  reason: z
+    .string()
     .min(10, 'Revocation reason must be at least 10 characters')
     .max(1000, 'Revocation reason is too long'),
   /** Confirmation timeout in hours */
@@ -163,14 +163,16 @@ export const keyRevocationSchema = z.object({
 /**
  * Validation result type
  */
-export type ValidationResult<T> = {
-  success: true;
-  data: T;
-} | {
-  success: false;
-  error: string;
-  code: string;
-};
+export type ValidationResult<T> =
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      error: string;
+      code: string;
+    };
 
 /**
  * Validate data against a schema
@@ -178,14 +180,14 @@ export type ValidationResult<T> = {
 export function validateData<T>(
   data: unknown,
   schema: z.ZodSchema<T>,
-  errorCode: string = 'VALIDATION_ERROR'
+  errorCode: string = 'VALIDATION_ERROR',
 ): ValidationResult<T> {
   const result = schema.safeParse(data);
-  
+
   if (result.success) {
     return { success: true, data: result.data };
   }
-  
+
   const firstError = result.error.errors[0];
   return {
     success: false,

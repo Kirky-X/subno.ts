@@ -79,10 +79,13 @@ export class RegisterService {
     return `enc_${randomBytes.toString('hex')}`;
   }
 
-  async register(request: RegisterRequest, context?: {
-    ip?: string;
-    userAgent?: string;
-  }): Promise<RegisterResult> {
+  async register(
+    request: RegisterRequest,
+    context?: {
+      ip?: string;
+      userAgent?: string;
+    },
+  ): Promise<RegisterResult> {
     const algorithm = request.algorithm || 'RSA-2048';
 
     if (!this.validatePublicKey(request.publicKey, algorithm)) {
@@ -127,10 +130,7 @@ export class RegisterService {
         expiresAt,
       };
 
-      const result = await this.db
-        .insert(publicKeys)
-        .values(newKey)
-        .returning();
+      const result = await this.db.insert(publicKeys).values(newKey).returning();
 
       const createdKey = result[0];
 
@@ -178,10 +178,7 @@ export class RegisterService {
       const result = await this.db
         .select()
         .from(publicKeys)
-        .where(and(
-          eq(publicKeys.channelId, channelId),
-          eq(publicKeys.isDeleted, false)
-        ))
+        .where(and(eq(publicKeys.channelId, channelId), eq(publicKeys.isDeleted, false)))
         .limit(1);
 
       if (result.length === 0) {
@@ -221,10 +218,7 @@ export class RegisterService {
       const result = await this.db
         .select()
         .from(publicKeys)
-        .where(and(
-          eq(publicKeys.id, keyId),
-          eq(publicKeys.isDeleted, false)
-        ))
+        .where(and(eq(publicKeys.id, keyId), eq(publicKeys.isDeleted, false)))
         .limit(1);
 
       if (result.length === 0) {

@@ -15,7 +15,7 @@ export const SENSITIVE_HEADERS = [
   'cookie',
   'set-cookie',
   'proxy-authorization',
-  'x-forwarded-for',  // May contain IPs
+  'x-forwarded-for', // May contain IPs
   'x-real-ip',
 ] as const;
 
@@ -24,8 +24,8 @@ export const SENSITIVE_HEADERS = [
  */
 export function isSensitiveHeader(headerName: string): boolean {
   const lowerHeader = headerName.toLowerCase();
-  return SENSITIVE_HEADERS.some(sensitive => 
-    lowerHeader === sensitive || lowerHeader.includes(sensitive)
+  return SENSITIVE_HEADERS.some(
+    sensitive => lowerHeader === sensitive || lowerHeader.includes(sensitive),
   );
 }
 
@@ -46,11 +46,11 @@ export function sanitizeHeaderValue(headerName: string, value: string): string {
  */
 export function sanitizeHeaders(headers: Headers): Headers {
   const sanitized = new Headers();
-  
+
   for (const [key, value] of headers.entries()) {
     sanitized.set(key, sanitizeHeaderValue(key, value));
   }
-  
+
   return sanitized;
 }
 
@@ -60,11 +60,11 @@ export function sanitizeHeaders(headers: Headers): Headers {
  */
 export function sanitizeHeadersForLog(headers: Headers): Record<string, string> {
   const sanitized: Record<string, string> = {};
-  
+
   for (const [key, value] of headers.entries()) {
     sanitized[key] = sanitizeHeaderValue(key, value);
   }
-  
+
   return sanitized;
 }
 

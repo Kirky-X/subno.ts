@@ -39,7 +39,7 @@ export function createError(
   code: string,
   severity: ErrorSeverity = 'medium',
   originalError?: unknown,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
 ): AppError {
   return {
     id: generateErrorId(),
@@ -96,14 +96,14 @@ export function handleError(
   code: string,
   severity: ErrorSeverity = 'medium',
   path?: string,
-  method?: string
+  method?: string,
 ): AppError {
   const appError = createError(
     error instanceof Error ? error.message : 'Unknown error',
     code,
     severity,
     error,
-    { path, method }
+    { path, method },
   );
 
   // Log the full error for debugging (in production, use proper logging)
@@ -135,11 +135,11 @@ export function handleError(
 export function withErrorHandling<T extends (...args: unknown[]) => Promise<unknown>>(
   handler: T,
   defaultCode = 'INTERNAL_ERROR',
-  defaultSeverity: ErrorSeverity = 'medium'
+  defaultSeverity: ErrorSeverity = 'medium',
 ): T {
   const wrapped = async (...args: Parameters<T>): Promise<ReturnType<T>> => {
     try {
-      return await handler(...args) as ReturnType<T>;
+      return (await handler(...args)) as ReturnType<T>;
     } catch (error) {
       handleError(error, defaultCode, defaultSeverity);
       throw error;
@@ -176,13 +176,10 @@ export function validationError(message: string, metadata?: Record<string, unkno
  * Create a not found error
  */
 export function notFoundError(resource: string, id?: string): AppError {
-  return createError(
-    `${resource} not found`,
-    ERROR_CODES.NOT_FOUND,
-    'low',
-    undefined,
-    { resource, id }
-  );
+  return createError(`${resource} not found`, ERROR_CODES.NOT_FOUND, 'low', undefined, {
+    resource,
+    id,
+  });
 }
 
 /**
@@ -203,13 +200,9 @@ export function forbiddenError(message = 'Access denied'): AppError {
  * Create a rate limit error
  */
 export function rateLimitError(retryAfter?: number): AppError {
-  return createError(
-    'Rate limit exceeded',
-    ERROR_CODES.RATE_LIMITED,
-    'medium',
-    undefined,
-    { retryAfter }
-  );
+  return createError('Rate limit exceeded', ERROR_CODES.RATE_LIMITED, 'medium', undefined, {
+    retryAfter,
+  });
 }
 
 /**
@@ -219,6 +212,6 @@ export function internalError(originalError?: unknown): AppError {
   return handleError(
     originalError || new Error('Internal server error'),
     ERROR_CODES.INTERNAL_ERROR,
-    'high'
+    'high',
   );
 }

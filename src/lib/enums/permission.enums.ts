@@ -8,22 +8,22 @@
 export enum ApiKeyPermission {
   /** 读取权限 */
   READ = 'read',
-  
+
   /** 写入权限 */
   WRITE = 'write',
-  
+
   /** 发布消息权限 */
   PUBLISH = 'publish',
-  
+
   /** 订阅频道权限 */
   SUBSCRIBE = 'subscribe',
-  
+
   /** 注册频道权限 */
   REGISTER = 'register',
-  
+
   /** 撤销密钥权限 */
   REVOKE = 'revoke',
-  
+
   /** 管理员权限 */
   ADMIN = 'admin',
 }
@@ -35,16 +35,16 @@ export enum ApiKeyPermission {
 export enum PermissionGroup {
   /** 只读权限 */
   READ_ONLY = 'read_only',
-  
+
   /** 标准权限（读写） */
   STANDARD = 'standard',
-  
+
   /** 发布者权限 */
   PUBLISHER = 'publisher',
-  
+
   /** 完全权限 */
   FULL = 'full',
-  
+
   /** 管理员权限 */
   ADMIN = 'admin',
 }
@@ -97,7 +97,7 @@ export function isValidApiKeyPermission(value: string): value is ApiKeyPermissio
  */
 export function hasPermission(
   userPermissions: ApiKeyPermission[],
-  requiredPermission: ApiKeyPermission
+  requiredPermission: ApiKeyPermission,
 ): boolean {
   return userPermissions.includes(requiredPermission);
 }
@@ -110,7 +110,7 @@ export function hasPermission(
  */
 export function hasAnyPermission(
   userPermissions: ApiKeyPermission[],
-  requiredPermissions: ApiKeyPermission[]
+  requiredPermissions: ApiKeyPermission[],
 ): boolean {
   return requiredPermissions.some(perm => userPermissions.includes(perm));
 }
@@ -123,7 +123,7 @@ export function hasAnyPermission(
  */
 export function hasAllPermissions(
   userPermissions: ApiKeyPermission[],
-  requiredPermissions: ApiKeyPermission[]
+  requiredPermissions: ApiKeyPermission[],
 ): boolean {
   return requiredPermissions.every(perm => userPermissions.includes(perm));
 }

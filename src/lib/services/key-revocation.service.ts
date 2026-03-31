@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { publicKeyRepository, apiKeyRepository, revocationConfirmationRepository, channelRepository } from '../repositories';
-import { 
-  validateLength, 
-  containsInvalidCharacters, 
-  KEY_MANAGEMENT_CONFIG 
+import {
+  publicKeyRepository,
+  apiKeyRepository,
+  revocationConfirmationRepository,
+  channelRepository,
+} from '../repositories';
+import {
+  validateLength,
+  containsInvalidCharacters,
+  KEY_MANAGEMENT_CONFIG,
 } from '../utils/secure-compare';
 
 export interface RevokeKeyRequest {
@@ -52,16 +57,22 @@ export class KeyRevocationService {
       return { error: 'Reason must be a string', code: 'INVALID_INPUT' };
     }
 
-    if (!validateLength(reason, KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MIN_LENGTH, KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MAX_LENGTH)) {
+    if (
+      !validateLength(
+        reason,
+        KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MIN_LENGTH,
+        KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MAX_LENGTH,
+      )
+    ) {
       if (reason.length < KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MIN_LENGTH) {
-        return { 
-          error: `Reason must be at least ${KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MIN_LENGTH} characters`, 
-          code: 'INVALID_REASON' 
+        return {
+          error: `Reason must be at least ${KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MIN_LENGTH} characters`,
+          code: 'INVALID_REASON',
         };
       }
-      return { 
-        error: `Reason must not exceed ${KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MAX_LENGTH} characters`, 
-        code: 'INVALID_REASON' 
+      return {
+        error: `Reason must not exceed ${KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MAX_LENGTH} characters`,
+        code: 'INVALID_REASON',
       };
     }
 
@@ -78,10 +89,10 @@ export class KeyRevocationService {
    */
   private async validateApiKeyPermission(
     apiKeyId: string,
-    targetKeyId: string
+    targetKeyId: string,
   ): Promise<{ valid: boolean; error?: string; code?: string }> {
     const apiKey = await apiKeyRepository.findById(apiKeyId);
-    
+
     if (!apiKey) {
       return { valid: false, error: 'API key not found', code: 'INVALID_API_KEY' };
     }
@@ -107,10 +118,10 @@ export class KeyRevocationService {
     const hasRevokePermission = permissions.includes('key_revoke');
 
     if (!hasRevokePermission && !hasAdminPermission) {
-      return { 
-        valid: false, 
-        error: 'Insufficient permissions for key revocation', 
-        code: 'FORBIDDEN' 
+      return {
+        valid: false,
+        error: 'Insufficient permissions for key revocation',
+        code: 'FORBIDDEN',
       };
     }
 
@@ -130,14 +141,14 @@ export class KeyRevocationService {
     const channelAccess = await channelRepository.verifyAccess(
       targetKey.channelId,
       apiKey.userId,
-      true // require creator
+      true, // require creator
     );
 
     if (!channelAccess.hasAccess) {
-      return { 
-        valid: false, 
-        error: channelAccess.error || 'Not authorized to revoke this key', 
-        code: 'FORBIDDEN' 
+      return {
+        valid: false,
+        error: channelAccess.error || 'Not authorized to revoke this key',
+        code: 'FORBIDDEN',
       };
     }
 
@@ -153,10 +164,10 @@ export class KeyRevocationService {
     ]);
 
     if (!permissionCheck.valid) {
-      return { 
-        success: false, 
-        error: permissionCheck.error, 
-        code: permissionCheck.code 
+      return {
+        success: false,
+        error: permissionCheck.error,
+        code: permissionCheck.code,
       };
     }
 
@@ -171,10 +182,10 @@ export class KeyRevocationService {
     // Validate reason with enhanced checks
     const reasonValidation = this.validateReason(request.reason);
     if (reasonValidation) {
-      return { 
-        success: false, 
-        error: reasonValidation.error, 
-        code: reasonValidation.code 
+      return {
+        success: false,
+        error: reasonValidation.error,
+        code: reasonValidation.code,
       };
     }
 
@@ -206,15 +217,19 @@ export class KeyRevocationService {
   async confirmRevocation(
     revocationId: string,
     confirmationCode: string,
-    confirmedBy: string
+    confirmedBy: string,
   ): Promise<ConfirmRevokeResult> {
     const verification = await revocationConfirmationRepository.verifyConfirmationCode(
       revocationId,
-      confirmationCode
+      confirmationCode,
     );
 
     if (verification.isLocked) {
-      return { success: false, error: 'Too many failed attempts. Please try again later.', code: 'LOCKED' };
+      return {
+        success: false,
+        error: 'Too many failed attempts. Please try again later.',
+        code: 'LOCKED',
+      };
     }
 
     if (!verification.valid) {
@@ -235,7 +250,7 @@ export class KeyRevocationService {
     const deletedKey = await publicKeyRepository.softDelete(
       confirmation.keyId,
       confirmedBy,
-      confirmation.reason
+      confirmation.reason,
     );
 
     if (!deletedKey) {
@@ -252,7 +267,10 @@ export class KeyRevocationService {
     };
   }
 
-  async cancelRevocation(revocationId: string, confirmedBy: string): Promise<{
+  async cancelRevocation(
+    revocationId: string,
+    confirmedBy: string,
+  ): Promise<{
     success: boolean;
     error?: string;
     code?: string;
@@ -297,7 +315,12 @@ export class KeyRevocationService {
     const confirmation = await revocationConfirmationRepository.findByKeyId(keyId);
 
     if (!confirmation) {
-      return { success: false, error: 'No pending revocation', code: 'NOT_FOUND', status: 'not_found' };
+      return {
+        success: false,
+        error: 'No pending revocation',
+        code: 'NOT_FOUND',
+        status: 'not_found',
+      };
     }
 
     return this.getRevocationStatus(confirmation.id);

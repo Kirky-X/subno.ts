@@ -67,14 +67,8 @@ export function secureCompare(a: string, b: string): boolean {
  * @param maxLength - Maximum allowed length
  * @returns true if valid, false otherwise
  */
-export function validateLength(
-  value: string,
-  minLength: number,
-  maxLength: number
-): boolean {
-  return typeof value === 'string' &&
-         value.length >= minLength &&
-         value.length <= maxLength;
+export function validateLength(value: string, minLength: number, maxLength: number): boolean {
+  return typeof value === 'string' && value.length >= minLength && value.length <= maxLength;
 }
 
 /**
@@ -88,10 +82,10 @@ export function validateLength(
 export function containsInvalidCharacters(value: string): boolean {
   if (typeof value !== 'string') return true;
 
-  return value.split('').some((char) => {
+  return value.split('').some(char => {
     const charCode = char.charCodeAt(0);
     const isControlChar = charCode < 32 && charCode !== 9 && charCode !== 10 && charCode !== 13;
-    const isSurrogate = charCode >= 0xD800 && charCode <= 0xDFFF;
+    const isSurrogate = charCode >= 0xd800 && charCode <= 0xdfff;
     return isControlChar || isSurrogate;
   });
 }

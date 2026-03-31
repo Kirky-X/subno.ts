@@ -10,11 +10,7 @@ export class PublicKeyRepository {
   private db = getDatabase();
 
   async findById(id: string): Promise<PublicKey | null> {
-    const result = await this.db
-      .select()
-      .from(publicKeys)
-      .where(eq(publicKeys.id, id))
-      .limit(1);
+    const result = await this.db.select().from(publicKeys).where(eq(publicKeys.id, id)).limit(1);
     return result[0] || null;
   }
 
@@ -22,10 +18,7 @@ export class PublicKeyRepository {
     const result = await this.db
       .select()
       .from(publicKeys)
-      .where(and(
-        eq(publicKeys.channelId, channelId),
-        eq(publicKeys.isDeleted, false)
-      ))
+      .where(and(eq(publicKeys.channelId, channelId), eq(publicKeys.isDeleted, false)))
       .limit(1);
     return result[0] || null;
   }
@@ -33,7 +26,7 @@ export class PublicKeyRepository {
   /**
    * Find public key by channel ID with ownership verification.
    * SECURITY: This method verifies that the requesting user is the channel creator.
-   * 
+   *
    * @param channelId - The channel ID to look up
    * @param userId - The user ID requesting access
    * @param requireCreator - Whether to require creator ownership (default: true)
@@ -42,14 +35,10 @@ export class PublicKeyRepository {
   async findByChannelIdWithAccess(
     channelId: string,
     userId: string,
-    requireCreator = true
+    requireCreator = true,
   ): Promise<PublicKey | null> {
     // First verify the user has access to the channel
-    const accessCheck = await channelRepository.verifyAccess(
-      channelId,
-      userId,
-      requireCreator
-    );
+    const accessCheck = await channelRepository.verifyAccess(channelId, userId, requireCreator);
 
     if (!accessCheck.hasAccess) {
       // Log unauthorized access attempt
@@ -64,27 +53,23 @@ export class PublicKeyRepository {
   /**
    * Check if user has access to a specific public key.
    * SECURITY: Verifies channel ownership before allowing access.
-   * 
+   *
    * @param keyId - The public key ID
    * @param userId - The user ID requesting access
    * @returns Object with hasAccess boolean and key if accessible
    */
   async verifyKeyAccess(
     keyId: string,
-    userId: string
+    userId: string,
   ): Promise<{ hasAccess: boolean; key?: PublicKey; error?: string }> {
     const key = await this.findById(keyId);
-    
+
     if (!key) {
       return { hasAccess: false, error: 'Key not found' };
     }
 
     // Verify channel ownership
-    const accessCheck = await channelRepository.verifyAccess(
-      key.channelId,
-      userId,
-      true
-    );
+    const accessCheck = await channelRepository.verifyAccess(key.channelId, userId, true);
 
     if (!accessCheck.hasAccess) {
       return { hasAccess: false, error: accessCheck.error };
@@ -118,11 +103,7 @@ export class PublicKeyRepository {
     return result;
   }
 
-  async softDelete(
-    id: string,
-    revokedBy: string,
-    reason: string
-  ): Promise<PublicKey | null> {
+  async softDelete(id: string, revokedBy: string, reason: string): Promise<PublicKey | null> {
     const result = await this.db
       .update(publicKeys)
       .set({
@@ -131,10 +112,7 @@ export class PublicKeyRepository {
         revokedBy,
         revocationReason: reason,
       })
-      .where(and(
-        eq(publicKeys.id, id),
-        eq(publicKeys.isDeleted, false)
-      ))
+      .where(and(eq(publicKeys.id, id), eq(publicKeys.isDeleted, false)))
       .returning();
     return result[0] || null;
   }
@@ -157,17 +135,12 @@ export class PublicKeyRepository {
     const result = await this.db
       .select()
       .from(publicKeys)
-      .where(and(
-        eq(publicKeys.isDeleted, true),
-        lt(publicKeys.revokedAt!, olderThan)
-      ));
+      .where(and(eq(publicKeys.isDeleted, true), lt(publicKeys.revokedAt!, olderThan)));
     return result;
   }
 
   async permanentDelete(id: string): Promise<boolean> {
-    const result = await this.db
-      .delete(publicKeys)
-      .where(eq(publicKeys.id, id));
+    const result = await this.db.delete(publicKeys).where(eq(publicKeys.id, id));
     return ((result as unknown as { rowCount: number }).rowCount ?? 0) > 0;
   }
 }

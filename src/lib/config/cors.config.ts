@@ -27,14 +27,7 @@ export interface CorsConfig {
 /**
  * Default allowed methods
  */
-const DEFAULT_ALLOWED_METHODS = [
-  'GET',
-  'POST',
-  'PUT',
-  'DELETE',
-  'PATCH',
-  'OPTIONS',
-];
+const DEFAULT_ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'];
 
 /**
  * Default allowed headers
@@ -68,7 +61,7 @@ const DEFAULT_EXPOSED_HEADERS = [
  */
 function parseAllowedOrigins(): string[] {
   const envOrigins = process.env.CORS_ORIGINS;
-  
+
   if (!envOrigins) {
     // Default origins based on environment
     if (process.env.NODE_ENV === 'development') {
@@ -117,9 +110,7 @@ function normalizeOrigin(origin: string): string {
  */
 export function getCorsConfig(): CorsConfig {
   const rawOrigins = parseAllowedOrigins();
-  const allowedOrigins = rawOrigins
-    .filter(isValidOrigin)
-    .map(normalizeOrigin);
+  const allowedOrigins = rawOrigins.filter(isValidOrigin).map(normalizeOrigin);
 
   // Warn about invalid origins
   const invalidOrigins = rawOrigins.filter(origin => !isValidOrigin(origin));
@@ -179,7 +170,7 @@ export function isOriginMatch(origin: string | null, config: CorsConfig): boolea
         try {
           const allowedUrl = new URL(allowedOrigin.replace('*.', ''));
           const allowedDomain = allowedUrl.hostname;
-          
+
           // Check if origin is a subdomain of the allowed domain
           // *.example.com should match sub.example.com but NOT example.com
           if (originHost.endsWith(`.${allowedDomain}`)) {
@@ -208,7 +199,7 @@ export function isOriginMatch(origin: string | null, config: CorsConfig): boolea
  */
 export function createCorsHeaders(
   origin: string | null,
-  config: CorsConfig
+  config: CorsConfig,
 ): Record<string, string> {
   const headers: Record<string, string> = {};
 
@@ -241,7 +232,7 @@ export function createPreflightHeaders(
   origin: string | null,
   requestHeaders: string | null,
   requestMethod: string | null,
-  config: CorsConfig
+  config: CorsConfig,
 ): Record<string, string> {
   const headers = createCorsHeaders(origin, config);
 
@@ -257,14 +248,12 @@ export function createPreflightHeaders(
   // Use request headers if provided and valid, otherwise use defaults
   if (requestHeaders) {
     // Validate and filter request headers
-    const requestedHeaders = requestHeaders
-      .split(',')
-      .map(h => h.trim().toLowerCase());
-    
-    const validHeaders = config.allowedHeaders.filter(h => 
-      requestedHeaders.includes(h.toLowerCase())
+    const requestedHeaders = requestHeaders.split(',').map(h => h.trim().toLowerCase());
+
+    const validHeaders = config.allowedHeaders.filter(h =>
+      requestedHeaders.includes(h.toLowerCase()),
     );
-    
+
     if (validHeaders.length > 0) {
       headers['Access-Control-Allow-Headers'] = validHeaders.join(', ');
     } else {

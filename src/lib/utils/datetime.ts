@@ -143,17 +143,17 @@ export interface TimeDifference {
 
 export function getTimeDifference(from: Date, to: Date = new Date()): TimeDifference {
   const diff = to.getTime() - from.getTime();
-  
+
   const milliseconds = Math.abs(diff % 1000);
   const seconds = Math.floor(Math.abs(diff) / 1000) % 60;
   const minutes = Math.floor(Math.abs(diff) / (1000 * 60)) % 60;
   const hours = Math.floor(Math.abs(diff) / (1000 * 60 * 60)) % 24;
   const days = Math.floor(Math.abs(diff) / (1000 * 60 * 60 * 24));
-  
+
   // Approximate calculations for months and years
   const approximateMonths = Math.floor(days / 30);
   const approximateYears = Math.floor(approximateMonths / 12);
-  
+
   return {
     years: approximateYears,
     months: approximateMonths % 12,
@@ -177,16 +177,16 @@ export function sleep(ms: number): Promise<void> {
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null;
-  
+
   return function executedFunction(...args: Parameters<T>) {
     const later = () => {
       timeout = null;
       func(...args);
     };
-    
+
     if (timeout) {
       clearTimeout(timeout);
     }
@@ -197,13 +197,10 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * Throttle function
  */
-export function throttle<T extends (...args: any[]) => any>(
-  func: T,
-  limit: number
-): T {
+export function throttle<T extends (...args: any[]) => any>(func: T, limit: number): T {
   let inThrottle: boolean;
-  
-  return function(this: any, ...args: Parameters<T>) {
+
+  return function (this: any, ...args: Parameters<T>) {
     if (!inThrottle) {
       func.apply(this, args);
       inThrottle = true;

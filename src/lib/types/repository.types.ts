@@ -149,11 +149,13 @@ export function hasExpired(expiresAt: Date | null): boolean {
  * Build conditions array for queries
  * Note: Returns Promise for dynamic import compatibility
  */
-export async function buildConditions(...conditions: (SQL | undefined)[]): Promise<SQL | undefined> {
+export async function buildConditions(
+  ...conditions: (SQL | undefined)[]
+): Promise<SQL | undefined> {
   const validConditions = conditions.filter((c): c is SQL => c !== undefined);
   if (validConditions.length === 0) return undefined;
   if (validConditions.length === 1) return validConditions[0];
-  
+
   // Dynamic import to avoid circular dependency
   const { and } = await import('drizzle-orm');
   return and(...validConditions);
@@ -172,7 +174,10 @@ export interface PaginationResult<T> {
 /**
  * Create pagination metadata from query options
  */
-export function getPaginationMeta(options: PaginatedQueryOptions, actualCount: number): PaginationResult<unknown> {
+export function getPaginationMeta(
+  options: PaginatedQueryOptions,
+  actualCount: number,
+): PaginationResult<unknown> {
   const { limit = 50, offset = 0 } = options;
   const hasMore = actualCount >= limit;
   return {

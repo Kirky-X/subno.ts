@@ -60,10 +60,13 @@ export class SubscribeService {
     return { valid: true };
   }
 
-  createSSEStream(options: SubscribeOptions, context?: {
-    ip?: string;
-    userAgent?: string;
-  }): ReadableStream<Uint8Array> {
+  createSSEStream(
+    options: SubscribeOptions,
+    context?: {
+      ip?: string;
+      userAgent?: string;
+    },
+  ): ReadableStream<Uint8Array> {
     const { channel } = options;
 
     const totalConnections = this.getTotalConnectionCount();
@@ -82,7 +85,7 @@ export class SubscribeService {
     let streamController: ReadableStreamDefaultController | null = null;
 
     return new ReadableStream<Uint8Array>({
-      start: async (controller) => {
+      start: async controller => {
         streamController = controller;
         this.addConnection(channel, controller);
         this.startCleanupTimer();
@@ -115,7 +118,7 @@ export class SubscribeService {
           }
         }, KEEPALIVE_INTERVAL);
 
-        redisSubscriber = await this.subscribeToRedis(channel, (message) => {
+        redisSubscriber = await this.subscribeToRedis(channel, message => {
           try {
             const sseMessage: SSEMessage = {
               id: (message as { id?: string })?.id,
@@ -272,7 +275,7 @@ export class SubscribeService {
 
   private async subscribeToRedis(
     channel: string,
-    callback: (message: unknown) => void
+    callback: (message: unknown) => void,
   ): Promise<unknown> {
     try {
       const redis = await getRedisSubscriber();

@@ -19,7 +19,12 @@ const RATE_LIMIT_SUBSCRIBE = parseEnvInt('RATE_LIMIT_SUBSCRIBE', 5, 1, 10000);
 const RATE_LIMIT_REVOKE = parseEnvInt('RATE_LIMIT_REVOKE', 20, 1, 10000);
 
 // Cleanup interval in milliseconds (60000-3600000 = 1 minute to 1 hour)
-const RATE_LIMIT_CLEANUP_INTERVAL_MS = parseEnvInt('RATE_LIMIT_CLEANUP_INTERVAL_MS', 300000, 60000, 3600000);
+const RATE_LIMIT_CLEANUP_INTERVAL_MS = parseEnvInt(
+  'RATE_LIMIT_CLEANUP_INTERVAL_MS',
+  300000,
+  60000,
+  3600000,
+);
 
 // Maximum requests per window
 export const RATE_LIMIT_CONFIG = {
@@ -38,9 +43,13 @@ export const RATE_LIMIT_CONFIG = {
  * Get the rate limit configuration for a specific endpoint type
  * Falls back to 'default' if the type is not configured
  */
-export function getRateLimitConfig(type: string): typeof RATE_LIMIT_CONFIG.maxRequests['default'] {
-  return RATE_LIMIT_CONFIG.maxRequests[type as keyof typeof RATE_LIMIT_CONFIG.maxRequests]
-    ?? RATE_LIMIT_CONFIG.maxRequests.default;
+export function getRateLimitConfig(
+  type: string,
+): (typeof RATE_LIMIT_CONFIG.maxRequests)['default'] {
+  return (
+    RATE_LIMIT_CONFIG.maxRequests[type as keyof typeof RATE_LIMIT_CONFIG.maxRequests] ??
+    RATE_LIMIT_CONFIG.maxRequests.default
+  );
 }
 
 /**

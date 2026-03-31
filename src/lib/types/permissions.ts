@@ -69,23 +69,10 @@ export const PermissionGroups = {
  * Higher-level permissions automatically include lower-level permissions
  */
 export const PermissionHierarchy: Record<Permission, Permission[]> = {
-  [Permission.ADMIN]: [
-    Permission.READ,
-    Permission.WRITE,
-    Permission.KEY_REVOKE,
-    Permission.ADMIN,
-  ],
-  [Permission.KEY_REVOKE]: [
-    Permission.READ,
-    Permission.KEY_REVOKE,
-  ],
-  [Permission.WRITE]: [
-    Permission.READ,
-    Permission.WRITE,
-  ],
-  [Permission.READ]: [
-    Permission.READ,
-  ],
+  [Permission.ADMIN]: [Permission.READ, Permission.WRITE, Permission.KEY_REVOKE, Permission.ADMIN],
+  [Permission.KEY_REVOKE]: [Permission.READ, Permission.KEY_REVOKE],
+  [Permission.WRITE]: [Permission.READ, Permission.WRITE],
+  [Permission.READ]: [Permission.READ],
 };
 
 /**
@@ -96,7 +83,7 @@ export const PermissionHierarchy: Record<Permission, Permission[]> = {
  */
 export function permissionImplies(
   userPermission: Permission,
-  requiredPermission: Permission
+  requiredPermission: Permission,
 ): boolean {
   return PermissionHierarchy[userPermission]?.includes(requiredPermission) ?? false;
 }
@@ -109,7 +96,7 @@ export function permissionImplies(
  */
 export function hasPermission(
   userPermissions: Permission[],
-  requiredPermission: Permission
+  requiredPermission: Permission,
 ): boolean {
   return userPermissions.some(perm => permissionImplies(perm, requiredPermission));
 }
@@ -122,11 +109,9 @@ export function hasPermission(
  */
 export function hasAllPermissions(
   userPermissions: Permission[],
-  requiredPermissions: Permission[]
+  requiredPermissions: Permission[],
 ): boolean {
-  return requiredPermissions.every(required =>
-    hasPermission(userPermissions, required)
-  );
+  return requiredPermissions.every(required => hasPermission(userPermissions, required));
 }
 
 /**

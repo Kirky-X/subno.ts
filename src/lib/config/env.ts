@@ -19,26 +19,26 @@ type ClientSchema = typeof clientSchema;
 const serverSchema = z.object({
   // Database configuration
   DATABASE_URL: z.string().url().describe('PostgreSQL connection URL'),
-  
+
   // Redis configuration
   REDIS_URL: z.string().url().describe('Redis connection URL'),
-  
+
   // API configuration
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().transform(Number).default('3000'),
-  
+
   // Security configuration
   ADMIN_MASTER_KEY: z.string().min(32).describe('Master key for admin operations (min 32 chars)'),
   CRON_SECRET: z.string().min(32).describe('Secret token for cron jobs (min 32 chars)'),
-  
+
   // Message configuration
   PUBLIC_MESSAGE_TTL: z.string().transform(Number).default('43200'),
   PRIVATE_MESSAGE_TTL: z.string().transform(Number).default('86400'),
-  
+
   // Channel configuration
   TEMPORARY_CHANNEL_TTL: z.string().transform(Number).default('1800'),
   PERSISTENT_CHANNEL_DEFAULT_TTL: z.string().transform(Number).default('86400'),
-  
+
   // Rate limiting configuration
   RATE_LIMIT_WINDOW_SECONDS: z.string().transform(Number).default('60'),
   RATE_LIMIT_DEFAULT: z.string().transform(Number).default('100'),
@@ -46,21 +46,21 @@ const serverSchema = z.object({
   RATE_LIMIT_SUBSCRIBE: z.string().transform(Number).default('5'),
   RATE_LIMIT_REGISTER: z.string().transform(Number).default('5'),
   RATE_LIMIT_REVOKE: z.string().transform(Number).default('20'),
-  
+
   // Key revocation configuration
   REVOCATION_CONFIRMATION_HOURS: z.string().transform(Number).default('24'),
   REVOKED_KEY_CLEANUP_DAYS: z.string().transform(Number).default('30'),
   CONFIRMATION_MAX_ATTEMPTS: z.string().transform(Number).default('5'),
   CONFIRMATION_LOCKOUT_MINUTES: z.string().transform(Number).default('60'),
-  
+
   // CORS configuration
   CORS_ORIGINS: z.string().optional().describe('Comma-separated list of allowed origins'),
-  
+
   // Database connection pool configuration
   DB_POOL_SIZE: z.string().transform(Number).default('20'),
   DB_IDLE_TIMEOUT: z.string().transform(Number).default('30000'),
   DB_CONNECT_TIMEOUT: z.string().transform(Number).default('2000'),
-  
+
   // Logging configuration
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 });
@@ -108,7 +108,7 @@ export const env = createEnv({
     DB_IDLE_TIMEOUT: process.env.DB_IDLE_TIMEOUT,
     DB_CONNECT_TIMEOUT: process.env.DB_CONNECT_TIMEOUT,
     LOG_LEVEL: process.env.LOG_LEVEL,
-    
+
     // Client-side
     // NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
@@ -134,7 +134,7 @@ export function getDatabaseConfig() {
     DB_IDLE_TIMEOUT: number;
     DB_CONNECT_TIMEOUT: number;
   };
-  
+
   return {
     url: e.DATABASE_URL,
     poolSize: e.DB_POOL_SIZE,
@@ -230,21 +230,25 @@ export function validateProductionSecurity(): void {
     ADMIN_MASTER_KEY: string;
     CRON_SECRET: string;
   };
-  
+
   if (e.NODE_ENV === 'production') {
-    if (e.ADMIN_MASTER_KEY.includes('REPLACE_WITH') || 
-        e.ADMIN_MASTER_KEY.includes('dev-') ||
-        e.ADMIN_MASTER_KEY.length < 32) {
+    if (
+      e.ADMIN_MASTER_KEY.includes('REPLACE_WITH') ||
+      e.ADMIN_MASTER_KEY.includes('dev-') ||
+      e.ADMIN_MASTER_KEY.length < 32
+    ) {
       throw new Error(
-        'ADMIN_MASTER_KEY must be a strong random key (min 32 characters) in production'
+        'ADMIN_MASTER_KEY must be a strong random key (min 32 characters) in production',
       );
     }
-    
-    if (e.CRON_SECRET.includes('REPLACE_WITH') || 
-        e.CRON_SECRET.includes('dev-') ||
-        e.CRON_SECRET.length < 32) {
+
+    if (
+      e.CRON_SECRET.includes('REPLACE_WITH') ||
+      e.CRON_SECRET.includes('dev-') ||
+      e.CRON_SECRET.length < 32
+    ) {
       throw new Error(
-        'CRON_SECRET must be a strong random token (min 32 characters) in production'
+        'CRON_SECRET must be a strong random token (min 32 characters) in production',
       );
     }
   }

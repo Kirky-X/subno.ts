@@ -3,7 +3,7 @@
 
 /**
  * Revocation Status Constants
- * 
+ *
  * Defines all possible statuses for revocation confirmations
  */
 
@@ -13,13 +13,13 @@
 export enum RevocationStatus {
   /** Confirmation code is pending verification */
   PENDING = 'pending',
-  
+
   /** Confirmation code has been verified and key revoked */
   CONFIRMED = 'confirmed',
-  
+
   /** Confirmation code was cancelled by user */
   CANCELLED = 'cancelled',
-  
+
   /** Confirmation code has expired */
   EXPIRED = 'expired',
 }
@@ -30,10 +30,10 @@ export enum RevocationStatus {
 export enum DeliveryStatus {
   /** Notification was successfully sent */
   SENT = 'sent',
-  
+
   /** Notification delivery failed */
   FAILED = 'failed',
-  
+
   /** Notification was partially delivered */
   PARTIAL = 'partial',
 }

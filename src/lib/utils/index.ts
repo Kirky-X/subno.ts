@@ -16,7 +16,7 @@ export {
   // 错误码
   ErrorCode,
   HTTP_STATUS_MAP,
-  
+
   // 错误类
   AppError,
   AuthenticationError,
@@ -25,34 +25,34 @@ export {
   ResourceError,
   RateLimitError,
   ServerError,
-  
+
   // 错误处理器
   ErrorHandler,
   errorHandler,
-  
+
   // 请求上下文
   extractRequestContext,
   generateRequestId,
   type RequestContext,
-  
+
   // 响应格式
   successResponse,
   errorResponse,
   type StandardErrorResponse,
   type StandardSuccessResponse,
   type ApiResponse,
-  
+
   // API 路由包装器
   withErrorHandler,
-  
+
   // 快捷错误创建
   Errors,
-  
+
   // 辅助函数
   isRetryableError,
   isClientError,
   isServerError,
-  
+
   // 类型
   type ErrorSeverity,
   type ErrorHandlerConfig,
@@ -80,10 +80,10 @@ export {
 export {
   // 配置
   API_KEY_VALIDATION_CONFIG,
-  
+
   // 函数
   validateApiKeyFormat,
-  
+
   // Zod schemas
   channelIdSchema,
   messageSchema,
@@ -92,7 +92,7 @@ export {
   paginationSchema,
   apiKeyCreationSchema,
   keyRevocationSchema,
-  
+
   // 类型和工具
   type ValidationResult,
   validateData,
@@ -130,10 +130,7 @@ export {
   SENSITIVE_HEADERS,
 } from './header-sanitization';
 
-export {
-  mapServiceError,
-  type ServiceResult,
-} from './service-error-mapper';
+export { mapServiceError, type ServiceResult } from './service-error-mapper';
 
 export {
   validateRequestBody,

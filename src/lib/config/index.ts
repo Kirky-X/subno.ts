@@ -2,15 +2,15 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 // Rate limit configuration
-export { 
-  RATE_LIMIT_CONFIG, 
-  getRateLimitConfig, 
+export {
+  RATE_LIMIT_CONFIG,
+  getRateLimitConfig,
   getRateLimitWindowMs,
   getCleanupIntervalMs,
 } from './rate-limit.config';
 
 // Database configuration
-export { 
+export {
   DB_CONFIG,
   DB_POOL_SIZE,
   DB_IDLE_TIMEOUT,
@@ -22,10 +22,7 @@ export {
 } from './database.config';
 
 // Security configuration (PBKDF2, hashing, encryption)
-export {
-  SECURITY_CONFIG as SECURITY_PBKDF2_CONFIG,
-  getSecurityConfig,
-} from './security.config';
+export { SECURITY_CONFIG as SECURITY_PBKDF2_CONFIG, getSecurityConfig } from './security.config';
 
 // CORS configuration
 export {

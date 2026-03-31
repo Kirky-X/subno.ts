@@ -27,15 +27,18 @@ const NODE_ENV = (process.env.NODE_ENV || 'development') as keyof typeof LOG_LEV
  */
 export const logger = pino({
   level: process.env.LOG_LEVEL || LOG_LEVELS[NODE_ENV] || 'info',
-  transport: NODE_ENV === 'development' ? {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'SYS:standard',
-      ignore: 'pid,hostname',
-      singleLine: false,
-    },
-  } : undefined,
+  transport:
+    NODE_ENV === 'development'
+      ? {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname',
+            singleLine: false,
+          },
+        }
+      : undefined,
   // Add timestamp in ISO format
   timestamp: () => `,"time":"${new Date().toISOString()}"`,
   // Enable error serialization
@@ -81,17 +84,20 @@ export function logHttpRequest(
   method: string,
   url: string,
   statusCode: number,
-  durationMs: number
+  durationMs: number,
 ): void {
   const logLevel = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
-  
-  logger[logLevel]({
-    type: 'http_request',
-    method,
-    url,
-    statusCode,
-    durationMs,
-  }, `${method} ${url} - ${statusCode} (${durationMs}ms)`);
+
+  logger[logLevel](
+    {
+      type: 'http_request',
+      method,
+      url,
+      statusCode,
+      durationMs,
+    },
+    `${method} ${url} - ${statusCode} (${durationMs}ms)`,
+  );
 }
 
 /**
@@ -100,28 +106,30 @@ export function logHttpRequest(
  * @param durationMs - Query duration in milliseconds
  * @param error - Optional error if query failed
  */
-export function logDatabaseQuery(
-  query: string,
-  durationMs: number,
-  error?: Error
-): void {
+export function logDatabaseQuery(query: string, durationMs: number, error?: Error): void {
   if (error) {
-    logger.error({
-      type: 'database_query',
-      query,
-      durationMs,
-      error: {
-        message: error.message,
-        name: error.name,
-        stack: error.stack,
+    logger.error(
+      {
+        type: 'database_query',
+        query,
+        durationMs,
+        error: {
+          message: error.message,
+          name: error.name,
+          stack: error.stack,
+        },
       },
-    }, `Database query failed: ${query}`);
+      `Database query failed: ${query}`,
+    );
   } else {
-    logger.debug({
-      type: 'database_query',
-      query,
-      durationMs,
-    }, `Database query executed: ${query} (${durationMs}ms)`);
+    logger.debug(
+      {
+        type: 'database_query',
+        query,
+        durationMs,
+      },
+      `Database query executed: ${query} (${durationMs}ms)`,
+    );
   }
 }
 
@@ -136,27 +144,33 @@ export function logRedisOperation(
   operation: string,
   key: string,
   durationMs: number,
-  error?: Error
+  error?: Error,
 ): void {
   if (error) {
-    logger.error({
-      type: 'redis_operation',
-      operation,
-      key,
-      durationMs,
-      error: {
-        message: error.message,
-        name: error.name,
-        stack: error.stack,
+    logger.error(
+      {
+        type: 'redis_operation',
+        operation,
+        key,
+        durationMs,
+        error: {
+          message: error.message,
+          name: error.name,
+          stack: error.stack,
+        },
       },
-    }, `Redis operation failed: ${operation} on ${key}`);
+      `Redis operation failed: ${operation} on ${key}`,
+    );
   } else {
-    logger.debug({
-      type: 'redis_operation',
-      operation,
-      key,
-      durationMs,
-    }, `Redis operation executed: ${operation} on ${key} (${durationMs}ms)`);
+    logger.debug(
+      {
+        type: 'redis_operation',
+        operation,
+        key,
+        durationMs,
+      },
+      `Redis operation executed: ${operation} on ${key} (${durationMs}ms)`,
+    );
   }
 }
 
@@ -166,11 +180,14 @@ export function logRedisOperation(
  * @param details - Event details
  */
 export function logSecurityEvent(event: string, details: Record<string, unknown>): void {
-  logger.warn({
-    type: 'security_event',
-    event,
-    ...details,
-  }, `Security event: ${event}`);
+  logger.warn(
+    {
+      type: 'security_event',
+      event,
+      ...details,
+    },
+    `Security event: ${event}`,
+  );
 }
 
 /**
@@ -182,12 +199,15 @@ export function logSecurityEvent(event: string, details: Record<string, unknown>
 export function logRateLimitExceeded(
   identifier: string,
   limit: number,
-  windowSeconds: number
+  windowSeconds: number,
 ): void {
-  logger.warn({
-    type: 'rate_limit_exceeded',
-    identifier,
-    limit,
-    windowSeconds,
-  }, `Rate limit exceeded for ${identifier}`);
+  logger.warn(
+    {
+      type: 'rate_limit_exceeded',
+      identifier,
+      limit,
+      windowSeconds,
+    },
+    `Rate limit exceeded for ${identifier}`,
+  );
 }

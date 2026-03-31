@@ -8,10 +8,10 @@
 export enum ChannelType {
   /** 公开频道 - 任何人都可以订阅 */
   PUBLIC = 'public',
-  
+
   /** 加密频道 - 需要解密密钥 */
   ENCRYPTED = 'encrypted',
-  
+
   /** 临时频道 - 自动过期清理 */
   TEMPORARY = 'temporary',
 }
@@ -23,13 +23,13 @@ export enum ChannelType {
 export enum ChannelStatus {
   /** 活跃状态 */
   ACTIVE = 'active',
-  
+
   /** 非活跃状态 */
   INACTIVE = 'inactive',
-  
+
   /** 已暂停 */
   SUSPENDED = 'suspended',
-  
+
   /** 已关闭 */
   CLOSED = 'closed',
 }

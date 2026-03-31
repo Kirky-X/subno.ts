@@ -5,9 +5,7 @@
  * Generic Result type for operations that can succeed or fail
  */
 
-export type Result<T, E = Error> =
-  | { success: true; data: T }
-  | { success: false; error: E };
+export type Result<T, E = Error> = { success: true; data: T } | { success: false; error: E };
 
 export function ok<T>(data: T): Result<T, never> {
   return { success: true, data };

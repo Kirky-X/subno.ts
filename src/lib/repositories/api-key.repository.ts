@@ -14,7 +14,9 @@ export class ApiKeyRepository {
    * Calculate the expiry date based on configured days
    */
   private calculateExpiryDate(): Date {
-    return new Date(Date.now() - KEY_MANAGEMENT_CONFIG.DEFAULT_API_KEY_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+    return new Date(
+      Date.now() - KEY_MANAGEMENT_CONFIG.DEFAULT_API_KEY_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+    );
   }
 
   /**
@@ -44,11 +46,7 @@ export class ApiKeyRepository {
   }
 
   async findById(id: string): Promise<ApiKey | null> {
-    const result = await this.db
-      .select()
-      .from(apiKeys)
-      .where(eq(apiKeys.id, id))
-      .limit(1);
+    const result = await this.db.select().from(apiKeys).where(eq(apiKeys.id, id)).limit(1);
     return result[0] ?? null;
   }
 
@@ -65,12 +63,9 @@ export class ApiKeyRepository {
    * Validate that an API key has the required permission.
    * Returns true only if the key exists, is active, not deleted, and has the permission.
    */
-  async validatePermission(
-    keyHash: string,
-    requiredPermission: string
-  ): Promise<boolean> {
+  async validatePermission(keyHash: string, requiredPermission: string): Promise<boolean> {
     const key = await this.findByKeyHash(keyHash);
-    
+
     if (!key) {
       return false;
     }
@@ -90,16 +85,19 @@ export class ApiKeyRepository {
     return permissions.includes('admin') || permissions.includes(requiredPermission);
   }
 
-  async findByUserId(userId: string, options?: {
-    includeDeleted?: boolean;
-    limit?: number;
-    offset?: number;
-  }): Promise<ApiKey[]> {
+  async findByUserId(
+    userId: string,
+    options?: {
+      includeDeleted?: boolean;
+      limit?: number;
+      offset?: number;
+    },
+  ): Promise<ApiKey[]> {
     const { includeDeleted = false, limit = 50, offset = 0 } = options || {};
 
-    const condition = this.buildFindConditions({ 
-      includeDeleted, 
-      userId 
+    const condition = this.buildFindConditions({
+      includeDeleted,
+      userId,
     });
 
     const result = await this.db
@@ -133,11 +131,7 @@ export class ApiKeyRepository {
     return result;
   }
 
-  async softDelete(
-    id: string,
-    revokedBy: string,
-    reason: string
-  ): Promise<ApiKey | null> {
+  async softDelete(id: string, revokedBy: string, reason: string): Promise<ApiKey | null> {
     const result = await this.db
       .update(apiKeys)
       .set({
@@ -147,10 +141,7 @@ export class ApiKeyRepository {
         revokedBy,
         revocationReason: reason,
       })
-      .where(and(
-        eq(apiKeys.id, id),
-        eq(apiKeys.isDeleted, false)
-      ))
+      .where(and(eq(apiKeys.id, id), eq(apiKeys.isDeleted, false)))
       .returning();
     return result[0] ?? null;
   }
@@ -174,28 +165,20 @@ export class ApiKeyRepository {
     const result = await this.db
       .select()
       .from(apiKeys)
-      .where(and(
-        eq(apiKeys.isDeleted, true),
-        lt(apiKeys.revokedAt, olderThan)
-      ));
+      .where(and(eq(apiKeys.isDeleted, true), lt(apiKeys.revokedAt, olderThan)));
     return result;
   }
 
   async permanentDelete(id: string): Promise<boolean> {
-    const result = await this.db
-      .delete(apiKeys)
-      .where(eq(apiKeys.id, id));
-    
+    const result = await this.db.delete(apiKeys).where(eq(apiKeys.id, id));
+
     // Drizzle delete returns { rowCount: number | null }
     const rowCount = (result as { rowCount?: number | null }).rowCount ?? 0;
     return rowCount > 0;
   }
 
   async updateLastUsed(id: string): Promise<void> {
-    await this.db
-      .update(apiKeys)
-      .set({ lastUsedAt: new Date() })
-      .where(eq(apiKeys.id, id));
+    await this.db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, id));
   }
 
   async deactivate(id: string): Promise<ApiKey | null> {

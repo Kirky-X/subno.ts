@@ -5,12 +5,7 @@
  * Environment variable parsing utilities
  */
 
-export function parseEnvInt(
-  key: string,
-  defaultValue: number,
-  min: number,
-  max: number
-): number {
+export function parseEnvInt(key: string, defaultValue: number, min: number, max: number): number {
   const value = parseInt(process.env[key] || String(defaultValue), 10);
   if (isNaN(value) || value < min) return defaultValue;
   if (value > max) return max;

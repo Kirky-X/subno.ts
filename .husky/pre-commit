@@ -1,0 +1,62 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# 捕获错误并友好提示
+trap 'echo ""; echo "❌ Pre-commit 钩子执行失败！"; echo "请运行 node scripts/verify-precommit.js 诊断问题"; exit 1' ERR
+
+# 工业级 pre-commit hook
+# 1. 使用 lint-staged 对暂存文件进行代码检查和格式化
+echo "📝 步骤 1/5: 代码格式化和 ESLint 检查..."
+npx lint-staged || {
+  echo ""
+  echo "❌ 代码格式化或 ESLint 检查失败"
+  echo "建议：运行 'npm run lint:fix' 自动修复可修复的问题"
+  exit 1
+}
+
+# 2. 运行类型检查
+echo "🔍 步骤 2/5: TypeScript 类型检查..."
+if ! npx tsc --noEmit; then
+  echo ""
+  echo "❌ TypeScript 类型检查失败"
+  echo "请修复类型错误后重新提交"
+  exit 1
+fi
+
+# 3. 【新增】检查许可证头
+echo "📄 步骤 3/5: 许可证声明检查..."
+if ! node .husky/check-license.js; then
+  echo ""
+  echo "❌ 许可证检查失败"
+  exit 1
+fi
+
+# 4. 【新增】快速依赖安全检查（仅高危和严重漏洞）
+echo "🔒 步骤 4/5: 快速依赖安全检查..."
+if timeout 10 npm audit --json 2>/dev/null | grep -q '"high":[1-9]\|"critical":[1-9]'; then
+  echo ""
+  echo "❌ 发现高危或严重漏洞！"
+  echo ""
+  echo "建议："
+  echo "  1. 运行 'npm audit fix' 尝试自动修复"
+  echo "  2. 查看详细报告：npm audit"
+  echo ""
+  exit 1
+fi
+echo "✅ 依赖安全检查通过"
+
+# 5. 运行单元测试（仅当有测试文件变更时）
+if git diff --cached --name-only | grep -qE '\.(test|spec)\.(ts|tsx|js|jsx)$'; then
+  echo "🧪 步骤 5/5: 检测到测试文件变更，运行相关测试..."
+  if ! npm test -- --run --bail; then
+    echo ""
+    echo "❌ 测试失败"
+    echo "请修复测试后重新提交"
+    exit 1
+  fi
+else
+  echo "⏭️  步骤 5/5: 跳过测试（无测试文件变更）"
+fi
+
+echo ""
+echo "✅ 所有 pre-commit 检查通过！"

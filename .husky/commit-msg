@@ -1,0 +1,42 @@
+#\!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# 读取提交信息文件
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# 检查提交信息格式（Conventional Commits 规范）
+# 格式：<type>(<scope>): <description>
+# type: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert
+if \! echo "$COMMIT_MSG" | grep -qE "^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\([a-z-]+\))?: .{1,100}"; then
+  echo ""
+  echo "❌ 提交信息格式不正确！"
+  echo ""
+  echo "请使用 Conventional Commits 规范："
+  echo "  <type>(<scope>): <description>"
+  echo ""
+  echo "示例:"
+  echo "  feat(auth): 添加用户登录功能"
+  echo "  fix(api): 修复空指针异常"
+  echo "  docs: 更新 README 文档"
+  echo "  refactor(core): 重构数据库连接池"
+  echo "  test: 添加单元测试"
+  echo "  chore(deps): 升级依赖版本"
+  echo ""
+  echo "允许的 type:"
+  echo "  feat     - 新功能"
+  echo "  fix      - 修复 bug"
+  echo "  docs     - 文档变更"
+  echo "  style    - 代码格式（不影响代码运行）"
+  echo "  refactor - 重构（既不是新功能也不是 bug 修复）"
+  echo "  test     - 添加或修改测试"
+  echo "  chore    - 构建过程或辅助工具变动"
+  echo "  perf     - 性能优化"
+  echo "  ci       - CI 配置文件和脚本"
+  echo "  build    - 影响构建系统或外部依赖的更改"
+  echo "  revert   - 撤销之前的提交"
+  echo ""
+  exit 1
+fi
+
+echo "✅ 提交信息格式正确"

@@ -57,12 +57,12 @@ export async function withRetry<T>(options: RetryOperationOptions<T>): Promise<T
     ...retryOptions,
   };
 
-  return retry(async (bail) => {
+  return retry(async bail => {
     try {
       return await operation();
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
-      
+
       // Check if error is retryable
       if (isRetryable && !isRetryable(err)) {
         bail(err);
@@ -71,11 +71,14 @@ export async function withRetry<T>(options: RetryOperationOptions<T>): Promise<T
 
       // Log retry attempt
       if (logRetries) {
-        logger.warn({
-          operation: name,
-          error: err.message,
-          attemptsRemaining: mergedOptions.retries,
-        }, `${name} failed, will retry...`);
+        logger.warn(
+          {
+            operation: name,
+            error: err.message,
+            attemptsRemaining: mergedOptions.retries,
+          },
+          `${name} failed, will retry...`,
+        );
       }
 
       // Call custom error handler
@@ -95,10 +98,7 @@ export async function withRetry<T>(options: RetryOperationOptions<T>): Promise<T
 /**
  * Retry database operations with appropriate settings
  */
-export async function withDatabaseRetry<T>(
-  operation: () => Promise<T>,
-  name?: string
-): Promise<T> {
+export async function withDatabaseRetry<T>(operation: () => Promise<T>, name?: string): Promise<T> {
   return withRetry({
     name: name || 'Database operation',
     retries: 5,
@@ -106,7 +106,7 @@ export async function withDatabaseRetry<T>(
     maxTimeout: 10000,
     factor: 2,
     operation,
-    isRetryable: (error) => {
+    isRetryable: error => {
       // Don't retry on constraint violations or syntax errors
       const nonRetryableErrors = [
         'unique violation',
@@ -114,10 +114,8 @@ export async function withDatabaseRetry<T>(
         'check violation',
         'syntax error',
       ];
-      
-      return !nonRetryableErrors.some(msg => 
-        error.message.toLowerCase().includes(msg)
-      );
+
+      return !nonRetryableErrors.some(msg => error.message.toLowerCase().includes(msg));
     },
   });
 }
@@ -125,10 +123,7 @@ export async function withDatabaseRetry<T>(
 /**
  * Retry Redis operations with appropriate settings
  */
-export async function withRedisRetry<T>(
-  operation: () => Promise<T>,
-  name?: string
-): Promise<T> {
+export async function withRedisRetry<T>(operation: () => Promise<T>, name?: string): Promise<T> {
   return withRetry({
     name: name || 'Redis operation',
     retries: 3,
@@ -136,17 +131,15 @@ export async function withRedisRetry<T>(
     maxTimeout: 5000,
     factor: 2,
     operation,
-    isRetryable: (error) => {
+    isRetryable: error => {
       // Don't retry on command errors
       const nonRetryableErrors = [
         'unknown command',
         'wrong number of arguments',
         'invalid argument',
       ];
-      
-      return !nonRetryableErrors.some(msg => 
-        error.message.toLowerCase().includes(msg)
-      );
+
+      return !nonRetryableErrors.some(msg => error.message.toLowerCase().includes(msg));
     },
   });
 }
@@ -154,10 +147,7 @@ export async function withRedisRetry<T>(
 /**
  * Retry HTTP requests with appropriate settings
  */
-export async function withHttpRetry<T>(
-  operation: () => Promise<T>,
-  name?: string
-): Promise<T> {
+export async function withHttpRetry<T>(operation: () => Promise<T>, name?: string): Promise<T> {
   return withRetry({
     name: name || 'HTTP request',
     retries: 3,
@@ -165,13 +155,13 @@ export async function withHttpRetry<T>(
     maxTimeout: 10000,
     factor: 2,
     operation,
-    isRetryable: (error) => {
+    isRetryable: error => {
       // Don't retry on client errors (4xx) except 429 (rate limit)
       if ('statusCode' in error && typeof error.statusCode === 'number') {
         const code = error.statusCode;
         return code >= 500 || code === 429;
       }
-      
+
       // Retry on network errors
       return true;
     },
@@ -181,10 +171,7 @@ export async function withHttpRetry<T>(
 /**
  * Retry SSE connection establishment
  */
-export async function withSSERetry<T>(
-  operation: () => Promise<T>,
-  name?: string
-): Promise<T> {
+export async function withSSERetry<T>(operation: () => Promise<T>, name?: string): Promise<T> {
   return withRetry({
     name: name || 'SSE connection',
     retries: 5,
@@ -192,7 +179,7 @@ export async function withSSERetry<T>(
     maxTimeout: 30000,
     factor: 2.5,
     operation,
-    isRetryable: (error) => {
+    isRetryable: error => {
       // Always retry on connection errors
       return true;
     },
@@ -207,7 +194,7 @@ export async function withSSERetry<T>(
  */
 export function createRetryableFunction<T extends unknown[], R>(
   operation: (...args: T) => Promise<R>,
-  options: Partial<RetryOptions> & { name?: string } = {}
+  options: Partial<RetryOptions> & { name?: string } = {},
 ): (...args: T) => Promise<R> {
   return async (...args: T) => {
     return withRetry({
@@ -231,10 +218,8 @@ export function isTransientError(error: Error): boolean {
     'temporary failure',
     'network is unreachable',
   ];
-  
-  return transientIndicators.some(indicator =>
-    error.message.toLowerCase().includes(indicator)
-  );
+
+  return transientIndicators.some(indicator => error.message.toLowerCase().includes(indicator));
 }
 
 /**
@@ -243,7 +228,7 @@ export function isTransientError(error: Error): boolean {
 export async function withTimeoutAndRetry<T>(
   promise: Promise<T>,
   timeoutMs: number,
-  options: Partial<RetryOptions> & { name?: string } = {}
+  options: Partial<RetryOptions> & { name?: string } = {},
 ): Promise<T> {
   return withRetry({
     name: options.name || 'Timed operation',
@@ -252,7 +237,10 @@ export async function withTimeoutAndRetry<T>(
       return Promise.race([
         promise,
         new Promise<T>((_, reject) =>
-          setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
+          setTimeout(
+            () => reject(new Error(`Operation timed out after ${timeoutMs}ms`)),
+            timeoutMs,
+          ),
         ),
       ]);
     },

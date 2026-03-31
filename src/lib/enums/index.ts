@@ -29,17 +29,10 @@ export {
 } from './permission.enums';
 
 // Rate limit enums
-export {
-  RateLimitEndpointType,
-  getRateLimitEndpointLabel,
-} from './ratelimit.enums';
+export { RateLimitEndpointType, getRateLimitEndpointLabel } from './ratelimit.enums';
 
 // Config enums
-export {
-  ConfigKey,
-  ConfigCategory,
-  CONFIG_CATEGORIES,
-} from './config.enums';
+export { ConfigKey, ConfigCategory, CONFIG_CATEGORIES } from './config.enums';
 
 // Algorithm enums
 export {
@@ -71,7 +64,4 @@ export {
   getDeliveryStatusLabel,
 } from '../types/revocation.types';
 
-export {
-  ErrorCode,
-  HTTP_STATUS_MAP,
-} from '../utils/error-handler';
+export { ErrorCode, HTTP_STATUS_MAP } from '../utils/error-handler';

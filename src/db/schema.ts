@@ -1,37 +1,53 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { pgTable, varchar, text, boolean, timestamp, uuid, jsonb, integer, index } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  varchar,
+  text,
+  boolean,
+  timestamp,
+  uuid,
+  jsonb,
+  integer,
+  index,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
 // ============================================================================
 // Public Keys Table - stores user public keys
 // ============================================================================
-export const publicKeys = pgTable('public_keys', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  channelId: varchar('channel_id', { length: 64 }).notNull().unique(),
-  publicKey: text('public_key').notNull(),
-  algorithm: varchar('algorithm', { length: 50 }).notNull().default('RSA-2048'),
-  metadata: jsonb('metadata').default({}),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  expiresAt: timestamp('expires_at'),
-  lastUsedAt: timestamp('last_used_at'),
-  // Soft delete fields
-  isDeleted: boolean('is_deleted').notNull().default(false),
-  revokedAt: timestamp('revoked_at'),
-  revokedBy: varchar('revoked_by', { length: 255 }),
-  revocationReason: text('revocation_reason'),
-}, (table) => [
-  // Index for active keys by channel (used in subscribe queries)
-  index('idx_public_keys_channel').on(table.channelId),
-  // Index for cleanup of deleted keys
-  index('idx_public_keys_deleted').on(table.isDeleted, table.revokedAt),
-  // Index for finding non-deleted keys
-  index('idx_public_keys_active').on(table.isDeleted, table.createdAt),
-  // Index for algorithm-based queries
-  index('idx_public_keys_algorithm').on(table.algorithm),
-]);
+export const publicKeys = pgTable(
+  'public_keys',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    channelId: varchar('channel_id', { length: 64 }).notNull().unique(),
+    publicKey: text('public_key').notNull(),
+    algorithm: varchar('algorithm', { length: 50 }).notNull().default('RSA-2048'),
+    metadata: jsonb('metadata').default({}),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    expiresAt: timestamp('expires_at'),
+    lastUsedAt: timestamp('last_used_at'),
+    // Soft delete fields
+    isDeleted: boolean('is_deleted').notNull().default(false),
+    revokedAt: timestamp('revoked_at'),
+    revokedBy: varchar('revoked_by', { length: 255 }),
+    revocationReason: text('revocation_reason'),
+  },
+  table => [
+    // Index for active keys by channel (used in subscribe queries)
+    index('idx_public_keys_channel').on(table.channelId),
+    // Index for cleanup of deleted keys
+    index('idx_public_keys_deleted').on(table.isDeleted, table.revokedAt),
+    // Index for finding non-deleted keys
+    index('idx_public_keys_active').on(table.isDeleted, table.createdAt),
+    // Index for algorithm-based queries
+    index('idx_public_keys_algorithm').on(table.algorithm),
+  ],
+);
 
 // Relations
 export const publicKeysRelations = relations(publicKeys, ({ many }) => ({
@@ -42,30 +58,36 @@ export const publicKeysRelations = relations(publicKeys, ({ many }) => ({
 // ============================================================================
 // API Keys Table - stores API access keys
 // ============================================================================
-export const apiKeys = pgTable('api_keys', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  keyHash: varchar('key_hash', { length: 255 }).notNull().unique(),
-  keyPrefix: varchar('key_prefix', { length: 16 }).notNull(),
-  userId: varchar('user_id', { length: 255 }).notNull(),
-  name: varchar('name', { length: 255 }).notNull().default('API Key'),
-  permissions: jsonb('permissions').notNull().default(['read', 'write']),
-  isActive: boolean('is_active').notNull().default(true),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  lastUsedAt: timestamp('last_used_at'),
-  expiresAt: timestamp('expires_at'),
-  // Soft delete fields (for API key revocation)
-  isDeleted: boolean('is_deleted').notNull().default(false),
-  revokedAt: timestamp('revoked_at'),
-  revokedBy: varchar('revoked_by', { length: 255 }),
-  revocationReason: text('revocation_reason'),
-}, (table) => [
-  // Index for user API key queries
-  index('idx_api_keys_user_id').on(table.userId),
-  // Index for active API keys
-  index('idx_api_keys_active').on(table.isActive, table.isDeleted),
-  // Index for cleanup of deleted keys
-  index('idx_api_keys_deleted').on(table.isDeleted, table.revokedAt),
-]);
+export const apiKeys = pgTable(
+  'api_keys',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    keyHash: varchar('key_hash', { length: 255 }).notNull().unique(),
+    keyPrefix: varchar('key_prefix', { length: 16 }).notNull(),
+    userId: varchar('user_id', { length: 255 }).notNull(),
+    name: varchar('name', { length: 255 }).notNull().default('API Key'),
+    permissions: jsonb('permissions').notNull().default(['read', 'write']),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    lastUsedAt: timestamp('last_used_at'),
+    expiresAt: timestamp('expires_at'),
+    // Soft delete fields (for API key revocation)
+    isDeleted: boolean('is_deleted').notNull().default(false),
+    revokedAt: timestamp('revoked_at'),
+    revokedBy: varchar('revoked_by', { length: 255 }),
+    revocationReason: text('revocation_reason'),
+  },
+  table => [
+    // Index for user API key queries
+    index('idx_api_keys_user_id').on(table.userId),
+    // Index for active API keys
+    index('idx_api_keys_active').on(table.isActive, table.isDeleted),
+    // Index for cleanup of deleted keys
+    index('idx_api_keys_deleted').on(table.isDeleted, table.revokedAt),
+  ],
+);
 
 // Relations
 export const apiKeysRelations = relations(apiKeys, ({ many }) => ({
@@ -75,80 +97,96 @@ export const apiKeysRelations = relations(apiKeys, ({ many }) => ({
 // ============================================================================
 // Channels Table - stores channel information
 // ============================================================================
-export const channels = pgTable('channels', {
-  id: varchar('id', { length: 64 }).primaryKey(),
-  name: varchar('name', { length: 255 }).notNull(),
-  description: text('description'),
-  type: varchar('type', { length: 20 }).notNull().default('public'), // public, encrypted, temporary
-  creator: varchar('creator', { length: 255 }),
-  metadata: jsonb('metadata').default({}),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  expiresAt: timestamp('expires_at'),
-  isActive: boolean('is_active').notNull().default(true),
-}, (table) => [
-  // Index for channel name lookups
-  index('idx_channels_name').on(table.name),
-  // Index for channel type filtering
-  index('idx_channels_type').on(table.type),
-  // Index for creator-based queries
-  index('idx_channels_creator').on(table.creator),
-  // Index for active channels
-  index('idx_channels_active').on(table.isActive),
-]);
+export const channels = pgTable(
+  'channels',
+  {
+    id: varchar('id', { length: 64 }).primaryKey(),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    type: varchar('type', { length: 20 }).notNull().default('public'), // public, encrypted, temporary
+    creator: varchar('creator', { length: 255 }),
+    metadata: jsonb('metadata').default({}),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    expiresAt: timestamp('expires_at'),
+    isActive: boolean('is_active').notNull().default(true),
+  },
+  table => [
+    // Index for channel name lookups
+    index('idx_channels_name').on(table.name),
+    // Index for channel type filtering
+    index('idx_channels_type').on(table.type),
+    // Index for creator-based queries
+    index('idx_channels_creator').on(table.creator),
+    // Index for active channels
+    index('idx_channels_active').on(table.isActive),
+  ],
+);
 
 // ============================================================================
 // Messages Table - stores message records
 // ============================================================================
-export const messages = pgTable('messages', {
-  id: varchar('id', { length: 128 }).primaryKey(),
-  channelId: varchar('channel_id', { length: 64 }).notNull(),
-  content: text('content').notNull(),
-  priority: integer('priority').notNull().default(50),
-  sender: varchar('sender', { length: 255 }),
-  encrypted: boolean('encrypted').notNull().default(false),
-  cached: boolean('cached').notNull().default(true),
-  signature: varchar('signature', { length: 512 }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  expiresAt: timestamp('expires_at'),
-}, (table) => [
-  // Index for channel-based message queries (most common operation)
-  index('idx_messages_channel_id').on(table.channelId),
-  // Index for time-based message ordering
-  index('idx_messages_created_at').on(table.createdAt),
-  // Index for priority-based message retrieval
-  index('idx_messages_priority').on(table.priority),
-  // Composite index for active channel messages
-  index('idx_messages_channel_created').on(table.channelId, table.createdAt),
-]);
+export const messages = pgTable(
+  'messages',
+  {
+    id: varchar('id', { length: 128 }).primaryKey(),
+    channelId: varchar('channel_id', { length: 64 }).notNull(),
+    content: text('content').notNull(),
+    priority: integer('priority').notNull().default(50),
+    sender: varchar('sender', { length: 255 }),
+    encrypted: boolean('encrypted').notNull().default(false),
+    cached: boolean('cached').notNull().default(true),
+    signature: varchar('signature', { length: 512 }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    expiresAt: timestamp('expires_at'),
+  },
+  table => [
+    // Index for channel-based message queries (most common operation)
+    index('idx_messages_channel_id').on(table.channelId),
+    // Index for time-based message ordering
+    index('idx_messages_created_at').on(table.createdAt),
+    // Index for priority-based message retrieval
+    index('idx_messages_priority').on(table.priority),
+    // Composite index for active channel messages
+    index('idx_messages_channel_created').on(table.channelId, table.createdAt),
+  ],
+);
 
 // ============================================================================
 // Revocation Confirmations Table - stores revocation confirmation codes
 // ============================================================================
-export const revocationConfirmations = pgTable('revocation_confirmations', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  keyId: uuid('key_id').notNull().references(() => publicKeys.id, { onDelete: 'cascade' }),
-  apiKeyId: uuid('api_key_id').references(() => apiKeys.id, { onDelete: 'cascade' }),
-  confirmationCodeHash: varchar('confirmation_code_hash', { length: 255 }).notNull(),
-  status: varchar('status', { length: 20 }).notNull().default('pending'), // pending, confirmed, cancelled, expired
-  reason: text('reason').notNull(),
-  expiresAt: timestamp('expires_at').notNull(),
-  attemptCount: integer('attempt_count').notNull().default(0),
-  lockedUntil: timestamp('locked_until'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  confirmedAt: timestamp('confirmed_at'),
-  confirmedBy: varchar('confirmed_by', { length: 255 }),
-}, (table) => [
-  // Index for status-based queries (cleanup, status checks)
-  index('idx_revocations_status').on(table.status),
-  // Index for expiration-based cleanup
-  index('idx_revocations_expires').on(table.expiresAt),
-  // Index for finding confirmations by key
-  index('idx_revocations_key_id').on(table.keyId),
-  // Index for finding confirmations by API key
-  index('idx_revocations_api_key_id').on(table.apiKeyId),
-  // Composite index for status + expiration queries
-  index('idx_revocations_status_expires').on(table.status, table.expiresAt),
-]);
+export const revocationConfirmations = pgTable(
+  'revocation_confirmations',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    keyId: uuid('key_id')
+      .notNull()
+      .references(() => publicKeys.id, { onDelete: 'cascade' }),
+    apiKeyId: uuid('api_key_id').references(() => apiKeys.id, { onDelete: 'cascade' }),
+    confirmationCodeHash: varchar('confirmation_code_hash', { length: 255 }).notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('pending'), // pending, confirmed, cancelled, expired
+    reason: text('reason').notNull(),
+    expiresAt: timestamp('expires_at').notNull(),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    lockedUntil: timestamp('locked_until'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    confirmedAt: timestamp('confirmed_at'),
+    confirmedBy: varchar('confirmed_by', { length: 255 }),
+  },
+  table => [
+    // Index for status-based queries (cleanup, status checks)
+    index('idx_revocations_status').on(table.status),
+    // Index for expiration-based cleanup
+    index('idx_revocations_expires').on(table.expiresAt),
+    // Index for finding confirmations by key
+    index('idx_revocations_key_id').on(table.keyId),
+    // Index for finding confirmations by API key
+    index('idx_revocations_api_key_id').on(table.apiKeyId),
+    // Composite index for status + expiration queries
+    index('idx_revocations_status_expires').on(table.status, table.expiresAt),
+  ],
+);
 
 // Relations
 export const revocationConfirmationsRelations = relations(revocationConfirmations, ({ one }) => ({
@@ -165,27 +203,35 @@ export const revocationConfirmationsRelations = relations(revocationConfirmation
 // ============================================================================
 // Notification History Table - stores notification history
 // ============================================================================
-export const notificationHistory = pgTable('notification_history', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  keyId: uuid('key_id').notNull().references(() => publicKeys.id, { onDelete: 'cascade' }),
-  channelId: varchar('channel_id', { length: 64 }),
-  notificationType: varchar('notification_type', { length: 50 }).notNull(),
-  recipientCount: integer('recipient_count').notNull().default(0),
-  deliveryStatus: varchar('delivery_status', { length: 20 }), // sent, failed, partial
-  errorDetails: jsonb('error_details'),
-  sentAt: timestamp('sent_at').notNull().defaultNow(),
-}, (table) => [
-  // Index for key-based notification lookups
-  index('idx_notifications_key_id').on(table.keyId),
-  // Index for channel-based queries
-  index('idx_notifications_channel_id').on(table.channelId),
-  // Index for notification type filtering
-  index('idx_notifications_type').on(table.notificationType),
-  // Index for delivery status queries
-  index('idx_notifications_status').on(table.deliveryStatus),
-  // Index for time-based queries
-  index('idx_notifications_sent_at').on(table.sentAt),
-]);
+export const notificationHistory = pgTable(
+  'notification_history',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    keyId: uuid('key_id')
+      .notNull()
+      .references(() => publicKeys.id, { onDelete: 'cascade' }),
+    channelId: varchar('channel_id', { length: 64 }),
+    notificationType: varchar('notification_type', { length: 50 }).notNull(),
+    recipientCount: integer('recipient_count').notNull().default(0),
+    deliveryStatus: varchar('delivery_status', { length: 20 }), // sent, failed, partial
+    errorDetails: jsonb('error_details'),
+    sentAt: timestamp('sent_at').notNull().defaultNow(),
+  },
+  table => [
+    // Index for key-based notification lookups
+    index('idx_notifications_key_id').on(table.keyId),
+    // Index for channel-based queries
+    index('idx_notifications_channel_id').on(table.channelId),
+    // Index for notification type filtering
+    index('idx_notifications_type').on(table.notificationType),
+    // Index for delivery status queries
+    index('idx_notifications_status').on(table.deliveryStatus),
+    // Index for time-based queries
+    index('idx_notifications_sent_at').on(table.sentAt),
+  ],
+);
 
 // Relations
 export const notificationHistoryRelations = relations(notificationHistory, ({ one }) => ({
@@ -198,32 +244,38 @@ export const notificationHistoryRelations = relations(notificationHistory, ({ on
 // ============================================================================
 // Audit Logs Table - stores audit logs
 // ============================================================================
-export const auditLogs = pgTable('audit_logs', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  action: varchar('action', { length: 100 }).notNull(),
-  channelId: varchar('channel_id', { length: 64 }),
-  keyId: uuid('key_id'),
-  apiKeyId: uuid('api_key_id'),
-  messageId: varchar('message_id', { length: 128 }),
-  userId: varchar('user_id', { length: 255 }),
-  ip: varchar('ip', { length: 45 }),
-  userAgent: varchar('user_agent', { length: 512 }),
-  success: boolean('success').notNull().default(true),
-  error: text('error'),
-  metadata: jsonb('metadata').default({}),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (table) => [
-  // Index for action-based queries with time filter
-  index('idx_audit_action').on(table.action, table.createdAt),
-  // Index for finding audit logs by key
-  index('idx_audit_key_id').on(table.keyId),
-  // Index for finding audit logs by channel
-  index('idx_audit_channel_id').on(table.channelId),
-  // Index for finding audit logs by user
-  index('idx_audit_user_id').on(table.userId),
-  // Index for time-based cleanup queries
-  index('idx_audit_created_at').on(table.createdAt),
-]);
+export const auditLogs = pgTable(
+  'audit_logs',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    action: varchar('action', { length: 100 }).notNull(),
+    channelId: varchar('channel_id', { length: 64 }),
+    keyId: uuid('key_id'),
+    apiKeyId: uuid('api_key_id'),
+    messageId: varchar('message_id', { length: 128 }),
+    userId: varchar('user_id', { length: 255 }),
+    ip: varchar('ip', { length: 45 }),
+    userAgent: varchar('user_agent', { length: 512 }),
+    success: boolean('success').notNull().default(true),
+    error: text('error'),
+    metadata: jsonb('metadata').default({}),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  table => [
+    // Index for action-based queries with time filter
+    index('idx_audit_action').on(table.action, table.createdAt),
+    // Index for finding audit logs by key
+    index('idx_audit_key_id').on(table.keyId),
+    // Index for finding audit logs by channel
+    index('idx_audit_channel_id').on(table.channelId),
+    // Index for finding audit logs by user
+    index('idx_audit_user_id').on(table.userId),
+    // Index for time-based cleanup queries
+    index('idx_audit_created_at').on(table.createdAt),
+  ],
+);
 
 // ============================================================================
 // Type Exports

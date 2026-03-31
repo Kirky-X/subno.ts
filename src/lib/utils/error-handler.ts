@@ -273,14 +273,14 @@ export interface RequestContext {
  * 从 NextRequest 提取请求上下文
  */
 export function extractRequestContext(request: NextRequest): RequestContext {
-  const requestId = 
+  const requestId =
     request.headers.get('x-request-id') ||
     request.headers.get('x-correlation-id') ||
     generateRequestId();
 
   const path = new URL(request.url).pathname;
   const method = request.method;
-  const clientIP = 
+  const clientIP =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') ||
     'unknown';
@@ -337,9 +337,7 @@ export interface StandardSuccessResponse<T = unknown> {
 /**
  * API 响应类型
  */
-export type ApiResponse<T = unknown> = 
-  | StandardSuccessResponse<T>
-  | StandardErrorResponse;
+export type ApiResponse<T = unknown> = StandardSuccessResponse<T> | StandardErrorResponse;
 
 // ============================================================================
 // 自定义错误类
@@ -366,7 +364,7 @@ export class AppError extends Error {
       originalError?: Error;
       severity?: ErrorSeverity;
       requestId?: string;
-    }
+    },
   ) {
     super(message || USER_FRIENDLY_MESSAGES[code]);
     this.name = 'AppError';
@@ -412,10 +410,7 @@ export class AppError extends Error {
    * 转换为 NextResponse
    */
   toNextResponse(requestId?: string): NextResponse {
-    return NextResponse.json(
-      this.toErrorResponse(requestId),
-      { status: this.status }
-    );
+    return NextResponse.json(this.toErrorResponse(requestId), { status: this.status });
   }
 
   /**
@@ -471,13 +466,12 @@ export class AuthenticationError extends AppError {
       originalError?: Error;
       requestId?: string;
       severity?: ErrorSeverity;
-    }
+    },
   ) {
-    super(
-      options?.code || ErrorCode.AUTH_FAILED,
-      message,
-      { ...options, severity: options?.severity || 'medium' }
-    );
+    super(options?.code || ErrorCode.AUTH_FAILED, message, {
+      ...options,
+      severity: options?.severity || 'medium',
+    });
     this.name = 'AuthenticationError';
   }
 }
@@ -494,13 +488,12 @@ export class AuthorizationError extends AppError {
       originalError?: Error;
       requestId?: string;
       severity?: ErrorSeverity;
-    }
+    },
   ) {
-    super(
-      options?.code || ErrorCode.FORBIDDEN,
-      message,
-      { ...options, severity: options?.severity || 'medium' }
-    );
+    super(options?.code || ErrorCode.FORBIDDEN, message, {
+      ...options,
+      severity: options?.severity || 'medium',
+    });
     this.name = 'AuthorizationError';
   }
 }
@@ -517,13 +510,12 @@ export class ValidationError extends AppError {
       originalError?: Error;
       requestId?: string;
       severity?: ErrorSeverity;
-    }
+    },
   ) {
-    super(
-      options?.code || ErrorCode.VALIDATION_ERROR,
-      message,
-      { ...options, severity: options?.severity || 'low' }
-    );
+    super(options?.code || ErrorCode.VALIDATION_ERROR, message, {
+      ...options,
+      severity: options?.severity || 'low',
+    });
     this.name = 'ValidationError';
   }
 }
@@ -540,13 +532,12 @@ export class ResourceError extends AppError {
       originalError?: Error;
       requestId?: string;
       severity?: ErrorSeverity;
-    }
+    },
   ) {
-    super(
-      options?.code || ErrorCode.NOT_FOUND,
-      message,
-      { ...options, severity: options?.severity || 'low' }
-    );
+    super(options?.code || ErrorCode.NOT_FOUND, message, {
+      ...options,
+      severity: options?.severity || 'low',
+    });
     this.name = 'ResourceError';
   }
 }
@@ -563,17 +554,13 @@ export class RateLimitError extends AppError {
       message?: string;
       details?: Record<string, unknown>;
       requestId?: string;
-    }
+    },
   ) {
-    super(
-      ErrorCode.RATE_LIMIT_EXCEEDED,
-      options?.message,
-      {
-        details: { retryAfter, ...options?.details },
-        severity: 'medium',
-        requestId: options?.requestId,
-      }
-    );
+    super(ErrorCode.RATE_LIMIT_EXCEEDED, options?.message, {
+      details: { retryAfter, ...options?.details },
+      severity: 'medium',
+      requestId: options?.requestId,
+    });
     this.name = 'RateLimitError';
     this.retryAfter = retryAfter;
   }
@@ -584,8 +571,10 @@ export class RateLimitError extends AppError {
   override toNextResponse(requestId?: string): NextResponse {
     const response = super.toNextResponse(requestId);
     response.headers.set('Retry-After', this.retryAfter.toString());
-    response.headers.set('X-RateLimit-Reset', 
-      Math.ceil(Date.now() / 1000 + this.retryAfter).toString());
+    response.headers.set(
+      'X-RateLimit-Reset',
+      Math.ceil(Date.now() / 1000 + this.retryAfter).toString(),
+    );
     return response;
   }
 }
@@ -602,16 +591,12 @@ export class ServerError extends AppError {
       originalError?: Error;
       severity?: ErrorSeverity;
       requestId?: string;
-    }
+    },
   ) {
-    super(
-      options?.code || ErrorCode.INTERNAL_ERROR,
-      message,
-      { 
-        ...options, 
-        severity: options?.severity || 'high',
-      }
-    );
+    super(options?.code || ErrorCode.INTERNAL_ERROR, message, {
+      ...options,
+      severity: options?.severity || 'high',
+    });
     this.name = 'ServerError';
   }
 }
@@ -650,12 +635,9 @@ export class ErrorHandler {
   /**
    * 处理错误并返回标准响应
    */
-  handle(
-    error: unknown,
-    context?: Partial<RequestContext>
-  ): NextResponse {
+  handle(error: unknown, context?: Partial<RequestContext>): NextResponse {
     const appError = this.normalizeError(error, context);
-    
+
     // 记录错误日志
     if (this.config.logErrors) {
       this.logError(appError, context);
@@ -667,10 +649,7 @@ export class ErrorHandler {
   /**
    * 将任意错误转换为 AppError
    */
-  normalizeError(
-    error: unknown,
-    context?: Partial<RequestContext>
-  ): AppError {
+  normalizeError(error: unknown, context?: Partial<RequestContext>): AppError {
     if (error instanceof AppError) {
       return error;
     }
@@ -741,8 +720,8 @@ export class ErrorHandler {
       'column',
       'syntax error at or near',
     ];
-    return dbErrorPatterns.some(pattern => 
-      error.message.toLowerCase().includes(pattern.toLowerCase())
+    return dbErrorPatterns.some(pattern =>
+      error.message.toLowerCase().includes(pattern.toLowerCase()),
     );
   }
 
@@ -751,8 +730,8 @@ export class ErrorHandler {
    */
   private isTimeoutError(error: Error): boolean {
     const timeoutPatterns = ['ETIMEDOUT', 'timeout', 'timed out'];
-    return timeoutPatterns.some(pattern => 
-      error.message.toLowerCase().includes(pattern.toLowerCase())
+    return timeoutPatterns.some(pattern =>
+      error.message.toLowerCase().includes(pattern.toLowerCase()),
     );
   }
 }
@@ -769,14 +748,14 @@ export const errorHandler = new ErrorHandler();
  */
 type ApiRouteHandler<T = unknown, P = Record<string, string>> = (
   request: NextRequest,
-  context: { params: Promise<P> }
+  context: { params: Promise<P> },
 ) => Promise<NextResponse<T>>;
 
 /**
  * 包装 API 路由处理器，添加统一错误处理
  */
 export function withErrorHandler<T = unknown, P = Record<string, string>>(
-  handler: ApiRouteHandler<T, P>
+  handler: ApiRouteHandler<T, P>,
 ): ApiRouteHandler<T, P> {
   return async (request, context) => {
     try {
@@ -798,7 +777,7 @@ export function withErrorHandler<T = unknown, P = Record<string, string>>(
 export function successResponse<T>(
   data: T,
   message?: string,
-  _requestId?: string
+  _requestId?: string,
 ): StandardSuccessResponse<T> {
   return {
     success: true,
@@ -816,7 +795,7 @@ export function errorResponse(
   options?: {
     details?: Record<string, unknown>;
     requestId?: string;
-  }
+  },
 ): StandardErrorResponse {
   const requestId = options?.requestId || generateRequestId();
   return {
@@ -835,85 +814,82 @@ export function errorResponse(
  * 快捷创建常见错误
  */
 export const Errors = {
-  missingApiKey: (requestId?: string) => 
+  missingApiKey: (requestId?: string) =>
     new AuthenticationError('API 密钥是必需的', {
       code: ErrorCode.MISSING_API_KEY,
       requestId,
     }),
 
-  invalidApiKey: (requestId?: string) => 
+  invalidApiKey: (requestId?: string) =>
     new AuthenticationError('无效的 API 密钥', {
       code: ErrorCode.INVALID_API_KEY,
       requestId,
     }),
 
-  inactiveApiKey: (requestId?: string) => 
+  inactiveApiKey: (requestId?: string) =>
     new AuthenticationError('API 密钥已停用', {
       code: ErrorCode.INACTIVE_API_KEY,
       requestId,
     }),
 
-  revokedApiKey: (requestId?: string) => 
+  revokedApiKey: (requestId?: string) =>
     new AuthenticationError('API 密钥已被撤销', {
       code: ErrorCode.REVOKED_API_KEY,
       requestId,
     }),
 
-  expiredApiKey: (requestId?: string) => 
+  expiredApiKey: (requestId?: string) =>
     new AuthenticationError('API 密钥已过期', {
       code: ErrorCode.EXPIRED_API_KEY,
       requestId,
     }),
 
-  forbidden: (message?: string, requestId?: string) => 
+  forbidden: (message?: string, requestId?: string) =>
     new AuthorizationError(message, { requestId }),
 
-  insufficientPermissions: (required?: string[], requestId?: string) => 
+  insufficientPermissions: (required?: string[], requestId?: string) =>
     new AuthorizationError('权限不足', {
       code: ErrorCode.INSUFFICIENT_PERMISSIONS,
       details: required ? { required } : undefined,
       requestId,
     }),
 
-  notFound: (resource?: string, requestId?: string) => 
-    new ResourceError(
-      resource ? `${resource} 不存在` : '请求的资源不存在',
-      { requestId }
-    ),
+  notFound: (resource?: string, requestId?: string) =>
+    new ResourceError(resource ? `${resource} 不存在` : '请求的资源不存在', { requestId }),
 
-  validationError: (message: string, details?: Record<string, unknown>, requestId?: string) => 
+  validationError: (message: string, details?: Record<string, unknown>, requestId?: string) =>
     new ValidationError(message, { details, requestId }),
 
-  invalidParameter: (param: string, reason?: string, requestId?: string) => 
+  invalidParameter: (param: string, reason?: string, requestId?: string) =>
     new ValidationError(`无效的参数: ${param}`, {
       code: ErrorCode.INVALID_PARAMETER,
       details: { parameter: param, reason },
       requestId,
     }),
 
-  missingParameter: (param: string, requestId?: string) => 
+  missingParameter: (param: string, requestId?: string) =>
     new ValidationError(`缺少必需的参数: ${param}`, {
       code: ErrorCode.MISSING_PARAMETER,
       details: { parameter: param },
       requestId,
     }),
 
-  conflict: (message: string, requestId?: string) => 
+  conflict: (message: string, requestId?: string) =>
     new ResourceError(message, {
       code: ErrorCode.CONFLICT,
       requestId,
     }),
 
-  rateLimited: (retryAfter: number = 60, requestId?: string) => 
+  rateLimited: (retryAfter: number = 60, requestId?: string) =>
     new RateLimitError(retryAfter, { requestId }),
 
-  internal: (originalError?: Error, requestId?: string) => 
+  internal: (originalError?: Error, requestId?: string) =>
     new ServerError('服务器内部错误', {
       originalError,
       requestId,
     }),
 
-  databaseError: (originalError?: Error, requestId?: string) => 
+  databaseError: (originalError?: Error, requestId?: string) =>
     new ServerError('数据库操作失败', {
       code: ErrorCode.DATABASE_ERROR,
       originalError,
