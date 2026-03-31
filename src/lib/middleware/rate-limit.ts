@@ -35,7 +35,7 @@ function createRateLimiter(endpointType: string) {
   const config = getRateLimitConfig(endpointType);
   
   // Common options for both Redis and Memory limiters
-  const commonOptions: IRateLimiterStoreOptions = {
+  const commonOptions = {
     points: config.maxRequests,
     duration: Math.ceil(config.windowMs / 1000), // Convert to seconds
     blockDuration: 0, // Don't block, just reject
@@ -163,7 +163,7 @@ export async function rateLimit(
     
     return {
       success: true,
-      limit: result.totalPoints,
+      limit: config.maxRequests,
       remaining: result.remainingPoints,
       resetAt: Date.now() + result.msBeforeNext,
     };
@@ -172,7 +172,7 @@ export async function rateLimit(
       // Rate limit exceeded - this is expected
       return {
         success: false,
-        limit: error.totalPoints || config.maxRequests,
+        limit: config.maxRequests,
         remaining: 0,
         resetAt: Date.now() + error.msBeforeNext,
         retryAfter: Math.ceil(error.msBeforeNext / 1000),
