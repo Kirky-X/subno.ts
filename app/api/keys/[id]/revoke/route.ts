@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { keyRevocationService, auditService } from '@/src/lib/services';
 import { requireApiKeyWithPermissions, getApiKeyInfo } from '@/src/lib/middleware';
-import { Permission } from '@/src/lib/types/permissions';
+import { ApiKeyPermission } from '@/src/lib/enums/permission.enums';
 import {
   withErrorHandler,
   extractRequestContext,
@@ -32,7 +32,7 @@ export const POST = withErrorHandler(async (
   // The KeyRevocationService.validateApiKeyPermission method verifies that:
   // 1. The API key has 'key_revoke' or 'admin' permission
   // 2. For non-admin users, only keys from channels they created can be revoked
-  const authError = await requireApiKeyWithPermissions(request, [Permission.KEY_REVOKE]);
+  const authError = await requireApiKeyWithPermissions(request, [ApiKeyPermission.REVOKE]);
   if (authError) {
     throw new AuthorizationError('权限不足以执行密钥撤销操作', {
       code: ErrorCode.INSUFFICIENT_PERMISSIONS,
@@ -140,7 +140,7 @@ export const GET = withErrorHandler(async (
   const context = extractRequestContext(request);
   
   // Validate API key - requires at least read permission
-  const authError = await requireApiKeyWithPermissions(request, [Permission.READ]);
+  const authError = await requireApiKeyWithPermissions(request, [ApiKeyPermission.READ]);
   if (authError) {
     throw new AuthorizationError('权限不足以查看撤销状态', {
       code: ErrorCode.INSUFFICIENT_PERMISSIONS,

@@ -11,7 +11,7 @@ import {
   extractRequestContext,
 } from '../utils/error-handler';
 import { apiKeyCache } from '../utils/cache';
-import { ApiKeyPermission, hasPermission, hasAnyPermission } from '../enums/permission.enums';
+import { ApiKeyPermission, hasPermission, hasAnyPermission, hasAllPermissions } from '../enums/permission.enums';
 
 /**
  * API Key validation configuration constants
