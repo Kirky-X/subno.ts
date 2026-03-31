@@ -29,7 +29,8 @@ export enum LogLevel {
  * @returns 如果在中生产环境返回 true
  */
 export function isProduction(): boolean {
-  return env.NODE_ENV === NodeEnv.PRODUCTION;
+  const e = env as unknown as { NODE_ENV: string };
+  return e.NODE_ENV === NodeEnv.PRODUCTION;
 }
 
 /**
@@ -37,7 +38,8 @@ export function isProduction(): boolean {
  * @returns 如果在开发环境返回 true
  */
 export function isDevelopment(): boolean {
-  return env.NODE_ENV === NodeEnv.DEVELOPMENT;
+  const e = env as unknown as { NODE_ENV: string };
+  return e.NODE_ENV === NodeEnv.DEVELOPMENT;
 }
 
 /**
@@ -45,7 +47,8 @@ export function isDevelopment(): boolean {
  * @returns 如果在测试环境返回 true
  */
 export function isTest(): boolean {
-  return env.NODE_ENV === NodeEnv.TEST;
+  const e = env as unknown as { NODE_ENV: string };
+  return e.NODE_ENV === NodeEnv.TEST;
 }
 
 /**
@@ -54,7 +57,8 @@ export function isTest(): boolean {
  * @returns 如果应该记录返回 true
  */
 export function shouldLog(level: LogLevel): boolean {
-  const currentLevel = env.LOG_LEVEL;
+  const e = env as unknown as { LOG_LEVEL: LogLevel };
+  const currentLevel = e.LOG_LEVEL;
   const levels = [
     LogLevel.FATAL,
     LogLevel.ERROR,

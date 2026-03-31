@@ -9,6 +9,10 @@
 import { createEnv } from '@t3-oss/env-nextjs';
 import { z } from 'zod';
 
+// Type declaration to work around inference issues
+type ServerSchema = typeof serverSchema;
+type ClientSchema = typeof clientSchema;
+
 /**
  * Server-side environment variables schema
  */
@@ -72,10 +76,11 @@ const clientSchema = z.object({
 
 /**
  * Runtime environment for server-side rendering
+ * Note: Using type assertion to work around @t3-oss/env-nextjs type inference issues
  */
 export const env = createEnv({
-  server: serverSchema,
-  client: clientSchema,
+  server: serverSchema as any,
+  client: clientSchema as any,
   runtimeEnv: {
     // Server-side
     DATABASE_URL: process.env.DATABASE_URL,
@@ -123,11 +128,18 @@ export function getEnv() {
  * Get database configuration
  */
 export function getDatabaseConfig() {
+  const e = env as unknown as {
+    DATABASE_URL: string;
+    DB_POOL_SIZE: number;
+    DB_IDLE_TIMEOUT: number;
+    DB_CONNECT_TIMEOUT: number;
+  };
+  
   return {
-    url: env.DATABASE_URL,
-    poolSize: env.DB_POOL_SIZE,
-    idleTimeout: env.DB_IDLE_TIMEOUT,
-    connectTimeout: env.DB_CONNECT_TIMEOUT,
+    url: e.DATABASE_URL,
+    poolSize: e.DB_POOL_SIZE,
+    idleTimeout: e.DB_IDLE_TIMEOUT,
+    connectTimeout: e.DB_CONNECT_TIMEOUT,
   };
 }
 
@@ -135,8 +147,9 @@ export function getDatabaseConfig() {
  * Get Redis configuration
  */
 export function getRedisConfig() {
+  const e = env as unknown as { REDIS_URL: string };
   return {
-    url: env.REDIS_URL,
+    url: e.REDIS_URL,
   };
 }
 
@@ -144,13 +157,21 @@ export function getRedisConfig() {
  * Get rate limit configuration
  */
 export function getRateLimitConfig() {
+  const e = env as unknown as {
+    RATE_LIMIT_WINDOW_SECONDS: number;
+    RATE_LIMIT_DEFAULT: number;
+    RATE_LIMIT_PUBLISH: number;
+    RATE_LIMIT_SUBSCRIBE: number;
+    RATE_LIMIT_REGISTER: number;
+    RATE_LIMIT_REVOKE: number;
+  };
   return {
-    windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS,
-    default: env.RATE_LIMIT_DEFAULT,
-    publish: env.RATE_LIMIT_PUBLISH,
-    subscribe: env.RATE_LIMIT_SUBSCRIBE,
-    register: env.RATE_LIMIT_REGISTER,
-    revoke: env.RATE_LIMIT_REVOKE,
+    windowSeconds: e.RATE_LIMIT_WINDOW_SECONDS,
+    default: e.RATE_LIMIT_DEFAULT,
+    publish: e.RATE_LIMIT_PUBLISH,
+    subscribe: e.RATE_LIMIT_SUBSCRIBE,
+    register: e.RATE_LIMIT_REGISTER,
+    revoke: e.RATE_LIMIT_REVOKE,
   };
 }
 
@@ -158,9 +179,13 @@ export function getRateLimitConfig() {
  * Get message TTL configuration
  */
 export function getMessageTTLConfig() {
+  const e = env as unknown as {
+    PUBLIC_MESSAGE_TTL: number;
+    PRIVATE_MESSAGE_TTL: number;
+  };
   return {
-    public: env.PUBLIC_MESSAGE_TTL,
-    private: env.PRIVATE_MESSAGE_TTL,
+    public: e.PUBLIC_MESSAGE_TTL,
+    private: e.PRIVATE_MESSAGE_TTL,
   };
 }
 
@@ -168,9 +193,13 @@ export function getMessageTTLConfig() {
  * Get channel configuration
  */
 export function getChannelConfig() {
+  const e = env as unknown as {
+    TEMPORARY_CHANNEL_TTL: number;
+    PERSISTENT_CHANNEL_DEFAULT_TTL: number;
+  };
   return {
-    temporaryTTL: env.TEMPORARY_CHANNEL_TTL,
-    persistentDefaultTTL: env.PERSISTENT_CHANNEL_DEFAULT_TTL,
+    temporaryTTL: e.TEMPORARY_CHANNEL_TTL,
+    persistentDefaultTTL: e.PERSISTENT_CHANNEL_DEFAULT_TTL,
   };
 }
 
@@ -178,11 +207,17 @@ export function getChannelConfig() {
  * Get key revocation configuration
  */
 export function getKeyRevocationConfig() {
+  const e = env as unknown as {
+    REVOCATION_CONFIRMATION_HOURS: number;
+    REVOKED_KEY_CLEANUP_DAYS: number;
+    CONFIRMATION_MAX_ATTEMPTS: number;
+    CONFIRMATION_LOCKOUT_MINUTES: number;
+  };
   return {
-    confirmationHours: env.REVOCATION_CONFIRMATION_HOURS,
-    cleanupDays: env.REVOKED_KEY_CLEANUP_DAYS,
-    maxAttempts: env.CONFIRMATION_MAX_ATTEMPTS,
-    lockoutMinutes: env.CONFIRMATION_LOCKOUT_MINUTES,
+    confirmationHours: e.REVOCATION_CONFIRMATION_HOURS,
+    cleanupDays: e.REVOKED_KEY_CLEANUP_DAYS,
+    maxAttempts: e.CONFIRMATION_MAX_ATTEMPTS,
+    lockoutMinutes: e.CONFIRMATION_LOCKOUT_MINUTES,
   };
 }
 
@@ -190,18 +225,24 @@ export function getKeyRevocationConfig() {
  * Validate that ADMIN_MASTER_KEY is properly configured in production
  */
 export function validateProductionSecurity(): void {
-  if (env.NODE_ENV === 'production') {
-    if (env.ADMIN_MASTER_KEY.includes('REPLACE_WITH') || 
-        env.ADMIN_MASTER_KEY.includes('dev-') ||
-        env.ADMIN_MASTER_KEY.length < 32) {
+  const e = env as unknown as {
+    NODE_ENV: 'development' | 'production' | 'test';
+    ADMIN_MASTER_KEY: string;
+    CRON_SECRET: string;
+  };
+  
+  if (e.NODE_ENV === 'production') {
+    if (e.ADMIN_MASTER_KEY.includes('REPLACE_WITH') || 
+        e.ADMIN_MASTER_KEY.includes('dev-') ||
+        e.ADMIN_MASTER_KEY.length < 32) {
       throw new Error(
         'ADMIN_MASTER_KEY must be a strong random key (min 32 characters) in production'
       );
     }
     
-    if (env.CRON_SECRET.includes('REPLACE_WITH') || 
-        env.CRON_SECRET.includes('dev-') ||
-        env.CRON_SECRET.length < 32) {
+    if (e.CRON_SECRET.includes('REPLACE_WITH') || 
+        e.CRON_SECRET.includes('dev-') ||
+        e.CRON_SECRET.length < 32) {
       throw new Error(
         'CRON_SECRET must be a strong random token (min 32 characters) in production'
       );
