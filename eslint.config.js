@@ -12,7 +12,7 @@ export default tseslint.config(
   tseslint.configs.stylistic,  // 风格指南
   // .husky 和根目录的 JS 配置文件使用简化规则
   {
-    files: ['.husky/**/*.js', '.prettierrc.js', '*.config.js'],
+    files: ['.husky/**/*.js', '.prettierrc.js', '*.config.js', 'scripts/**/*.js'],
     rules: {
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',

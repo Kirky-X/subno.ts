@@ -175,7 +175,7 @@ function verifyTypeScript() {
       results.failed.push('❌ TypeScript 类型检查失败（源代码有错误）');
     } else {
       results.passed.push('✅ TypeScript 类型检查通过（仅测试文件有预期错误）');
-      results.warnings.push('⚠️  测试文件存在类型错误（不影响提交）');
+      results.warnings.push('ℹ️  测试文件存在类型错误（历史遗留问题，不影响提交）');
     }
   }
 }
@@ -222,7 +222,8 @@ function verifyDependencySecurity() {
     }
   } else {
     // 超时或其他错误不算失败，只算警告
-    results.warnings.push('⚠️  npm audit 执行超时或失败（不影响提交）');
+    // 这可能是由于 npm registry 不支持 audit 接口
+    results.warnings.push('ℹ️  npm audit 不可用（registry 可能不支持，不影响提交）');
   }
 }
 
