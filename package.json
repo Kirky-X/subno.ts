@@ -41,6 +41,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/async-retry": "^1.4.9",
     "@types/node": "^20.0.0",
     "@types/pg": "^8.18.0",
     "@types/react": "^18.2.0",
