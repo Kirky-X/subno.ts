@@ -16,7 +16,6 @@ interface I18nContextType {
 
 export const I18nContext = createContext<I18nContextType | null>(null);
 
-// Nested key getter utility
 function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   const keys = path.split('.');
   let result: unknown = obj;
@@ -34,7 +33,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('zh-CN');
   const [translations, setTranslations] = useState<Record<string, unknown>>({});
 
-  // Load translations
   useEffect(() => {
     async function loadTranslations() {
       try {
@@ -50,7 +48,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     loadTranslations();
   }, [locale]);
 
-  // Initialize language setting
   useEffect(() => {
     if (typeof window === 'undefined') return;
 

@@ -1,7 +1,5 @@
-"""Error Types and Exceptions.
-
-Defines custom exception classes for SecureNotify SDK.
-"""
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 KirkyX. All rights reserved.
 
 from typing import Optional, Dict, Any
 from enum import Enum
@@ -84,18 +82,11 @@ class SecureNotifyError(Exception):
     """Base exception class for SecureNotify SDK."""
 
     def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
-        """Initialize SecureNotifyError.
-
-        Args:
-            message: Error message.
-            details: Additional error details.
-        """
         super().__init__(message)
         self.message = message
         self.details = details or {}
 
     def __str__(self) -> str:
-        """Return string representation."""
         if self.details:
             return f"{self.message} (details: {self.details})"
         return self.message
@@ -112,15 +103,6 @@ class SecureNotifyApiError(SecureNotifyError):
         details: Optional[Dict[str, Any]] = None,
         request_id: Optional[str] = None,
     ):
-        """Initialize SecureNotifyApiError.
-
-        Args:
-            status_code: HTTP status code.
-            error_code: Error code from API.
-            message: Error message from API.
-            details: Additional error details.
-            request_id: Request ID for debugging.
-        """
         super().__init__(message, details)
         self.status_code = status_code
         self.error_code = error_code
@@ -128,7 +110,6 @@ class SecureNotifyApiError(SecureNotifyError):
 
     @property
     def is_retryable(self) -> bool:
-        """Check if the error is retryable."""
         return self.error_code in RETRYABLE_ERRORS
 
 
@@ -140,12 +121,6 @@ class SecureNotifyConnectionError(SecureNotifyError):
         message: str = "Connection failed",
         details: Optional[Dict[str, Any]] = None,
     ):
-        """Initialize SecureNotifyConnectionError.
-
-        Args:
-            message: Error message.
-            details: Additional error details.
-        """
         super().__init__(message, details)
 
 
@@ -158,13 +133,6 @@ class SecureNotifyTimeoutError(SecureNotifyError):
         timeout: Optional[float] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
-        """Initialize SecureNotifyTimeoutError.
-
-        Args:
-            message: Error message.
-            timeout: Timeout in seconds.
-            details: Additional error details.
-        """
         super().__init__(message, details)
         self.timeout = timeout
 
@@ -177,12 +145,6 @@ class SecureNotifyAuthenticationError(SecureNotifyError):
         message: str = "Authentication failed",
         details: Optional[Dict[str, Any]] = None,
     ):
-        """Initialize SecureNotifyAuthenticationError.
-
-        Args:
-            message: Error message.
-            details: Additional error details.
-        """
         super().__init__(message, details)
 
 
@@ -195,13 +157,6 @@ class SecureNotifyRateLimitError(SecureNotifyApiError):
         retry_after: Optional[float] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
-        """Initialize SecureNotifyRateLimitError.
-
-        Args:
-            message: Error message.
-            retry_after: Seconds to wait before retry.
-            details: Additional error details.
-        """
         super().__init__(
             status_code=429,
             error_code=ErrorCode.RATE_LIMIT_EXCEEDED,
@@ -212,14 +167,7 @@ class SecureNotifyRateLimitError(SecureNotifyApiError):
 
 
 def get_error_class(error_code: ErrorCode) -> type:
-    """Get the appropriate exception class for an error code.
-
-    Args:
-        error_code: Error code from API.
-
-    Returns:
-        Exception class to use.
-    """
+    """Get the appropriate exception class for an error code."""
     auth_errors = {
         ErrorCode.AUTH_REQUIRED,
         ErrorCode.AUTH_FAILED,

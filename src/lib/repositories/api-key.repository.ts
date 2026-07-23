@@ -10,18 +10,12 @@ import { QueryBuilder } from './query-builder';
 export class ApiKeyRepository {
   private db = getDatabase();
 
-  /**
-   * Calculate the expiry date based on configured days
-   */
   private calculateExpiryDate(): Date {
     return new Date(
       Date.now() - KEY_MANAGEMENT_CONFIG.DEFAULT_API_KEY_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
     );
   }
 
-  /**
-   * Build find conditions using the unified QueryBuilder
-   */
   private buildFindConditions(options: {
     includeDeleted?: boolean;
     includeExpired?: boolean;
@@ -59,10 +53,6 @@ export class ApiKeyRepository {
     return result[0] ?? null;
   }
 
-  /**
-   * Validate that an API key has the required permission.
-   * Returns true only if the key exists, is active, not deleted, and has the permission.
-   */
   async validatePermission(keyHash: string, requiredPermission: string): Promise<boolean> {
     const key = await this.findByKeyHash(keyHash);
 
@@ -70,17 +60,14 @@ export class ApiKeyRepository {
       return false;
     }
 
-    // Check if key is active and not deleted
     if (!key.isActive || key.isDeleted) {
       return false;
     }
 
-    // Check if key has expired
     if (key.expiresAt && key.expiresAt < new Date()) {
       return false;
     }
 
-    // Check if key has the required permission
     const permissions = key.permissions as string[];
     return permissions.includes('admin') || permissions.includes(requiredPermission);
   }

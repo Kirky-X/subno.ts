@@ -60,9 +60,6 @@ pub enum SecureNotifyError {
     Unknown(String),
 }
 
-// Note: SecureNotifyError implements Clone via derive macro
-// For FFI compatibility, this is sufficient
-
 impl SecureNotifyError {
     pub fn code(&self) -> String {
         match self {
@@ -134,10 +131,8 @@ impl SecureNotifyError {
     }
 }
 
-/// Result type alias
 pub type Result<T> = std::result::Result<T, SecureNotifyError>;
 
-/// Message priority levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MessagePriority {
     Critical = 100,
@@ -187,7 +182,6 @@ impl MessagePriority {
     }
 }
 
-/// Channel types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ChannelType {
     Public,
@@ -221,7 +215,6 @@ impl ChannelType {
     }
 }
 
-/// Encryption algorithm types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EncryptionAlgorithm {
     Rsa2048,
@@ -264,7 +257,6 @@ impl EncryptionAlgorithm {
     }
 }
 
-/// Client connection state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConnectionState {
     Disconnected,
@@ -304,7 +296,6 @@ impl ConnectionState {
     }
 }
 
-// Import internal modules
 pub mod types;
 pub mod managers;
 pub mod utils;
@@ -312,13 +303,10 @@ pub mod utils;
 pub mod client;
 
 
-// Re-export types from api module
 pub use types::api::{SseEvent, SseEventType};
 
-// Re-export ClientBuilder and SecureNotifyClient from client module
 pub use client::{ClientBuilder, SecureNotifyClient};
 
-// Re-export SseMessage from utils module
 pub use utils::connection::SseMessage;
 
 
@@ -346,8 +334,6 @@ pub use utils::connection::SseMessage;
 /// }
 /// ```
 
-/// Create a new client (convenience function for FFI)
-// #[uniffi::export]
 pub fn create_client(base_url: String, api_key: String) -> Result<SecureNotifyClient> {
     SecureNotifyClient::builder()
         .base_url(base_url)
@@ -355,13 +341,9 @@ pub fn create_client(base_url: String, api_key: String) -> Result<SecureNotifyCl
         .build()
 }
 
-/// Create a client with default URL
-// #[uniffi::export]
 pub fn create_client_with_defaults(api_key: String) -> Result<SecureNotifyClient> {
     create_client("https://api.securenotify.dev".to_string(), api_key)
 }
-
-// uniffi::include_scaffolding!("securenotify");
 
 #[cfg(test)]
 mod tests;

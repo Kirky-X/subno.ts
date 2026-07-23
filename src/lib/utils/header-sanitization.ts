@@ -5,9 +5,6 @@
  * Header sanitization utilities for security
  */
 
-/**
- * Sensitive header names that should be redacted in logs
- */
 export const SENSITIVE_HEADERS = [
   'authorization',
   'x-api-key',
@@ -19,9 +16,6 @@ export const SENSITIVE_HEADERS = [
   'x-real-ip',
 ] as const;
 
-/**
- * Check if a header name is sensitive
- */
 export function isSensitiveHeader(headerName: string): boolean {
   const lowerHeader = headerName.toLowerCase();
   return SENSITIVE_HEADERS.some(
@@ -76,9 +70,6 @@ export function sanitizeHeaderForLog(headerName: string, value: string): string 
   return sanitizeHeaderValue(headerName, value);
 }
 
-/**
- * Check if headers contain any sensitive information
- */
 export function headersContainSensitiveInfo(headers: Headers): boolean {
   for (const headerName of SENSITIVE_HEADERS) {
     if (headers.has(headerName)) {

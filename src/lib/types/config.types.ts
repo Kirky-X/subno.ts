@@ -8,9 +8,6 @@
  * Replaces magic numbers and string literals with type-safe enums
  */
 
-/**
- * Channel type enumeration
- */
 export enum ChannelType {
   /** Public channel - anyone can subscribe */
   PUBLIC = 'public',
@@ -22,9 +19,6 @@ export enum ChannelType {
   TEMPORARY = 'temporary',
 }
 
-/**
- * Encryption algorithm enumeration
- */
 export enum Algorithm {
   /** RSA 2048-bit key */
   RSA_2048 = 'RSA-2048',
@@ -36,9 +30,6 @@ export enum Algorithm {
   ED25519 = 'ED25519',
 }
 
-/**
- * Message priority levels
- */
 export enum MessagePriorityLevel {
   /** Critical priority - highest importance */
   CRITICAL = 100,
@@ -61,9 +52,6 @@ export enum MessagePriorityLevel {
  */
 export { Permission } from './permissions';
 
-/**
- * System configuration constants
- */
 export const ConfigConstants = {
   /** Maximum message size in bytes (1MB) */
   MAX_MESSAGE_SIZE: 1024 * 1024,
@@ -144,9 +132,6 @@ export const ConfigConstants = {
   CORS_MAX_AGE: 86400,
 } as const;
 
-/**
- * Type for config constants
- */
 export type ConfigConstantsType = typeof ConfigConstants;
 
 /**

@@ -3,21 +3,12 @@
 
 import crypto from 'crypto';
 
-/**
- * Generate a unique error ID for tracking
- */
 export function generateErrorId(): string {
   return crypto.randomUUID().substring(0, 8);
 }
 
-/**
- * Error severity levels
- */
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 
-/**
- * Structured error information
- */
 export interface AppError {
   id: string;
   message: string;
@@ -31,9 +22,6 @@ export interface AppError {
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Create a structured error
- */
 export function createError(
   message: string,
   code: string,
@@ -52,9 +40,6 @@ export function createError(
   };
 }
 
-/**
- * Error response interface
- */
 export interface ErrorResponse {
   success: false;
   error: {
@@ -88,9 +73,6 @@ export function createErrorResponse(error: AppError, includeDetails = false): Er
   return response;
 }
 
-/**
- * Handle and format errors consistently
- */
 export function handleError(
   error: unknown,
   code: string,
@@ -129,9 +111,6 @@ export function handleError(
   return appError;
 }
 
-/**
- * Wrap async route handlers with error handling
- */
 export function withErrorHandling<T extends (...args: unknown[]) => Promise<unknown>>(
   handler: T,
   defaultCode = 'INTERNAL_ERROR',
@@ -148,9 +127,6 @@ export function withErrorHandling<T extends (...args: unknown[]) => Promise<unkn
   return wrapped as T;
 }
 
-/**
- * Common error codes
- */
 export const ERROR_CODES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   INVALID_INPUT: 'INVALID_INPUT',
@@ -165,16 +141,10 @@ export const ERROR_CODES = {
   TIMEOUT_ERROR: 'TIMEOUT_ERROR',
 } as const;
 
-/**
- * Create a validation error
- */
 export function validationError(message: string, metadata?: Record<string, unknown>): AppError {
   return createError(message, ERROR_CODES.VALIDATION_ERROR, 'medium', undefined, metadata);
 }
 
-/**
- * Create a not found error
- */
 export function notFoundError(resource: string, id?: string): AppError {
   return createError(`${resource} not found`, ERROR_CODES.NOT_FOUND, 'low', undefined, {
     resource,
@@ -182,32 +152,20 @@ export function notFoundError(resource: string, id?: string): AppError {
   });
 }
 
-/**
- * Create an unauthorized error
- */
 export function unauthorizedError(message = 'Authentication required'): AppError {
   return createError(message, ERROR_CODES.UNAUTHORIZED, 'medium');
 }
 
-/**
- * Create a forbidden error
- */
 export function forbiddenError(message = 'Access denied'): AppError {
   return createError(message, ERROR_CODES.FORBIDDEN, 'medium');
 }
 
-/**
- * Create a rate limit error
- */
 export function rateLimitError(retryAfter?: number): AppError {
   return createError('Rate limit exceeded', ERROR_CODES.RATE_LIMITED, 'medium', undefined, {
     retryAfter,
   });
 }
 
-/**
- * Create an internal error
- */
 export function internalError(originalError?: unknown): AppError {
   return handleError(
     originalError || new Error('Internal server error'),

@@ -32,9 +32,6 @@ public class MessageInfo {
     @JsonProperty("priority")
     private String priority;
 
-    /**
-     * Response from publishing a message.
-     */
     @Data
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class MessagePublishResponse {
@@ -52,9 +49,6 @@ public class MessageInfo {
         private boolean autoCreated;
     }
 
-    /**
-     * Queue status response.
-     */
     @Data
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class QueueStatusResponse {

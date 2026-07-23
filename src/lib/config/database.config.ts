@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-/**
- * Database configuration
- * All configurable values are loaded from environment variables with bounds checking
- */
-
 import { parseEnvInt } from '../utils/env.utils';
 
 // Pool size: 1-100 connections
@@ -25,30 +20,18 @@ export const DB_CONFIG = {
   },
 } as const;
 
-/**
- * Get database pool configuration
- */
 export function getDbPoolConfig() {
   return DB_CONFIG.pool;
 }
 
-/**
- * Get pool size
- */
 export function getPoolSize(): number {
   return DB_POOL_SIZE;
 }
 
-/**
- * Get idle timeout in milliseconds
- */
 export function getIdleTimeout(): number {
   return DB_IDLE_TIMEOUT;
 }
 
-/**
- * Get connect timeout in milliseconds
- */
 export function getConnectTimeout(): number {
   return DB_CONNECT_TIMEOUT;
 }

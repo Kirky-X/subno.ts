@@ -43,7 +43,6 @@ export const DELETE = withErrorHandler(async (
     );
 
     if (!result.success) {
-      // 根据错误码抛出对应的错误
       switch (result.code) {
         case 'NOT_FOUND':
           throw new ResourceError('密钥不存在', {
@@ -69,7 +68,6 @@ export const DELETE = withErrorHandler(async (
       }
     }
 
-    // Audit log for successful revocation confirmation
     await auditService.log({
       action: 'key_revoke_confirmed',
       keyId: keyId,
@@ -97,7 +95,6 @@ export const DELETE = withErrorHandler(async (
     
     // 使用安全比较防止时序攻击
     if (!envAdminKey || !secureCompare(adminKey, envAdminKey)) {
-      // Audit log for failed admin authentication attempt
       await auditService.log({
         action: 'key_direct_delete_attempt',
         keyId: keyId,
@@ -131,7 +128,6 @@ export const DELETE = withErrorHandler(async (
       );
     }
 
-    // 导入 repository
     const { publicKeyRepository } = await import('@/src/lib/repositories');
     const key = await publicKeyRepository.findById(keyId);
     
@@ -139,7 +135,6 @@ export const DELETE = withErrorHandler(async (
       throw Errors.notFound('密钥', context.requestId);
     }
 
-    // 执行软删除
     const deletedKey = await publicKeyRepository.softDelete(
       keyId,
       'admin_direct',
@@ -176,7 +171,6 @@ export const DELETE = withErrorHandler(async (
     }, '公钥撤销成功（直接删除）'));
   }
 
-  // 无效请求
   throw new ValidationError(
     '请提供 X-API-Key 和 confirmationCode，或提供 X-Admin-Key 进行直接删除',
     {

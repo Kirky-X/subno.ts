@@ -29,17 +29,7 @@ public class PublishManager {
     }
 
     /**
-     * Publish a message to a channel.
-     *
-     * @param channel   The channel ID
-     * @param message   The message content
      * @param priority  Message priority (critical, high, normal, low, bulk)
-     * @param sender    Optional sender identifier
-     * @param cache     Whether to cache the message
-     * @param encrypted Whether the message is encrypted
-     * @param autoCreate Whether to auto-create the channel
-     * @param signature Optional message signature
-     * @return The publish result
      */
     public MessageInfo.MessagePublishResponse send(String channel, String message, String priority,
                                                     String sender, Boolean cache, Boolean encrypted,
@@ -64,46 +54,18 @@ public class PublishManager {
         }).getData();
     }
 
-    /**
-     * Publish a message with default options.
-     *
-     * @param channel The channel ID
-     * @param message The message content
-     * @return The publish result
-     */
     public MessageInfo.MessagePublishResponse send(String channel, String message) throws Exception {
         return send(channel, message, "normal", null, true, false, true, null);
     }
 
-    /**
-     * Publish a critical priority message.
-     *
-     * @param channel The channel ID
-     * @param message The message content
-     * @return The publish result
-     */
     public MessageInfo.MessagePublishResponse sendCritical(String channel, String message) throws Exception {
         return send(channel, message, "critical", null, true, false, true, null);
     }
 
-    /**
-     * Publish a message with sender.
-     *
-     * @param channel The channel ID
-     * @param message The message content
-     * @param sender  The sender identifier
-     * @return The publish result
-     */
     public MessageInfo.MessagePublishResponse send(String channel, String message, String sender) throws Exception {
         return send(channel, message, "normal", sender, true, false, true, null);
     }
 
-    /**
-     * Get queue status for a channel.
-     *
-     * @param channel The channel ID
-     * @return The queue status
-     */
     public MessageInfo.QueueStatusResponse getQueueStatus(String channel) throws Exception {
         return retryHandler.execute(() -> {
             try {
@@ -114,12 +76,6 @@ public class PublishManager {
         }).getData();
     }
 
-    /**
-     * Get a specific message by ID.
-     *
-     * @param messageId The message ID
-     * @return The message info
-     */
     public MessageInfo getMessage(String messageId) throws Exception {
         return retryHandler.execute(() -> {
             try {

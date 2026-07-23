@@ -1,7 +1,7 @@
-"""Performance Metrics Utility.
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 KirkyX. All rights reserved.
 
-Provides performance monitoring and metrics collection for SDK operations.
-"""
+"""Performance monitoring and metrics collection for SDK operations."""
 
 import time
 from typing import Dict, Optional, List, Union
@@ -12,7 +12,6 @@ from collections import deque
 
 @dataclass
 class MetricSample:
-    """A single metric sample."""
     timestamp: float
     duration_ms: float
     success: bool
@@ -34,7 +33,6 @@ class MetricStats:
     total_duration_ms: float = 0.0
 
     def add_sample(self, sample: MetricSample):
-        """Add a sample to the statistics."""
         self.count += 1
         self.total_duration_ms += sample.duration_ms
 
@@ -51,7 +49,6 @@ class MetricStats:
         self.avg_duration_ms = self.total_duration_ms / self.count
 
     def calculate_percentiles(self, samples: List[MetricSample]):
-        """Calculate percentile values."""
         if not samples:
             return
 
@@ -65,7 +62,6 @@ class MetricStats:
 
 @dataclass
 class MetricsSummary:
-    """Summary of all metrics."""
     total_requests: int = 0
     total_success: int = 0
     total_failures: int = 0
@@ -74,26 +70,12 @@ class MetricsSummary:
 
 
 class MetricsCollector:
-    """Collects and aggregates performance metrics."""
-
     def __init__(self, max_samples: int = 1000):
-        """Initialize metrics collector.
-
-        Args:
-            max_samples: Maximum number of samples to keep per endpoint.
-        """
         self._max_samples = max_samples
         self._samples: Dict[str, deque] = {}
         self._lock = Lock()
 
     def record(self, endpoint: str, duration_ms: float, success: bool):
-        """Record a metric sample.
-
-        Args:
-            endpoint: API endpoint.
-            duration_ms: Request duration in milliseconds.
-            success: Whether the request was successful.
-        """
         sample = MetricSample(
             timestamp=time.time(),
             duration_ms=duration_ms,
@@ -109,9 +91,6 @@ class MetricsCollector:
 
     def get_stats(self, endpoint: Optional[str] = None) -> Union[MetricStats, Dict[str, MetricStats]]:
         """Get statistics for endpoints.
-
-        Args:
-            endpoint: Specific endpoint to get stats for, or None for all.
 
         Returns:
             If endpoint is specified, returns a single MetricStats object.
@@ -140,16 +119,10 @@ class MetricsCollector:
                 return result
 
     def reset(self):
-        """Reset all metrics."""
         with self._lock:
             self._samples.clear()
 
     def get_summary(self) -> MetricsSummary:
-        """Get a summary of all metrics.
-
-        Returns:
-            MetricsSummary object with summary statistics.
-        """
         stats = self.get_stats()
         total_requests = sum(s.count for s in stats.values())
         total_success = sum(s.success_count for s in stats.values())
@@ -168,28 +141,19 @@ class MetricsContext:
     """Context manager for measuring operation duration."""
 
     def __init__(self, collector: MetricsCollector, endpoint: str):
-        """Initialize metrics context.
-
-        Args:
-            collector: Metrics collector to record to.
-            endpoint: API endpoint being measured.
-        """
         self._collector = collector
         self._endpoint = endpoint
         self._start_time = 0.0
         self._success = False
 
     def __enter__(self) -> 'MetricsContext':
-        """Enter context."""
         self._start_time = time.time()
         return self
 
     def markSuccess(self) -> None:
-        """Mark the operation as successful."""
         self._success = True
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit context."""
         duration_ms = (time.time() - self._start_time) * 1000
         self._success = exc_type is None
         self._collector.record(self._endpoint, duration_ms, self._success)

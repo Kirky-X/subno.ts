@@ -71,9 +71,6 @@ export enum ErrorCode {
 // HTTP 状态码映射
 // ============================================================================
 
-/**
- * 错误码到 HTTP 状态码的映射
- */
 export const HTTP_STATUS_MAP: Record<ErrorCode, number> = {
   // 401 - 认证错误
   [ErrorCode.MISSING_API_KEY]: 401,
@@ -187,14 +184,8 @@ const USER_FRIENDLY_MESSAGES: Record<ErrorCode, string> = {
 // 错误严重级别
 // ============================================================================
 
-/**
- * 错误严重级别
- */
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 
-/**
- * 错误码到严重级别的默认映射
- */
 const DEFAULT_SEVERITY_MAP: Record<ErrorCode, ErrorSeverity> = {
   // 低严重性 - 客户端错误
   [ErrorCode.MISSING_API_KEY]: 'low',
@@ -269,9 +260,6 @@ export interface RequestContext {
   apiKeyId?: string;
 }
 
-/**
- * 从 NextRequest 提取请求上下文
- */
 export function extractRequestContext(request: NextRequest): RequestContext {
   const requestId =
     request.headers.get('x-request-id') ||
@@ -295,9 +283,6 @@ export function extractRequestContext(request: NextRequest): RequestContext {
   };
 }
 
-/**
- * 生成请求 ID
- */
 export function generateRequestId(): string {
   return crypto.randomUUID().substring(0, 8);
 }
@@ -306,9 +291,6 @@ export function generateRequestId(): string {
 // 标准错误响应格式
 // ============================================================================
 
-/**
- * 标准错误响应格式
- */
 export interface StandardErrorResponse {
   success: false;
   error: {
@@ -325,18 +307,12 @@ export interface StandardErrorResponse {
   };
 }
 
-/**
- * 成功响应格式
- */
 export interface StandardSuccessResponse<T = unknown> {
   success: true;
   data: T;
   message?: string;
 }
 
-/**
- * API 响应类型
- */
 export type ApiResponse<T = unknown> = StandardSuccessResponse<T> | StandardErrorResponse;
 
 // ============================================================================
@@ -382,16 +358,10 @@ export class AppError extends Error {
     }
   }
 
-  /**
-   * 获取用户友好的消息
-   */
   getUserMessage(): string {
     return USER_FRIENDLY_MESSAGES[this.code] || this.message;
   }
 
-  /**
-   * 转换为标准错误响应格式
-   */
   toErrorResponse(requestId?: string): StandardErrorResponse {
     return {
       success: false,
@@ -406,16 +376,10 @@ export class AppError extends Error {
     };
   }
 
-  /**
-   * 转换为 NextResponse
-   */
   toNextResponse(requestId?: string): NextResponse {
     return NextResponse.json(this.toErrorResponse(requestId), { status: this.status });
   }
 
-  /**
-   * 判断是否应该包含详细信息
-   */
   private shouldIncludeDetails(): boolean {
     // 生产环境不返回详细信息
     if (process.env.NODE_ENV === 'production') {
@@ -431,9 +395,6 @@ export class AppError extends Error {
     return safeDetailCodes.includes(this.code);
   }
 
-  /**
-   * 转换为日志格式
-   */
   toLogFormat(context?: Partial<RequestContext>): Record<string, unknown> {
     return {
       errorCode: this.code,
@@ -454,9 +415,6 @@ export class AppError extends Error {
   }
 }
 
-/**
- * 认证错误
- */
 export class AuthenticationError extends AppError {
   constructor(
     message?: string,
@@ -476,9 +434,6 @@ export class AuthenticationError extends AppError {
   }
 }
 
-/**
- * 授权错误
- */
 export class AuthorizationError extends AppError {
   constructor(
     message?: string,
@@ -498,9 +453,6 @@ export class AuthorizationError extends AppError {
   }
 }
 
-/**
- * 验证错误
- */
 export class ValidationError extends AppError {
   constructor(
     message?: string,
@@ -542,9 +494,6 @@ export class ResourceError extends AppError {
   }
 }
 
-/**
- * 速率限制错误
- */
 export class RateLimitError extends AppError {
   public readonly retryAfter: number;
 
@@ -579,9 +528,6 @@ export class RateLimitError extends AppError {
   }
 }
 
-/**
- * 服务器错误
- */
 export class ServerError extends AppError {
   constructor(
     message?: string,
@@ -605,9 +551,6 @@ export class ServerError extends AppError {
 // 错误处理工具函数
 // ============================================================================
 
-/**
- * 错误处理配置
- */
 export interface ErrorHandlerConfig {
   /** 是否记录错误日志 */
   logErrors?: boolean;
@@ -622,9 +565,6 @@ const defaultConfig: ErrorHandlerConfig = {
   hideDetailsInProduction: true,
 };
 
-/**
- * 全局错误处理器
- */
 export class ErrorHandler {
   private config: ErrorHandlerConfig;
 
@@ -632,13 +572,9 @@ export class ErrorHandler {
     this.config = { ...defaultConfig, ...config };
   }
 
-  /**
-   * 处理错误并返回标准响应
-   */
   handle(error: unknown, context?: Partial<RequestContext>): NextResponse {
     const appError = this.normalizeError(error, context);
 
-    // 记录错误日志
     if (this.config.logErrors) {
       this.logError(appError, context);
     }
@@ -646,16 +582,12 @@ export class ErrorHandler {
     return appError.toNextResponse(context?.requestId);
   }
 
-  /**
-   * 将任意错误转换为 AppError
-   */
   normalizeError(error: unknown, context?: Partial<RequestContext>): AppError {
     if (error instanceof AppError) {
       return error;
     }
 
     if (error instanceof Error) {
-      // 检查是否是数据库错误
       if (this.isDatabaseError(error)) {
         return new ServerError('数据库操作失败', {
           code: ErrorCode.DATABASE_ERROR,
@@ -664,7 +596,6 @@ export class ErrorHandler {
         });
       }
 
-      // 检查是否是超时错误
       if (this.isTimeoutError(error)) {
         return new ServerError('操作超时', {
           code: ErrorCode.TIMEOUT_ERROR,
@@ -673,22 +604,17 @@ export class ErrorHandler {
         });
       }
 
-      // 其他错误作为内部错误处理
       return new ServerError('服务器内部错误', {
         originalError: error,
         requestId: context?.requestId,
       });
     }
 
-    // 未知错误类型
     return new AppError(ErrorCode.UNKNOWN, '未知错误', {
       requestId: context?.requestId,
     });
   }
 
-  /**
-   * 记录错误日志
-   */
   private logError(error: AppError, context?: Partial<RequestContext>): void {
     if (this.config.logger) {
       this.config.logger(error, context);
@@ -705,9 +631,6 @@ export class ErrorHandler {
     }
   }
 
-  /**
-   * 检查是否是数据库错误
-   */
   private isDatabaseError(error: Error): boolean {
     const dbErrorPatterns = [
       'database',
@@ -725,9 +648,6 @@ export class ErrorHandler {
     );
   }
 
-  /**
-   * 检查是否是超时错误
-   */
   private isTimeoutError(error: Error): boolean {
     const timeoutPatterns = ['ETIMEDOUT', 'timeout', 'timed out'];
     return timeoutPatterns.some(pattern =>
@@ -736,24 +656,17 @@ export class ErrorHandler {
   }
 }
 
-// 创建全局错误处理器实例
 export const errorHandler = new ErrorHandler();
 
 // ============================================================================
 // API 路由包装器
 // ============================================================================
 
-/**
- * API 路由处理器类型
- */
 type ApiRouteHandler<T = unknown, P = Record<string, string>> = (
   request: NextRequest,
   context: { params: Promise<P> },
 ) => Promise<NextResponse<T>>;
 
-/**
- * 包装 API 路由处理器，添加统一错误处理
- */
 export function withErrorHandler<T = unknown, P = Record<string, string>>(
   handler: ApiRouteHandler<T, P>,
 ): ApiRouteHandler<T, P> {
@@ -771,9 +684,6 @@ export function withErrorHandler<T = unknown, P = Record<string, string>>(
 // 辅助函数
 // ============================================================================
 
-/**
- * 创建成功响应
- */
 export function successResponse<T>(
   data: T,
   message?: string,
@@ -786,9 +696,6 @@ export function successResponse<T>(
   };
 }
 
-/**
- * 创建错误响应
- */
 export function errorResponse(
   code: ErrorCode,
   message?: string,
@@ -810,9 +717,6 @@ export function errorResponse(
   };
 }
 
-/**
- * 快捷创建常见错误
- */
 export const Errors = {
   missingApiKey: (requestId?: string) =>
     new AuthenticationError('API 密钥是必需的', {
@@ -897,9 +801,6 @@ export const Errors = {
     }),
 };
 
-/**
- * 检查错误是否可重试
- */
 export function isRetryableError(error: unknown): boolean {
   if (error instanceof AppError) {
     return (

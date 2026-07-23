@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-//! HTTP client utilities for SecureNotify SDK
-
 use reqwest::{Client, RequestBuilder, Response, redirect::Policy};
 use std::sync::Arc;
 use std::time::Duration;
@@ -12,7 +10,6 @@ use super::metrics::{MetricsCollector, MetricsContext};
 use super::cache::ResponseCache;
 use super::request_deduplicator::RequestDeduplicator;
 
-/// HTTP client configuration
 #[derive(Debug, Clone)]
 pub struct HttpClientConfig {
     pub base_url: String,
@@ -38,7 +35,6 @@ impl Default for HttpClientConfig {
     }
 }
 
-/// HTTP client wrapper for SecureNotify API
 #[derive(Clone)]
 pub struct HttpClient {
     client: Client,
@@ -51,7 +47,6 @@ pub struct HttpClient {
 }
 
 impl HttpClient {
-    /// Create a new HTTP client
     pub fn new(base_url: &str, api_key: &str) -> Result<Self> {
         Self::with_config(
             base_url,
@@ -67,7 +62,6 @@ impl HttpClient {
         )
     }
 
-    /// Create an HTTP client with custom configuration
     pub fn with_config(
         base_url: &str,
         api_key: &str,
@@ -127,24 +121,21 @@ impl HttpClient {
         })
     }
 
-    /// Get the configuration
     pub fn config(&self) -> &HttpClientConfig {
         &self.config
     }
 
-    /// Build the base URL for an endpoint
     fn build_url(&self, endpoint: &str) -> String {
         let base = self.base_url.trim_end_matches('/');
         let endpoint = endpoint.trim_start_matches('/');
         format!("{}/{}", base, endpoint)
     }
 
-    /// Create a request builder with authentication
     fn request(&self, method: reqwest::Method, endpoint: &str) -> RequestBuilder {
         let url = self.build_url(endpoint);
         let mut builder = self.client.request(method, url);
 
-        builder = builder.header("User-Agent", "SecureNotify-Rust/0.1.0");  // Add User-Agent header
+        builder = builder.header("User-Agent", "SecureNotify-Rust/0.1.0");
 
         // Add request ID for tracing
         let request_id = uuid::Uuid::new_v4().to_string();
@@ -157,7 +148,6 @@ impl HttpClient {
         builder
     }
 
-    /// Execute a request with retry logic
     async fn execute_with_retry<T: serde::de::DeserializeOwned>(
         &self,
         request: RequestBuilder,
@@ -172,7 +162,6 @@ impl HttpClient {
         let request = request.try_clone()
             .ok_or_else(|| SecureNotifyError::ConnectionError("Failed to clone request for retry".to_string()))?;
 
-        // Create metrics context if metrics are enabled
         let endpoint = request.try_clone()
             .and_then(|r| r.build().ok())
             .map(|r| r.url().path().to_string())
@@ -196,7 +185,6 @@ impl HttpClient {
         )
         .await;
 
-        // Mark success or failure for metrics
         if let Some(mut ctx) = metrics_context {
             if result.is_ok() {
                 ctx.mark_success();
@@ -207,7 +195,6 @@ impl HttpClient {
         result
     }
 
-    /// Handle the HTTP response
     async fn handle_response<T: serde::de::DeserializeOwned>(
         &self,
         response: Response,
@@ -217,7 +204,6 @@ impl HttpClient {
         if status.is_success() {
             response.json().await.map_err(|e| e.into())
         } else {
-            // Try to parse error response
             let error_text = response.text().await.unwrap_or_default();
             let code = status.as_u16().to_string();
 
@@ -229,9 +215,7 @@ impl HttpClient {
         }
     }
 
-    /// Execute a GET request
     pub async fn get<T: serde::de::DeserializeOwned + serde::Serialize>(&self, endpoint: &str) -> Result<T> {
-        // Check cache first if enabled
         if let Some(cache) = &self.cache {
             let cache_key = format!("GET:{}", endpoint);
             if let Some(cached) = cache.get(&cache_key) {
@@ -244,7 +228,6 @@ impl HttpClient {
         let request = self.request(reqwest::Method::GET, endpoint);
         let result = self.execute_with_retry(request).await?;
 
-        // Cache successful responses
         if let Some(cache) = &self.cache {
             if let Ok(json) = serde_json::to_string(&result) {
                 let cache_key = format!("GET:{}", endpoint);
@@ -255,7 +238,6 @@ impl HttpClient {
         Ok(result)
     }
 
-    /// Execute a POST request with a body
     pub async fn post<T: serde::de::DeserializeOwned, B: serde::Serialize + Sync>(
         &self,
         endpoint: &str,
@@ -265,7 +247,6 @@ impl HttpClient {
         self.execute_with_retry(request).await
     }
 
-    /// Execute a PUT request with a body
     pub async fn put<T: serde::de::DeserializeOwned, B: serde::Serialize + Sync>(
         &self,
         endpoint: &str,
@@ -275,13 +256,11 @@ impl HttpClient {
         self.execute_with_retry(request).await
     }
 
-    /// Execute a DELETE request
     pub async fn delete<T: serde::de::DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
         let request = self.request(reqwest::Method::DELETE, endpoint);
         self.execute_with_retry(request).await
     }
 
-    /// Execute a POST request that returns no body
     pub async fn post_empty(&self, endpoint: &str) -> Result<()> {
         let request = self.request(reqwest::Method::POST, endpoint);
 
@@ -302,8 +281,6 @@ impl HttpClient {
             Err(e) => Err(e.into()),
         }
     }
-
-    // Metrics management methods (PERFORMANCE FIX)
 
     /// Get metrics summary if metrics are enabled
     ///
@@ -341,12 +318,9 @@ impl HttpClient {
         }
     }
 
-    /// Check if metrics collection is enabled
     pub fn metrics_enabled(&self) -> bool {
         self.metrics_collector.is_some()
     }
-
-    // Cache management methods (PERFORMANCE FIX)
 
     /// Clear all cached responses
     pub fn clear_cache(&self) {
@@ -379,7 +353,6 @@ impl HttpClient {
         self.cache.as_ref().map(|c| c.get_metrics())
     }
 
-    /// Reset cache metrics
     pub fn reset_cache_metrics(&self) {
         if let Some(cache) = &self.cache {
             cache.reset_metrics();
@@ -394,12 +367,9 @@ impl HttpClient {
         self.cache.as_ref().map(|c| c.get_hit_rate()).unwrap_or(0.0)
     }
 
-    /// Check if cache is enabled
     pub fn cache_enabled(&self) -> bool {
         self.cache.is_some()
     }
-
-    // Deduplicator management methods (PERFORMANCE FIX)
 
     /// Clear all pending duplicate requests
     ///
@@ -469,7 +439,6 @@ impl HttpClient {
         }
     }
 
-    /// Reset deduplicator statistics counters
     pub async fn reset_deduplicator_stats(&self) {
         if let Some(dedup) = &self.request_deduplicator {
             dedup.reset_stats().await;

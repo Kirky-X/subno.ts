@@ -81,7 +81,6 @@ export class MetricsCollector {
       endpoint,
     });
 
-    // Trim to max samples
     while (queue.length > this.maxSamples) {
       queue.shift();
     }
@@ -150,9 +149,6 @@ export class MetricsCollector {
     this.samples.clear();
   }
 
-  /**
-   * Calculate statistics from a list of samples.
-   */
   private calculateStats(samples: MetricSample[]): MetricStats {
     if (samples.length === 0) {
       return {

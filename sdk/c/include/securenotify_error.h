@@ -80,7 +80,6 @@ typedef enum securenotify_error_code {
  * freed using securenotify_error_free() after use.
  */
 struct securenotify_error {
-    /** Error code indicating the type of error */
     securenotify_error_code_t code;
     /** Error message (may be NULL for SECURENOTIFY_OK) */
     char* message;
@@ -137,12 +136,6 @@ void securenotify_error_set(
  */
 const char* securenotify_error_message(const securenotify_error_t* error);
 
-/**
- * @brief Get error code
- *
- * @param error Pointer to error structure
- * @return Error code
- */
 securenotify_error_code_t securenotify_error_code(const securenotify_error_t* error);
 
 /**

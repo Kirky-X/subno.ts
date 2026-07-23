@@ -13,7 +13,6 @@ export default function Template({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // 从 sessionStorage 获取导航方向
     const direction = sessionStorage.getItem('nav-direction');
     const directionElement = document.querySelector('.page-transition');
 
@@ -27,7 +26,6 @@ export default function Template({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // 清除方向标记
     sessionStorage.removeItem('nav-direction');
   }, [pathname]);
 

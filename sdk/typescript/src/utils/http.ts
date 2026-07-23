@@ -86,23 +86,14 @@ export class HttpClient {
     this.requestDeduplicator = this.enableDeduplication ? new RequestDeduplicator({ ttlSeconds: 5.0 }) : undefined;
   }
 
-  /**
-   * Get the API key for authentication
-   */
   private getApiKey(): string | undefined {
     return this.apiKey;
   }
 
-  /**
-   * Get the API key ID for authentication
-   */
   private getApiKeyId(): string | undefined {
     return this.apiKeyId;
   }
 
-  /**
-   * Build the full URL for a request
-   */
   private buildUrl(path: string, query?: Record<string, string | number | boolean | undefined>): string {
     const url = new URL(path, this.baseUrl);
 
@@ -117,9 +108,6 @@ export class HttpClient {
     return url.toString();
   }
 
-  /**
-   * Serialize request body to JSON
-   */
   private serializeBody(body: unknown): string | undefined {
     if (body === undefined || body === null) {
       return undefined;
@@ -131,9 +119,6 @@ export class HttpClient {
     }
   }
 
-  /**
-   * Parse JSON response safely
-   */
   private parseResponse<T>(text: string): T {
     try {
       return JSON.parse(text) as T;
@@ -142,9 +127,6 @@ export class HttpClient {
     }
   }
 
-  /**
-   * Parse response headers
-   */
   private parseHeaders(headers: Headers): HttpHeaders {
     const result: HttpHeaders = {};
     for (const [key, value] of headers.entries()) {
@@ -153,17 +135,13 @@ export class HttpClient {
     return result;
   }
 
-  /**
-   * Build request headers
-   */
   private buildHeaders(additionalHeaders?: HttpHeaders): HttpHeaders {
     const headers: HttpHeaders = {
       "Content-Type": "application/json",
       Accept: "application/json",
-      "User-Agent": "SecureNotify-TypeScript/0.1.0",  // Add User-Agent header
+      "User-Agent": "SecureNotify-TypeScript/0.1.0",
     };
 
-    // Add API key authentication if available
     const apiKey = this.getApiKey();
     const apiKeyId = this.getApiKeyId();
 
@@ -174,7 +152,6 @@ export class HttpClient {
       headers["X-API-Key-Id"] = apiKeyId;
     }
 
-    // Merge additional headers
     if (additionalHeaders) {
       for (const [key, value] of Object.entries(additionalHeaders)) {
         headers[key.toLowerCase()] = value;
@@ -208,7 +185,6 @@ export class HttpClient {
     };
 
     if (this.enableDeduplication && this.requestDeduplicator) {
-      // Use deduplicator for all requests
       const dedupKey = `${options.method ?? "GET"}:${options.path}`;
       const dedupParams = { ...(options.body as Record<string, any> || {}), ...(options.query || {}) };
       return await this.requestDeduplicator.execute(
@@ -218,7 +194,6 @@ export class HttpClient {
         options.method === "GET"
       );
     } else {
-      // Execute request directly
       return executeRequest();
     }
   }
@@ -237,7 +212,6 @@ export class HttpClient {
     // Check cache for GET requests if enabled (PERFORMANCE FIX)
     let cacheKey: string | undefined;
     if (this.cache && options.method === "GET") {
-      // Create cache key from endpoint and query
       const queryStr = options.query ? JSON.stringify(options.query) : "";
       cacheKey = `${options.method}:${options.path}:${queryStr}`;
       const cachedValue = this.cache.get(cacheKey);
@@ -292,18 +266,15 @@ export class HttpClient {
       const responseHeaders = this.parseHeaders(response.headers);
       const timestamp = new Date().toISOString();
 
-      // Try to parse as JSON
       let data: T;
       let isJson = false;
       try {
         data = this.parseResponse<T>(responseText);
         isJson = true;
       } catch {
-        // If not JSON, use the raw text
         data = responseText as unknown as T;
       }
 
-      // Check for error response
       if (!response.ok) {
         let errorDetails;
         if (isJson) {

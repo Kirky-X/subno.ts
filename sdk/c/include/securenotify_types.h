@@ -60,7 +60,6 @@ typedef struct securenotify_public_key {
     int64_t created_at;
     /** Expiration timestamp (Unix epoch milliseconds, 0 if never expires) */
     int64_t expires_at;
-    /** Whether the key has expired */
     bool is_expired;
 } securenotify_public_key_t;
 
@@ -68,9 +67,7 @@ typedef struct securenotify_public_key {
  * @brief List of public keys
  */
 typedef struct securenotify_public_key_list {
-    /** Array of public key pointers */
     securenotify_public_key_t** keys;
-    /** Number of keys in the list */
     size_t count;
 } securenotify_public_key_list_t;
 
@@ -82,17 +79,14 @@ typedef struct securenotify_channel {
     char* id;
     /** Human-readable channel name */
     char* name;
-    /** Channel description */
     char* description;
     /** Channel type ("public", "encrypted", "temporary") */
     char* type;
-    /** Channel creator identifier */
     char* creator;
     /** Creation timestamp (Unix epoch milliseconds) */
     int64_t created_at;
     /** Expiration timestamp (Unix epoch milliseconds, 0 if never expires) */
     int64_t expires_at;
-    /** Whether the channel is active */
     bool is_active;
 } securenotify_channel_t;
 
@@ -100,9 +94,7 @@ typedef struct securenotify_channel {
  * @brief List of channels
  */
 typedef struct securenotify_channel_list {
-    /** Array of channel pointers */
     securenotify_channel_t** channels;
-    /** Number of channels in the list */
     size_t count;
 } securenotify_channel_list_t;
 
@@ -126,15 +118,11 @@ typedef struct securenotify_message_result {
 typedef struct securenotify_message {
     /** Unique message identifier */
     char* id;
-    /** Channel ID */
     char* channel;
-    /** Message content */
     char* message;
-    /** Whether message is encrypted */
     bool encrypted;
     /** Creation timestamp (Unix epoch milliseconds) */
     int64_t created_at;
-    /** Sender identifier */
     char* sender;
     /** Message priority (0-100) */
     uint8_t priority;
@@ -144,9 +132,7 @@ typedef struct securenotify_message {
  * @brief List of messages
  */
 typedef struct securenotify_message_list {
-    /** Array of message pointers */
     securenotify_message_t** messages;
-    /** Number of messages in the list */
     size_t count;
 } securenotify_message_list_t;
 
@@ -158,13 +144,9 @@ typedef struct securenotify_api_key {
     char* id;
     /** Key prefix (for identification, last 8 chars visible) */
     char* key_prefix;
-    /** Key name */
     char* name;
-    /** Array of permission strings */
     char** permissions;
-    /** Number of permissions */
     size_t permissions_count;
-    /** Whether the key is active */
     bool is_active;
     /** Creation timestamp (Unix epoch milliseconds) */
     int64_t created_at;
@@ -178,9 +160,7 @@ typedef struct securenotify_api_key {
  * @brief List of API keys
  */
 typedef struct securenotify_api_key_list {
-    /** Array of API key pointers */
     securenotify_api_key_t** keys;
-    /** Number of keys in the list */
     size_t count;
 } securenotify_api_key_list_t;
 

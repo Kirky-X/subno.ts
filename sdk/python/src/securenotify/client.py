@@ -1,7 +1,7 @@
-"""SecureNotify Client.
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 KirkyX. All rights reserved.
 
-Main client class for SecureNotify SDK with sync/async support.
-"""
+"""Main client for SecureNotify API with sync/async support."""
 
 import asyncio
 from typing import Optional, Dict, Any, Callable, Awaitable
@@ -22,7 +22,6 @@ from securenotify.types.api import (
     ChannelType,
 )
 
-# URL regex pattern for validation
 _URL_PATTERN = (
     r"^https://[a-zA-Z0-9][-a-zA-Z0-9]*(\.[a-zA-Z0-9][-a-zA-Z0-9]*)+(/[^ \n]*)?$"
 )
@@ -30,9 +29,6 @@ _URL_PATTERN = (
 
 def _validate_base_url(base_url: str) -> None:
     """Validate base URL format.
-
-    Args:
-        base_url: URL to validate.
 
     Raises:
         ValueError: If URL is invalid or doesn't use HTTPS.
@@ -50,9 +46,6 @@ def _validate_base_url(base_url: str) -> None:
 def _validate_api_key(api_key: str) -> None:
     """Validate API key format.
 
-    Args:
-        api_key: API key to validate.
-
     Raises:
         ValueError: If API key is invalid.
     """
@@ -65,9 +58,6 @@ def _validate_api_key(api_key: str) -> None:
 
 def _validate_timeout(timeout: float) -> None:
     """Validate timeout value.
-
-    Args:
-        timeout: Timeout value in seconds.
 
     Raises:
         ValueError: If timeout is invalid.
@@ -170,19 +160,9 @@ class SecureNotifyClient:
     ):
         """Initialize SecureNotify client.
 
-        Args:
-            base_url: Base URL for the SecureNotify API.
-            api_key: API key for authentication.
-            timeout: HTTP request timeout in seconds.
-            verify: Whether to verify SSL certificates.
-            retry_config: Retry configuration for failed requests.
-            heartbeat_interval: SSE heartbeat interval in seconds.
-            sse_timeout: SSE connection timeout in seconds.
-
         Raises:
             ValueError: If any parameter has an invalid value.
         """
-        # Validate configuration parameters
         _validate_base_url(base_url)
         _validate_api_key(api_key)
         _validate_timeout(timeout)
@@ -204,18 +184,15 @@ class SecureNotifyClient:
         self._sse_client: Optional[SSEClient] = None
         self._closed = False
 
-        # Managers
         self._key_manager: Optional[KeyManager] = None
         self._channel_manager: Optional[ChannelManager] = None
         self._publish_manager: Optional[PublishManager] = None
         self._subscribe_manager: Optional[SubscribeManager] = None
         self._apikey_manager: Optional[ApiKeyManager] = None
 
-        # Sync mode
         self._sync_lock = asyncio.Lock()
 
     def _get_http_client(self) -> HttpClient:
-        """Get or create HTTP client."""
         if self._http_client is None:
             self._http_client = HttpClient(
                 base_url=self.base_url,
@@ -226,7 +203,6 @@ class SecureNotifyClient:
         return self._http_client
 
     def _get_sse_client(self) -> SSEClient:
-        """Get or create SSE client."""
         if self._sse_client is None:
             self._sse_client = SSEClient(
                 base_url=self.base_url,
@@ -237,7 +213,6 @@ class SecureNotifyClient:
         return self._sse_client
 
     def _get_key_manager(self) -> KeyManager:
-        """Get key manager."""
         if self._key_manager is None:
             self._key_manager = KeyManager(
                 http_client=self._get_http_client(), retry_config=self._retry_config
@@ -245,7 +220,6 @@ class SecureNotifyClient:
         return self._key_manager
 
     def _get_channel_manager(self) -> ChannelManager:
-        """Get channel manager."""
         if self._channel_manager is None:
             self._channel_manager = ChannelManager(
                 http_client=self._get_http_client(), retry_config=self._retry_config
@@ -253,7 +227,6 @@ class SecureNotifyClient:
         return self._channel_manager
 
     def _get_publish_manager(self) -> PublishManager:
-        """Get publish manager."""
         if self._publish_manager is None:
             self._publish_manager = PublishManager(
                 http_client=self._get_http_client(), retry_config=self._retry_config
@@ -261,7 +234,6 @@ class SecureNotifyClient:
         return self._publish_manager
 
     def _get_subscribe_manager(self) -> SubscribeManager:
-        """Get subscribe manager."""
         if self._subscribe_manager is None:
             self._subscribe_manager = SubscribeManager(
                 sse_client=self._get_sse_client()
@@ -269,7 +241,6 @@ class SecureNotifyClient:
         return self._subscribe_manager
 
     def _get_apikey_manager(self) -> ApiKeyManager:
-        """Get API key manager."""
         if self._apikey_manager is None:
             self._apikey_manager = ApiKeyManager(
                 http_client=self._get_http_client(), retry_config=self._retry_config
@@ -278,92 +249,63 @@ class SecureNotifyClient:
 
     @property
     def api_key(self) -> str:
-        """Get API key (masked for security).
-
-        Returns:
-            Masked API key showing only last 4 characters.
-        """
+        """Get API key (masked for security, showing only last 4 characters)."""
         if len(self._api_key) > 4:
             return "*" * (len(self._api_key) - 4) + self._api_key[-4:]
         return "****"
 
     def has_api_key(self) -> bool:
-        """Check if API key is configured (for internal use).
-
-        Returns:
-            True if API key is set.
-        """
+        """Check if API key is configured (for internal use)."""
         return bool(self._api_key)
 
     @property
     def keys(self) -> KeyManager:
-        """Access key management operations."""
         return self._get_key_manager()
 
     @property
     def channels(self) -> ChannelManager:
-        """Access channel management operations."""
         return self._get_channel_manager()
 
     @property
     def publish(self) -> PublishManager:
-        """Access publish operations."""
         return self._get_publish_manager()
 
     @property
     def subscribe(self) -> SubscribeManager:
-        """Access subscribe operations."""
         return self._get_subscribe_manager()
 
     @property
     def apikeys(self) -> ApiKeyManager:
-        """Access API key management operations."""
         return self._get_apikey_manager()
 
     async def aclose(self) -> None:
-        """Close the client and release resources.
-
-        Closes all active connections and background tasks.
-        """
+        """Close the client and release resources (connections and background tasks)."""
         if self._closed:
             return
 
         self._closed = True
 
-        # Close SSE connections
         if self._sse_client:
             await self._sse_client.disconnect()
 
-        # Close HTTP client
         if self._http_client:
             await self._http_client.close()
 
     async def __aenter__(self):
-        """Async context manager entry."""
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
         await self.aclose()
 
     def __enter__(self):
-        """Sync context manager entry.
-
-        Returns:
-            Self for use in sync context.
-        """
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Sync context manager exit.
-
-        Properly handles async cleanup in sync context (SECURITY FIX).
-        """
-        # Schedule async cleanup with proper event loop handling
+        """Properly handles async cleanup in sync context (SECURITY FIX)."""
+        # If event loop is already running, schedule cleanup task
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                # If event loop is already running, schedule cleanup task
                 loop.create_task(self.aclose())
             else:
                 loop.run_until_complete(self.aclose())
@@ -377,13 +319,8 @@ class SecureNotifyClient:
                 pass  # Last resort - resources may be cleaned up on process exit
 
 
-# Sync wrapper utilities
 def _run_async(coro):
-    """Run an async coroutine in a new event loop.
-
-    Creates a new event loop, runs the coroutine, and ensures proper cleanup
-    to prevent resource leaks.
-    """
+    """Run an async coroutine in a new event loop with proper cleanup to prevent resource leaks."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
@@ -400,10 +337,7 @@ def _run_async(coro):
 
 
 class SyncSecureNotifyClient:
-    """Synchronous wrapper for SecureNotifyClient.
-
-    Provides a synchronous interface to the async client.
-    """
+    """Synchronous wrapper for SecureNotifyClient."""
 
     __slots__ = ("_async_client",)
 
@@ -417,17 +351,6 @@ class SyncSecureNotifyClient:
         heartbeat_interval: float = 30.0,
         sse_timeout: float = 60.0,
     ):
-        """Initialize sync client.
-
-        Args:
-            base_url: Base URL for the SecureNotify API.
-            api_key: API key for authentication.
-            timeout: HTTP request timeout in seconds.
-            verify: Whether to verify SSL certificates.
-            retry_config: Retry configuration.
-            heartbeat_interval: SSE heartbeat interval.
-            sse_timeout: SSE connection timeout.
-        """
         self._async_client = SecureNotifyClient(
             base_url=base_url,
             api_key=api_key,
@@ -439,46 +362,36 @@ class SyncSecureNotifyClient:
         )
 
     def __enter__(self):
-        """Context manager entry."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit."""
         _run_async(self._async_client.aclose())
 
     def close(self):
-        """Close the client."""
         _run_async(self._async_client.aclose())
 
     @property
     def keys(self):
-        """Access key management operations (sync)."""
         return SyncKeyManager(self._async_client.keys)
 
     @property
     def channels(self):
-        """Access channel management operations (sync)."""
         return SyncChannelManager(self._async_client.channels)
 
     @property
     def publish(self):
-        """Access publish operations (sync)."""
         return SyncPublishManager(self._async_client.publish)
 
     @property
     def subscribe(self):
-        """Access subscribe operations (sync)."""
         return SyncSubscribeManager(self._async_client.subscribe)
 
     @property
     def apikeys(self):
-        """Access API key management operations (sync)."""
         return SyncApiKeyManager(self._async_client.apikeys)
 
 
 class SyncKeyManager:
-    """Synchronous wrapper for KeyManager."""
-
     def __init__(self, async_manager):
         self._manager = async_manager
 
@@ -504,8 +417,6 @@ class SyncKeyManager:
 
 
 class SyncChannelManager:
-    """Synchronous wrapper for ChannelManager."""
-
     def __init__(self, async_manager):
         self._manager = async_manager
 
@@ -529,8 +440,6 @@ class SyncChannelManager:
 
 
 class SyncPublishManager:
-    """Synchronous wrapper for PublishManager."""
-
     def __init__(self, async_manager):
         self._manager = async_manager
 
@@ -578,8 +487,6 @@ class SyncPublishManager:
 
 
 class SyncSubscribeManager:
-    """Synchronous wrapper for SubscribeManager."""
-
     def __init__(self, async_manager):
         self._manager = async_manager
 
@@ -596,8 +503,6 @@ class SyncSubscribeManager:
 
 
 class SyncApiKeyManager:
-    """Synchronous wrapper for ApiKeyManager."""
-
     def __init__(self, async_manager):
         self._manager = async_manager
 

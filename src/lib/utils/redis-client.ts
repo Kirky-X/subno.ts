@@ -10,15 +10,11 @@ type RedisClient = ReturnType<typeof createClient>;
  * Prevents external tampering with internal state
  */
 export const RedisClientManager = (() => {
-  // Private variables - not accessible outside
   let redisClient: RedisClient | null = null;
   let connectionPromise: Promise<void> | null = null;
   let redisSubscriber: RedisClient | null = null;
   let subscriberConnectionPromise: Promise<void> | null = null;
 
-  /**
-   * Get or create Redis client
-   */
   async function getClient(): Promise<RedisClient | null> {
     if (redisClient) return redisClient;
     if (connectionPromise) {
@@ -52,9 +48,6 @@ export const RedisClientManager = (() => {
     return redisClient;
   }
 
-  /**
-   * Get or create Redis subscriber
-   */
   async function getSubscriber(): Promise<RedisClient | null> {
     if (redisSubscriber) return redisSubscriber;
     if (subscriberConnectionPromise) {
@@ -88,9 +81,6 @@ export const RedisClientManager = (() => {
     return redisSubscriber;
   }
 
-  /**
-   * Close all Redis connections
-   */
   async function closeAll(): Promise<void> {
     const closePromises: Promise<void>[] = [];
 

@@ -89,13 +89,11 @@ function sanitizeMetadata(metadata?: Record<string, unknown>): Record<string, un
   const sanitized: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(metadata)) {
-    // Check if key contains sensitive patterns
     const isSensitive = SENSITIVE_KEYS.some(sk => key.toLowerCase().includes(sk));
 
     if (isSensitive) {
       sanitized[key] = '[REDACTED]';
     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      // Recursively sanitize nested objects
       sanitized[key] = sanitizeMetadata(value as Record<string, unknown>);
     } else {
       sanitized[key] = value;
@@ -135,9 +133,6 @@ export class AuditService {
     this.db = db || getDatabase();
   }
 
-  /**
-   * Factory method for creating AuditService with default dependencies
-   */
   static create(db?: ReturnType<typeof getDatabase>): AuditService {
     return new AuditService(db);
   }

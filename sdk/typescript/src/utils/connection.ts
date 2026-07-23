@@ -11,14 +11,8 @@ import type {
 } from "../types/api.js";
 import { SecureNotifyError } from "../types/errors.js";
 
-/**
- * SSE heartbeat interval in milliseconds
- */
 const HEARTBEAT_INTERVAL = 30000;
 
-/**
- * Default connection options
- */
 const DEFAULT_CONNECTION_OPTIONS: Required<ConnectionOptions> = {
   heartbeatInterval: HEARTBEAT_INTERVAL,
   heartbeatTimeout: HEARTBEAT_INTERVAL * 2,
@@ -117,7 +111,6 @@ export class SseConnection {
       addReconnectJitter: connectionOptions?.addReconnectJitter ?? DEFAULT_CONNECTION_OPTIONS.addReconnectJitter,
     };
 
-    // Initialize handler sets for each event type
     for (const type of ["connected", "message", "heartbeat", "error", "retry", "close"]) {
       this.handlers.set(type as SseEventType, new Set());
     }
@@ -137,9 +130,6 @@ export class SseConnection {
     return this.channel;
   }
 
-  /**
-   * Build the SSE URL with parameters
-   */
   private buildUrl(): string {
     const url = new URL(`${this.baseUrl}/subscribe`);
     url.searchParams.set("channel", this.channel);
@@ -151,9 +141,6 @@ export class SseConnection {
     return url.toString();
   }
 
-  /**
-   * Build headers for the SSE connection
-   */
   private buildHeaders(): HeadersInit | undefined {
     if (!this.apiKey) {
       return undefined;
@@ -211,7 +198,6 @@ export class SseConnection {
         this.handleError(error);
       };
 
-      // Handle specific event types
       this.eventSource.addEventListener("connected", (event: MessageEvent) => {
         this.emit("connected", JSON.parse(event.data));
       });
@@ -233,19 +219,14 @@ export class SseConnection {
     });
   }
 
-  /**
-   * Handle incoming message
-   */
   private handleMessage(event: MessageEvent): void {
     // Reset heartbeat timeout on any message
     this.resetHeartbeatTimeout();
 
-    // Store the last message ID
     if (event.lastEventId) {
       this.lastMessageId = event.lastEventId;
     }
 
-    // Try to parse as message event
     try {
       const data = JSON.parse(event.data);
       if (data.channel && data.message) {
@@ -256,9 +237,6 @@ export class SseConnection {
     }
   }
 
-  /**
-   * Handle connection error
-   */
   private handleError(error: Event): void {
     if (this.state === "disconnecting") {
       return;
@@ -274,7 +252,6 @@ export class SseConnection {
       return;
     }
 
-    // Connection was lost, try to reconnect
     this.state = "reconnecting";
     this.stopHeartbeat();
 
@@ -301,9 +278,6 @@ export class SseConnection {
     }, delay);
   }
 
-  /**
-   * Calculate reconnect delay with exponential backoff and jitter
-   */
   private calculateReconnectDelay(): number {
     const baseDelay = this.options.reconnectDelay * Math.pow(this.options.reconnectBackoffMultiplier, this.reconnectAttempts);
     const delay = Math.min(baseDelay, this.options.maxReconnectDelay);
@@ -316,9 +290,6 @@ export class SseConnection {
     return Math.floor(delay);
   }
 
-  /**
-   * Start heartbeat timer
-   */
   private startHeartbeat(): void {
     this.stopHeartbeat();
 
@@ -329,9 +300,6 @@ export class SseConnection {
     }, this.options.heartbeatInterval);
   }
 
-  /**
-   * Reset the heartbeat timeout
-   */
   private resetHeartbeatTimeout(): void {
     if (this.heartbeatTimeoutTimer) {
       clearTimeout(this.heartbeatTimeoutTimer);
@@ -342,9 +310,6 @@ export class SseConnection {
     }, this.options.heartbeatTimeout);
   }
 
-  /**
-   * Handle heartbeat timeout
-   */
   private handleHeartbeatTimeout(): void {
     this.stopHeartbeat();
 
@@ -365,15 +330,11 @@ export class SseConnection {
       reconnectable: true,
     } as SseErrorEvent);
 
-    // Try to reconnect
     if (this.reconnectAttempts < this.options.maxReconnectAttempts) {
       this.handleError(new Event("heartbeat-timeout"));
     }
   }
 
-  /**
-   * Stop heartbeat timer and timeout
-   */
   private stopHeartbeat(): void {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
@@ -398,7 +359,6 @@ export class SseConnection {
 
       this.state = "disconnecting";
 
-      // Clear all timers
       if (this.reconnectTimer) {
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = null;
@@ -406,7 +366,6 @@ export class SseConnection {
 
       this.stopHeartbeat();
 
-      // Close the connection
       if (this.eventSource) {
         this.eventSource.close();
         this.eventSource = null;
@@ -429,7 +388,6 @@ export class SseConnection {
       handlers.add(handler);
     }
 
-    // Return unsubscribe function
     return () => {
       const handlers = this.handlers.get(type);
       if (handlers) {
@@ -452,9 +410,6 @@ export class SseConnection {
     }
   }
 
-  /**
-   * Emit an event to all handlers
-   */
   private emit(type: SseEventType, data?: unknown): void {
     const handlers = this.handlers.get(type);
     if (!handlers) return;

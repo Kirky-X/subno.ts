@@ -34,26 +34,11 @@ public class SubscribeManager {
         this.subscriptions = new ConcurrentHashMap<>();
     }
 
-    /**
-     * Subscribe to a channel for real-time messages.
-     *
-     * @param channelId The channel ID to subscribe to
-     * @param handler   The message handler callback
-     * @return A subscription object for managing the subscription
-     */
     public ConnectionManager.Subscription subscribe(String channelId,
                                                      Consumer<SseEvent.SseMessageEvent> handler) {
         return subscribe(channelId, handler, null);
     }
 
-    /**
-     * Subscribe to a channel with error handling.
-     *
-     * @param channelId    The channel ID to subscribe to
-     * @param handler      The message handler callback
-     * @param errorHandler The error handler callback
-     * @return A subscription object for managing the subscription
-     */
     public ConnectionManager.Subscription subscribe(String channelId,
                                                      Consumer<SseEvent.SseMessageEvent> handler,
                                                      Consumer<SseEvent.SseErrorEvent> errorHandler) {
@@ -63,75 +48,38 @@ public class SubscribeManager {
         return subscription;
     }
 
-    /**
-     * Unsubscribe from a channel.
-     *
-     * @param channelId The channel ID to unsubscribe from
-     */
     public void unsubscribe(String channelId) {
         connectionManager.unsubscribe(channelId);
         subscribedChannels.remove(channelId);
         subscriptions.remove(channelId);
     }
 
-    /**
-     * Unsubscribe from all channels.
-     */
     public void unsubscribeAll() {
         connectionManager.unsubscribeAll();
         subscribedChannels.clear();
         subscriptions.clear();
     }
 
-    /**
-     * Check if subscribed to a channel.
-     *
-     * @param channelId The channel ID
-     * @return true if subscribed
-     */
     public boolean isSubscribed(String channelId) {
         return subscribedChannels.contains(channelId);
     }
 
-    /**
-     * Get all subscribed channel IDs.
-     *
-     * @return Set of channel IDs
-     */
     public Set<String> getSubscribedChannels() {
         return Set.copyOf(subscribedChannels);
     }
 
-    /**
-     * Get the number of subscribed channels.
-     *
-     * @return The count
-     */
     public int getSubscriptionCount() {
         return subscribedChannels.size();
     }
 
-    /**
-     * Check if the manager has active connections.
-     *
-     * @return true if connected
-     */
     public boolean isConnected() {
         return connectionManager.isConnected();
     }
 
-    /**
-     * Get the connection manager for advanced operations.
-     *
-     * @return The connection manager
-     */
     public ConnectionManager getConnectionManager() {
         return connectionManager;
     }
 
-    /**
-     * Close the subscription manager.
-     */
     public void close() {
         unsubscribeAll();
         connectionManager.close();

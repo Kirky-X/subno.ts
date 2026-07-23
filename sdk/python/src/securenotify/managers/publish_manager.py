@@ -1,7 +1,5 @@
-"""Publish Manager.
-
-Manages message publishing and queue status.
-"""
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 KirkyX. All rights reserved.
 
 from typing import Optional, Dict, Any
 from datetime import datetime
@@ -17,8 +15,6 @@ from securenotify.utils.http import validate_channel_id
 
 
 class PublishManager(BaseManager):
-    """Manages message publishing operations."""
-
     async def send(
         self,
         channel: str,
@@ -31,18 +27,6 @@ class PublishManager(BaseManager):
     ) -> MessagePublishResponse:
         """Send a message to a channel.
 
-        Args:
-            channel: Channel ID.
-            message: Message content.
-            priority: Message priority (default: NORMAL).
-            sender: Sender identifier (optional).
-            encrypted: Whether message is encrypted (default: True).
-            message_signature: Message signature for verification (optional).
-            cache: Whether to cache the message (default: True).
-
-        Returns:
-            Message publish response with message_id.
-
         Raises:
             ValueError: If channel or message is empty or invalid.
             SecureNotifyApiError: On API error.
@@ -54,7 +38,6 @@ class PublishManager(BaseManager):
                 "Channel ID must be 1-256 characters and contain only alphanumeric characters, hyphens, and underscores."
             )
 
-        # Validate message content
         if not message or not isinstance(message, str):
             raise ValueError("Message must be a non-empty string")
 
@@ -70,17 +53,6 @@ class PublishManager(BaseManager):
         return await self._execute("publish_message", request)
 
     async def get_queue_status(self, channel: str) -> QueueStatusInfo:
-        """Get message queue status for a channel.
-
-        Args:
-            channel: Channel ID.
-
-        Returns:
-            Queue status information.
-
-        Raises:
-            SecureNotifyApiError: On API error.
-        """
         data = await self._execute("get_queue_status", channel)
         return QueueStatusInfo(
             channel=data["channel"],
@@ -95,17 +67,6 @@ class PublishManager(BaseManager):
         sender: Optional[str] = None,
         encrypted: bool = True,
     ) -> MessagePublishResponse:
-        """Send a critical priority message.
-
-        Args:
-            channel: Channel ID.
-            message: Message content.
-            sender: Sender identifier (optional).
-            encrypted: Whether message is encrypted (default: True).
-
-        Returns:
-            Message publish response.
-        """
         return await self.send(
             channel=channel,
             message=message,
@@ -121,17 +82,6 @@ class PublishManager(BaseManager):
         sender: Optional[str] = None,
         encrypted: bool = True,
     ) -> MessagePublishResponse:
-        """Send a high priority message.
-
-        Args:
-            channel: Channel ID.
-            message: Message content.
-            sender: Sender identifier (optional).
-            encrypted: Whether message is encrypted (default: True).
-
-        Returns:
-            Message publish response.
-        """
         return await self.send(
             channel=channel,
             message=message,
@@ -144,13 +94,6 @@ class PublishManager(BaseManager):
         """Send a bulk priority message.
 
         For low-priority messages that can be delayed.
-
-        Args:
-            channel: Channel ID.
-            message: Message content.
-
-        Returns:
-            Message publish response.
         """
         return await self.send(
             channel=channel, message=message, priority=MessagePriority.BULK

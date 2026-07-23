@@ -29,13 +29,9 @@ public class KeyManager {
     }
 
     /**
-     * Register a new public key.
-     *
      * @param publicKey The PEM-encoded public key
      * @param algorithm The encryption algorithm (RSA-2048, RSA-4096, ECC-SECP256K1)
      * @param expiresIn Optional expiration time in seconds
-     * @param metadata  Optional metadata
-     * @return The registered public key info
      */
     public PublicKeyInfo register(String publicKey, String algorithm, Integer expiresIn, Map<String, Object> metadata) throws Exception {
         ApiRequest<?> request = ApiRequest.builder()
@@ -54,22 +50,10 @@ public class KeyManager {
         }).getData();
     }
 
-    /**
-     * Register a public key with default algorithm.
-     *
-     * @param publicKey The PEM-encoded public key
-     * @return The registered public key info
-     */
     public PublicKeyInfo register(String publicKey) throws Exception {
         return register(publicKey, "RSA-4096", null, null);
     }
 
-    /**
-     * Get public key info by ID.
-     *
-     * @param keyId The key ID
-     * @return The public key info
-     */
     public PublicKeyInfo get(String keyId) throws Exception {
         return retryHandler.execute(() -> {
             try {
@@ -80,12 +64,6 @@ public class KeyManager {
         }).getData();
     }
 
-    /**
-     * Get public key info by channel ID.
-     *
-     * @param channelId The channel ID
-     * @return The public key info
-     */
     public PublicKeyInfo getByChannel(String channelId) throws Exception {
         return retryHandler.execute(() -> {
             try {
@@ -97,12 +75,7 @@ public class KeyManager {
     }
 
     /**
-     * Revoke a public key.
-     *
-     * @param keyId   The key ID
-     * @param reason  The revocation reason
      * @param confirmationHours Hours to wait for confirmation
-     * @return The revocation result
      */
     public ApiResponse<?> revoke(String keyId, String reason, Integer confirmationHours) throws Exception {
         ApiRequest<?> request = ApiRequest.builder()
@@ -119,13 +92,6 @@ public class KeyManager {
         });
     }
 
-    /**
-     * Revoke a public key with default confirmation time.
-     *
-     * @param keyId  The key ID
-     * @param reason The revocation reason
-     * @return The revocation result
-     */
     public ApiResponse<?> revoke(String keyId, String reason) throws Exception {
         return revoke(keyId, reason, 24);
     }

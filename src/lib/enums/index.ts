@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-/**
- * 统一枚举导出文件
- * 提供所有枚举类型的集中访问点
- */
-
 // Channel enums
 export {
   ChannelType,

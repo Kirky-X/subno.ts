@@ -32,7 +32,6 @@ export const POST = withErrorHandler(async (
     });
   }
 
-  // Validate API key has permission to cancel
   const hasPermission = await apiKeyRepository.validatePermission(apiKey, 'key_revoke');
   if (!hasPermission) {
     await auditService.log({

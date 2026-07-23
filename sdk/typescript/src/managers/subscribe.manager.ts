@@ -76,7 +76,6 @@ export class SubscribeManager {
       throw SecureNotifyError.validation("handler is required");
     }
 
-    // Add the message handler
     let handlers = this.messageHandlers.get(channel);
     if (!handlers) {
       handlers = new Set();
@@ -84,7 +83,6 @@ export class SubscribeManager {
     }
     handlers.add(handler);
 
-    // Get or create the connection
     const connection = this.connectionManager.getConnection(channel);
 
     // Set up event handlers if this is the first subscription for this channel
@@ -92,7 +90,6 @@ export class SubscribeManager {
       this.setupChannelHandlers(channel, connection);
     }
 
-    // Connect if not already connected
     if (!connection.isConnected()) {
       try {
         await connection.connect();
@@ -106,7 +103,6 @@ export class SubscribeManager {
       }
     }
 
-    // Return unsubscribe function
     return async () => {
       await this.unsubscribe(channel, handler);
     };
@@ -116,7 +112,6 @@ export class SubscribeManager {
    * Set up internal handlers for a channel
    */
   private setupChannelHandlers(channel: string, connection: SseConnection): void {
-    // Message handler
     connection.on("message", (event: SseEvent) => {
       const messageCount = this.messageCounts.get(channel) ?? 0;
       this.messageCounts.set(channel, messageCount + 1);
@@ -134,7 +129,6 @@ export class SubscribeManager {
       }
     });
 
-    // Connection handler
     connection.on("connected", (event: SseEvent) => {
       const handlers = this.connectionHandlers.get(channel);
       if (handlers) {
@@ -148,7 +142,6 @@ export class SubscribeManager {
       }
     });
 
-    // Error handler
     connection.on("error", (event: SseEvent) => {
       const handlers = this.errorHandlers.get(channel);
       if (handlers) {
@@ -162,12 +155,10 @@ export class SubscribeManager {
       }
     });
 
-    // Retry handler
     connection.on("retry", () => {
       // Can be used for logging or notifications
     });
 
-    // Close handler
     connection.on("close", () => {
       this.messageCounts.delete(channel);
       this.lastMessageTimes.delete(channel);
@@ -186,7 +177,6 @@ export class SubscribeManager {
     }
 
     if (handler) {
-      // Remove specific handler
       const handlers = this.messageHandlers.get(channel);
       if (handlers) {
         handlers.delete(handler);
@@ -198,7 +188,6 @@ export class SubscribeManager {
         }
       }
     } else {
-      // Remove all handlers for this channel
       this.messageHandlers.delete(channel);
       this.connectionHandlers.delete(channel);
       this.errorHandlers.delete(channel);
@@ -342,7 +331,6 @@ export class SubscribeManager {
         resolve(event);
       });
 
-      // Handle errors
       this.onError(channel, async () => {
         clearTimeout(timeoutId);
         const unsub = await unsubscribePromise;

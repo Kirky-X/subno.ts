@@ -30,12 +30,7 @@ public class ApiKeyManager {
     }
 
     /**
-     * Create a new API key.
-     *
-     * @param name        The key name
-     * @param userId      The user ID
-     * @param permissions The permissions array
-     * @param expiresIn   Optional expiration time in seconds
+     * @param expiresIn Optional expiration time in seconds
      * @return The created API key (including the full key)
      */
     public ApiKeyInfo.ApiKeyCreateResponse create(String name, String userId, String[] permissions, Integer expiresIn) throws Exception {
@@ -55,22 +50,11 @@ public class ApiKeyManager {
         }).getData();
     }
 
-    /**
-     * Create an API key with default expiration.
-     *
-     * @param name        The key name
-     * @param userId      The user ID
-     * @param permissions The permissions array
-     * @return The created API key
-     */
     public ApiKeyInfo.ApiKeyCreateResponse create(String name, String userId, String[] permissions) throws Exception {
         return create(name, userId, permissions, 604800); // 7 days default
     }
 
     /**
-     * Get API key info by ID.
-     *
-     * @param keyId The key ID
      * @return The API key info (without the full key)
      */
     public ApiKeyInfo get(String keyId) throws Exception {
@@ -83,13 +67,6 @@ public class ApiKeyManager {
         }).getData();
     }
 
-    /**
-     * List all API keys for a user.
-     *
-     * @param limit  Maximum number of keys to return
-     * @param offset Offset for pagination
-     * @return The list response with pagination
-     */
     public ApiKeyListResponse list(Integer limit, Integer offset) throws Exception {
         ApiRequest<?> request = ApiRequest.builder()
                 .limit(limit)
@@ -105,22 +82,10 @@ public class ApiKeyManager {
         }).getData();
     }
 
-    /**
-     * List API keys with default pagination.
-     *
-     * @return The list response with pagination
-     */
     public ApiKeyListResponse list() throws Exception {
         return list(50, 0);
     }
 
-    /**
-     * Revoke an API key.
-     *
-     * @param keyId  The key ID
-     * @param reason The revocation reason
-     * @return The revocation result
-     */
     public ApiResponse<?> revoke(String keyId, String reason) throws Exception {
         ApiRequest<?> request = ApiRequest.builder()
                 .reason(reason)
@@ -135,9 +100,6 @@ public class ApiKeyManager {
         });
     }
 
-    /**
-     * Response wrapper for API key list.
-     */
     public static class ApiKeyListResponse {
         private ApiKeyInfo[] keys;
         private PaginationResult pagination;

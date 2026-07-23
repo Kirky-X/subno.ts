@@ -1,14 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-/**
- * Security configuration
- * All configurable values are loaded from environment variables
- */
-
-/**
- * Validate ADMIN_MASTER_KEY strength in production environment
- */
 function validateAdminMasterKey(): void {
   if (process.env.NODE_ENV === 'production') {
     const masterKey = process.env.ADMIN_MASTER_KEY;
@@ -20,9 +12,6 @@ function validateAdminMasterKey(): void {
 
 validateAdminMasterKey();
 
-/**
- * Validate and parse PBKDF2 iterations with bounds checking
- */
 function parsePbkdf2Iterations(): number {
   const minIterations = 100000;
   const maxIterations = 1000000;

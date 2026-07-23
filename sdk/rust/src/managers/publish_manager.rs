@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-//! Publish manager for SecureNotify SDK
-
 use async_trait::async_trait;
 use crate::{Result, MessagePriority};
 use crate::types::api::*;
 
-/// Trait for message publishing operations
 #[async_trait]
 pub trait PublishManager {
-    /// Publish a message to a channel
     async fn publish_message(
         &self,
         channel: &str,
@@ -22,20 +18,16 @@ pub trait PublishManager {
         signature: Option<&str>,
     ) -> Result<MessagePublishResponse>;
 
-    /// Get message queue status
     async fn get_queue_status(&self, channel: &str) -> Result<QueueStatus>;
 
-    /// Get a specific message
     async fn get_message(&self, channel: &str, message_id: &str) -> Result<MessageInfo>;
 }
 
-/// Implementation of PublishManager
 pub struct PublishManagerImpl {
     http_client: std::sync::Arc<crate::utils::http::HttpClient>,
 }
 
 impl PublishManagerImpl {
-    /// Create a new PublishManager
     pub fn new(http_client: std::sync::Arc<crate::utils::http::HttpClient>) -> Self {
         Self { http_client }
     }

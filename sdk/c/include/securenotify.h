@@ -85,12 +85,6 @@ securenotify_string_t* securenotify_client_get_base_url(
     securenotify_error_t* error
 );
 
-/**
- * @brief Get the client's connection state
- *
- * @param client Client handle
- * @return Current connection state
- */
 securenotify_connection_state_t securenotify_client_get_state(
     securenotify_client_t* client
 );
@@ -470,12 +464,6 @@ securenotify_subscription_t* securenotify_subscribe(
  */
 int securenotify_unsubscribe(securenotify_subscription_t* subscription, securenotify_error_t* error);
 
-/**
- * @brief Get subscription status
- *
- * @param subscription Subscription handle
- * @return Current subscription status
- */
 securenotify_subscription_status_t securenotify_subscription_get_status(
     securenotify_subscription_t* subscription
 );

@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-/**
- * Rate limit configuration
- * All configurable values are loaded from environment variables with bounds checking
- */
-
 import { parseEnvInt } from '../utils/env.utils';
 
 // Time window for rate limiting in seconds (1-3600 seconds = 1 hour)
@@ -26,7 +21,6 @@ const RATE_LIMIT_CLEANUP_INTERVAL_MS = parseEnvInt(
   3600000,
 );
 
-// Maximum requests per window
 export const RATE_LIMIT_CONFIG = {
   windowMs: RATE_LIMIT_WINDOW_SECONDS * 1000,
   maxRequests: {
@@ -39,10 +33,7 @@ export const RATE_LIMIT_CONFIG = {
   cleanupIntervalMs: RATE_LIMIT_CLEANUP_INTERVAL_MS,
 } as const;
 
-/**
- * Get the rate limit configuration for a specific endpoint type
- * Falls back to 'default' if the type is not configured
- */
+// Falls back to 'default' if the type is not configured
 export function getRateLimitConfig(
   type: string,
 ): (typeof RATE_LIMIT_CONFIG.maxRequests)['default'] {
@@ -52,16 +43,10 @@ export function getRateLimitConfig(
   );
 }
 
-/**
- * Get the time window in milliseconds
- */
 export function getRateLimitWindowMs(): number {
   return RATE_LIMIT_CONFIG.windowMs;
 }
 
-/**
- * Get the cleanup interval in milliseconds
- */
 export function getCleanupIntervalMs(): number {
   return RATE_LIMIT_CONFIG.cleanupIntervalMs;
 }

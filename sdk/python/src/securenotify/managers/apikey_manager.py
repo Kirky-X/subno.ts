@@ -1,7 +1,5 @@
-"""API Key Manager.
-
-Manages API key creation and retrieval.
-"""
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 KirkyX. All rights reserved.
 
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -16,20 +14,10 @@ from .base import BaseManager
 
 
 class ApiKeyManager(BaseManager):
-    """Manages API key operations."""
-
     async def create(
         self, name: str, permissions: List[str], expires_in: Optional[int] = None
     ) -> ApiKeyCreateResponse:
         """Create a new API key.
-
-        Args:
-            name: Name for the API key.
-            permissions: List of permission strings.
-            expires_in: Key expiry in seconds (optional).
-
-        Returns:
-            API key creation response with the new key.
 
         Raises:
             ValueError: If name or permissions is empty.
@@ -41,17 +29,6 @@ class ApiKeyManager(BaseManager):
         return await self._execute("create_api_key", request)
 
     async def get(self, key_id: str) -> ApiKeyInfo:
-        """Get API key information.
-
-        Args:
-            key_id: The key ID.
-
-        Returns:
-            API key information.
-
-        Raises:
-            SecureNotifyApiError: On API error.
-        """
         data = await self._execute("get_api_key", key_id)
         return ApiKeyInfo(
             id=data["id"],
@@ -65,14 +42,6 @@ class ApiKeyManager(BaseManager):
         )
 
     async def list(self) -> List[ApiKeyInfo]:
-        """List all API keys.
-
-        Returns:
-            List of API key information.
-
-        Raises:
-            SecureNotifyApiError: On API error.
-        """
         data = await self._execute("list_api_keys")
         keys = []
         for item in data.get("keys", []):
@@ -91,15 +60,4 @@ class ApiKeyManager(BaseManager):
         return keys
 
     async def revoke(self, key_id: str) -> Dict[str, Any]:
-        """Revoke an API key.
-
-        Args:
-            key_id: The key ID to revoke.
-
-        Returns:
-            Revocation confirmation.
-
-        Raises:
-            SecureNotifyApiError: On API error.
-        """
         return await self._execute("revoke_api_key", key_id)

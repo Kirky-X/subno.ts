@@ -21,33 +21,12 @@ public class RateLimiter {
     private long lastRefillTime;
 
     /**
-     * Create a new rate limiter.
-     *
-     * @param maxTokens        Maximum number of tokens available
-     * @param tokensPerRefill  Number of tokens to add per refill interval
-     * @param refillIntervalMs Time between token refills in milliseconds
-     */
-    public RateLimiter(int maxTokens, int tokensPerRefill, long refillIntervalMs) {
-        this.maxTokens = maxTokens;
-        this.tokensPerRefill = tokensPerRefill;
-        this.refillIntervalMs = refillIntervalMs;
-        this.semaphore = new Semaphore(maxTokens, true);
-        this.lastRefillTime = System.currentTimeMillis();
-    }
-
-    /**
      * Create a default rate limiter (10 requests per second).
      */
     public RateLimiter() {
         this(10, 10, 1000);
     }
 
-    /**
-     * Attempt to acquire a token.
-     *
-     * @param timeoutMs Maximum time to wait for a token in milliseconds
-     * @return true if token was acquired, false if timeout occurred
-     */
     public synchronized boolean tryAcquire(long timeoutMs) {
         refillTokens();
         try {
@@ -58,19 +37,11 @@ public class RateLimiter {
         }
     }
 
-    /**
-     * Acquire a token, blocking until one is available.
-     *
-     * @throws InterruptedException if interrupted while waiting
-     */
     public void acquire() throws InterruptedException {
         refillTokens();
         semaphore.acquire();
     }
 
-    /**
-     * Refill tokens based on elapsed time.
-     */
     private void refillTokens() {
         long now = System.currentTimeMillis();
         long elapsed = now - lastRefillTime;
@@ -87,21 +58,11 @@ public class RateLimiter {
         }
     }
 
-    /**
-     * Get the number of available tokens.
-     *
-     * @return Available token count
-     */
     public int getAvailableTokens() {
         refillTokens();
         return semaphore.availablePermits();
     }
 
-    /**
-     * Check if a token is available without acquiring it.
-     *
-     * @return true if at least one token is available
-     */
     public boolean isAvailable() {
         return getAvailableTokens() > 0;
     }

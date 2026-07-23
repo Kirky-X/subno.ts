@@ -11,9 +11,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class SseEvent {
 
-    /**
-     * SSE connected event.
-     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class SseConnectedEvent {
         @JsonProperty("channel")
@@ -25,7 +22,6 @@ public class SseEvent {
         @JsonProperty("timestamp")
         private long timestamp;
 
-        // Getters and Setters
         public String getChannel() {
             return channel;
         }
@@ -51,9 +47,6 @@ public class SseEvent {
         }
     }
 
-    /**
-     * SSE message event.
-     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class SseMessageEvent {
         @JsonProperty("id")
@@ -74,7 +67,6 @@ public class SseEvent {
         @JsonProperty("priority")
         private String priority;
 
-        // Getters and Setters
         public String getId() {
             return id;
         }
@@ -124,15 +116,11 @@ public class SseEvent {
         }
     }
 
-    /**
-     * SSE heartbeat event.
-     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class SseHeartbeatEvent {
         @JsonProperty("timestamp")
         private long timestamp;
 
-        // Getters and Setters
         public long getTimestamp() {
             return timestamp;
         }
@@ -142,9 +130,6 @@ public class SseEvent {
         }
     }
 
-    /**
-     * SSE error event.
-     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class SseErrorEvent {
         @JsonProperty("code")
@@ -156,7 +141,6 @@ public class SseEvent {
         @JsonProperty("reconnectable")
         private boolean reconnectable;
 
-        // Getters and Setters
         public String getCode() {
             return code;
         }

@@ -7,9 +7,6 @@
  * Provides simple in-memory caching for API responses to reduce redundant requests.
  */
 
-/**
- * A cache entry with value and expiration.
- */
 interface CacheEntry<T> {
   value: T;
   expiresAt: number;
@@ -66,7 +63,6 @@ export class ResponseCache<T = unknown> {
     }
 
     if (entry.expiresAt < Date.now()) {
-      // Expired, remove it
       this.cache.delete(key);
       this.metrics.entries--;
       this.metrics.misses++;

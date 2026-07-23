@@ -49,9 +49,6 @@ export interface RetryResult<T> {
   error?: SecureNotifyError;
 }
 
-/**
- * Calculate delay with exponential backoff and jitter
- */
 function calculateDelay(
   attempt: number,
   config: Required<RetryConfig>
@@ -60,7 +57,6 @@ function calculateDelay(
   const maxDelay = Math.min(baseDelay, config.maxDelay);
 
   if (config.jitter) {
-    // Add random jitter between 0 and baseDelay
     const jitterAmount = Math.random() * config.initialDelay * Math.pow(config.backoffMultiplier, attempt);
     const delay = Math.min(jitterAmount, config.maxDelay);
     return Math.floor(delay);
@@ -69,16 +65,11 @@ function calculateDelay(
   return maxDelay;
 }
 
-/**
- * Check if an error should be retried
- */
 function shouldRetry(error: SecureNotifyError, config: Required<RetryConfig>): boolean {
-  // Check if the error is marked as retryable
   if (error.retryable) {
     return true;
   }
 
-  // Check if the status code matches retryable status codes
   if (config.retryOnStatusCodes.includes(error.status)) {
     return true;
   }
@@ -86,9 +77,6 @@ function shouldRetry(error: SecureNotifyError, config: Required<RetryConfig>): b
   return false;
 }
 
-/**
- * Sleep for a specified duration
- */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -132,7 +120,6 @@ export async function withRetry<T>(
       attempts++;
 
       if (!(error instanceof SecureNotifyError)) {
-        // Convert unknown errors to SecureNotifyError
         lastError = new SecureNotifyError(
           "UNKNOWN",
           `Unknown error: ${(error as Error).message}`
@@ -141,7 +128,6 @@ export async function withRetry<T>(
         lastError = error as SecureNotifyError;
       }
 
-      // Check if we should retry
       if (attempts > finalConfig.maxRetries || !shouldRetry(lastError, finalConfig)) {
         return {
           attempts,
@@ -151,7 +137,6 @@ export async function withRetry<T>(
         };
       }
 
-      // Calculate and wait for the delay
       const delay = calculateDelay(attempts, finalConfig);
 
       // Check if we should respect Retry-After header
@@ -171,13 +156,8 @@ export async function withRetry<T>(
   };
 }
 
-/**
- * Parse Retry-After header value
- */
 function parseRetryAfter(error: SecureNotifyError): number | undefined {
-  // Check if Retry-After is in the details
   if (error.details?.message) {
-    // Try to extract seconds from message
     const match = error.details.message.match(/retry after\s+(\d+)\s*sec/i);
     if (match) {
       return parseInt(match[1], 10) * 1000;

@@ -45,52 +45,31 @@ export function getRelativeTime(date: Date): string {
   }
 }
 
-/**
- * Check if a date is in the past
- */
 export function isPast(date: Date): boolean {
   return date.getTime() < Date.now();
 }
 
-/**
- * Check if a date is in the future
- */
 export function isFuture(date: Date): boolean {
   return date.getTime() > Date.now();
 }
 
-/**
- * Check if a date is within a certain range from now
- */
 export function isWithinRange(date: Date, rangeMs: number): boolean {
   const diff = Math.abs(date.getTime() - Date.now());
   return diff <= rangeMs;
 }
 
-/**
- * Add seconds to a date
- */
 export function addSeconds(date: Date, seconds: number): Date {
   return new Date(date.getTime() + seconds * 1000);
 }
 
-/**
- * Add minutes to a date
- */
 export function addMinutes(date: Date, minutes: number): Date {
   return new Date(date.getTime() + minutes * 60 * 1000);
 }
 
-/**
- * Add hours to a date
- */
 export function addHours(date: Date, hours: number): Date {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
 }
 
-/**
- * Add days to a date
- */
 export function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }
@@ -128,9 +107,6 @@ export function parseISODate(isoString: string): Date | null {
   }
 }
 
-/**
- * Calculate time difference between two dates
- */
 export interface TimeDifference {
   years: number;
   months: number;
@@ -165,16 +141,10 @@ export function getTimeDifference(from: Date, to: Date = new Date()): TimeDiffer
   };
 }
 
-/**
- * Sleep utility for async operations
- */
 export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * Debounce function
- */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number,
@@ -194,9 +164,6 @@ export function debounce<T extends (...args: any[]) => any>(
   };
 }
 
-/**
- * Throttle function
- */
 export function throttle<T extends (...args: any[]) => any>(func: T, limit: number): T {
   let inThrottle: boolean;
 

@@ -34,7 +34,6 @@ public class ApiResponse<T> {
         this.data = data;
     }
 
-    // Getters and Setters
     public boolean isSuccess() {
         return success;
     }
@@ -83,9 +82,6 @@ public class ApiResponse<T> {
         return error(error);
     }
 
-    /**
-     * Error details from API response.
-     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class ErrorDetails {
 
@@ -106,7 +102,6 @@ public class ApiResponse<T> {
             this.code = code;
         }
 
-        // Getters and Setters
         public String getMessage() {
             return message;
         }

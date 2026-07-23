@@ -97,22 +97,18 @@ export class KeyRevocationService {
       return { valid: false, error: 'API key not found', code: 'INVALID_API_KEY' };
     }
 
-    // Check if API key is active
     if (!apiKey.isActive) {
       return { valid: false, error: 'API key is inactive', code: 'INACTIVE_API_KEY' };
     }
 
-    // Check if API key is expired
     if (apiKey.expiresAt && new Date(apiKey.expiresAt) < new Date()) {
       return { valid: false, error: 'API key has expired', code: 'EXPIRED_API_KEY' };
     }
 
-    // Check if API key has been revoked
     if (apiKey.isDeleted) {
       return { valid: false, error: 'API key has been revoked', code: 'REVOKED_API_KEY' };
     }
 
-    // Check permissions
     const permissions = apiKey.permissions as string[];
     const hasAdminPermission = permissions.includes('admin');
     const hasRevokePermission = permissions.includes('key_revoke');
@@ -132,12 +128,10 @@ export class KeyRevocationService {
       return { valid: false, error: 'Target key not found', code: 'NOT_FOUND' };
     }
 
-    // If admin permission, skip ownership check
     if (hasAdminPermission) {
       return { valid: true };
     }
 
-    // Verify the API key owner is the channel creator
     const channelAccess = await channelRepository.verifyAccess(
       targetKey.channelId,
       apiKey.userId,
@@ -179,7 +173,6 @@ export class KeyRevocationService {
       return { success: false, error: 'Key already revoked', code: 'ALREADY_REVOKED' };
     }
 
-    // Validate reason with enhanced checks
     const reasonValidation = this.validateReason(request.reason);
     if (reasonValidation) {
       return {
@@ -189,7 +182,6 @@ export class KeyRevocationService {
       };
     }
 
-    // Check for existing pending revocation
     if (existingConfirmation && existingConfirmation.status === 'pending') {
       return {
         success: false,
@@ -246,7 +238,6 @@ export class KeyRevocationService {
       return { success: false, error: 'Key not found', code: 'NOT_FOUND' };
     }
 
-    // Perform soft delete
     const deletedKey = await publicKeyRepository.softDelete(
       confirmation.keyId,
       confirmedBy,
@@ -257,7 +248,6 @@ export class KeyRevocationService {
       return { success: false, error: 'Failed to delete key', code: 'DELETE_FAILED' };
     }
 
-    // Update confirmation status
     await revocationConfirmationRepository.updateStatus(revocationId, 'confirmed', confirmedBy);
 
     return {
@@ -294,7 +284,6 @@ export class KeyRevocationService {
     const confirmation = await revocationConfirmationRepository.findById(revocationId);
 
     if (!confirmation) {
-      // Check if key exists but no pending revocation
       return { success: false, error: 'Revocation not found', code: 'NOT_FOUND' };
     }
 

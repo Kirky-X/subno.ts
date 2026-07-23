@@ -45,23 +45,17 @@ export default function StarField() {
     const width = canvas.width;
     const height = canvas.height;
 
-    // 检测鼠标是否静止，加速星空移动
     const timeSinceMouseMove = Date.now() - lastMouseMoveRef.current;
     if (timeSinceMouseMove > 2000) {
-      // 鼠标静止超过2秒，加速到3倍
       speedMultiplierRef.current = Math.min(speedMultiplierRef.current + 0.02, 3);
     } else {
-      // 鼠标移动中，恢复正常速度
       speedMultiplierRef.current = Math.max(speedMultiplierRef.current - 0.1, 1);
     }
 
-    // 半透明清除，产生拖尾效果
     ctx.fillStyle = 'rgba(9, 9, 11, 0.2)';
     ctx.fillRect(0, 0, width, height);
 
-    // 绘制星星
     starsRef.current.forEach((star) => {
-      // 更新位置（根据速度倍率）
       star.speed = star.baseSpeed * speedMultiplierRef.current;
       star.z -= star.speed;
       if (star.z <= 0) {
@@ -70,13 +64,11 @@ export default function StarField() {
         star.y = Math.random() * height;
       }
 
-      // 计算投影位置
       const sx = (star.x - width / 2) * (width / star.z) + width / 2;
       const sy = (star.y - height / 2) * (width / star.z) + height / 2;
       const size = (1 - star.z / width) * star.size * 2;
 
       if (sx >= 0 && sx <= width && sy >= 0 && sy <= height && size > 0) {
-        // 星星发光效果
         const gradient = ctx.createRadialGradient(sx, sy, 0, sx, sy, size * 2);
         gradient.addColorStop(0, `rgba(255, 255, 255, ${star.brightness})`);
         gradient.addColorStop(0.5, `rgba(200, 200, 255, ${star.brightness * 0.5})`);
@@ -87,7 +79,6 @@ export default function StarField() {
         ctx.fillStyle = gradient;
         ctx.fill();
 
-        // 中心亮点
         ctx.beginPath();
         ctx.arc(sx, sy, size * 0.3, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255, 255, 255, ${star.brightness})`;

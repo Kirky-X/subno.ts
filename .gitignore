@@ -10,6 +10,9 @@ CLAUDE.md
 .openspec/
 openspec/
 
+# Specmark specification artifacts
+specmark/
+
 # Project AGENTS.md (AI instructions)
 AGENTS.md
 

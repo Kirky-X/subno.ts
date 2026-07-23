@@ -26,9 +26,6 @@ public class RetryHandler {
     private final boolean jitter;
     private final Random random = new Random();
 
-    /**
-     * Default retry configuration.
-     */
     public static final RetryHandler DEFAULT = new RetryHandler(3, 1000, 30000, 2.0, true);
 
     public RetryHandler() {
@@ -44,14 +41,6 @@ public class RetryHandler {
         this.jitter = jitter;
     }
 
-    /**
-     * Execute a supplier with retry logic.
-     *
-     * @param supplier The supplier to execute
-     * @param <T>      The return type
-     * @return The result of the supplier
-     * @throws Exception if all retries fail
-     */
     public <T> T execute(Supplier<T> supplier) throws Exception {
         int attempt = 0;
         long delay = initialDelayMs;
@@ -77,14 +66,6 @@ public class RetryHandler {
         }
     }
 
-    /**
-     * Execute an async supplier with retry logic.
-     *
-     * @param supplier The async supplier to execute
-     * @param <T>      The return type
-     * @return The result of the supplier
-     * @throws Exception if all retries fail
-     */
     public <T> java.util.concurrent.CompletableFuture<T> executeAsync(
             java.util.function.Supplier<java.util.concurrent.CompletableFuture<T>> supplier) throws Exception {
 
@@ -112,26 +93,19 @@ public class RetryHandler {
         }
     }
 
-    /**
-     * Check if an exception should trigger a retry.
-     */
     private boolean shouldRetry(Exception e) {
-        // Retry on network errors
         if (e instanceof NetworkException) {
             return ((NetworkException) e).isRetryable();
         }
 
-        // Retry on rate limit errors
         if (e instanceof RateLimitException) {
             return true;
         }
 
-        // Retry on server errors (5xx)
         if (e instanceof ApiException && ((ApiException) e).isServerError()) {
             return true;
         }
 
-        // Retry on gateway errors and timeouts
         if (e instanceof ApiException) {
             int code = ((ApiException) e).getStatusCode();
             return code == 408 || code == 502 || code == 503 || code == 504;
@@ -140,9 +114,6 @@ public class RetryHandler {
         return false;
     }
 
-    /**
-     * Calculate the delay with optional jitter.
-     */
     private long calculateDelay(long baseDelay, int attempt) {
         if (!jitter) {
             return baseDelay;
@@ -160,14 +131,10 @@ public class RetryHandler {
         return delay;
     }
 
-    /**
-     * Calculate retry-after delay from RateLimitException.
-     */
     public static long getRetryAfterDelay(RateLimitException e) {
         return e.getWaitTimeMillis();
     }
 
-    // Getters for configuration
     public int getMaxRetries() {
         return maxRetries;
     }
@@ -188,9 +155,6 @@ public class RetryHandler {
         return jitter;
     }
 
-    /**
-     * Builder for custom retry configurations.
-     */
     public static class Builder {
         private int maxRetries = 3;
         private long initialDelayMs = 1000;

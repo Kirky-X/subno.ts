@@ -8,25 +8,16 @@ import { eq, and, desc, sql, count } from 'drizzle-orm';
 export class ChannelRepository {
   private db = getDatabase();
 
-  /**
-   * Find channel by ID
-   */
   async findById(id: string): Promise<Channel | null> {
     const result = await this.db.select().from(channels).where(eq(channels.id, id)).limit(1);
     return result[0] ?? null;
   }
 
-  /**
-   * Find channel by name
-   */
   async findByName(name: string): Promise<Channel | null> {
     const result = await this.db.select().from(channels).where(eq(channels.name, name)).limit(1);
     return result[0] ?? null;
   }
 
-  /**
-   * Find channels by creator with pagination
-   */
   async findByCreator(creator: string): Promise<Channel[]> {
     const result = await this.db
       .select()
@@ -36,9 +27,6 @@ export class ChannelRepository {
     return result;
   }
 
-  /**
-   * Find channels by creator with pagination support
-   */
   async findByCreatorWithPagination(
     creator: string,
     limit: number,
@@ -64,9 +52,6 @@ export class ChannelRepository {
     };
   }
 
-  /**
-   * Find active channels
-   */
   async findActive(limit = 100): Promise<Channel[]> {
     const result = await this.db
       .select()
@@ -77,9 +62,6 @@ export class ChannelRepository {
     return result;
   }
 
-  /**
-   * Find active channels with pagination support
-   */
   async findActiveWithPagination(
     limit: number,
     offset: number,
@@ -110,9 +92,6 @@ export class ChannelRepository {
     };
   }
 
-  /**
-   * Create a new channel
-   */
   async create(data: {
     id: string;
     name: string;
@@ -137,9 +116,6 @@ export class ChannelRepository {
     return result[0];
   }
 
-  /**
-   * Update channel
-   */
   async update(
     id: string,
     data: Partial<{
@@ -154,9 +130,6 @@ export class ChannelRepository {
     return result[0] ?? null;
   }
 
-  /**
-   * Soft delete channel
-   */
   async softDelete(id: string): Promise<Channel | null> {
     const result = await this.db
       .update(channels)
@@ -166,18 +139,12 @@ export class ChannelRepository {
     return result[0] ?? null;
   }
 
-  /**
-   * Check if user is the creator of the channel
-   */
   async isCreator(channelId: string, userId: string): Promise<boolean> {
     const channel = await this.findById(channelId);
     return channel?.creator === userId;
   }
 
-  /**
-   * Verify user has access to channel (creator or has explicit permission)
-   * This is the key security function for ownership verification
-   */
+  // SECURITY: Key function for ownership verification
   async verifyAccess(
     channelId: string,
     userId: string,

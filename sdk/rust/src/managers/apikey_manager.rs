@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-//! API Key manager for SecureNotify SDK
-
 use async_trait::async_trait;
 use crate::Result;
 use crate::types::api::*;
 
-/// Trait for API key management operations
 #[async_trait]
 pub trait ApiKeyManager {
-    /// Create a new API key
     async fn create_api_key(
         &self,
         name: &str,
@@ -19,27 +15,22 @@ pub trait ApiKeyManager {
         expires_at: Option<&str>,
     ) -> Result<ApiKeyCreateResponse>;
 
-    /// Get API key information
     async fn get_api_key(&self, key_id: &str) -> Result<ApiKeyInfo>;
 
-    /// List all API keys
     async fn list_api_keys(
         &self,
         limit: Option<u32>,
         offset: Option<u32>,
     ) -> Result<Vec<ApiKeyInfo>>;
 
-    /// Revoke an API key
     async fn revoke_api_key(&self, key_id: &str) -> Result<()>;
 }
 
-/// Implementation of ApiKeyManager
 pub struct ApiKeyManagerImpl {
     http_client: std::sync::Arc<crate::utils::http::HttpClient>,
 }
 
 impl ApiKeyManagerImpl {
-    /// Create a new ApiKeyManager
     pub fn new(http_client: std::sync::Arc<crate::utils::http::HttpClient>) -> Self {
         Self { http_client }
     }

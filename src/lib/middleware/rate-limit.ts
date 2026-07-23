@@ -16,8 +16,8 @@ import { RateLimitError, extractRequestContext } from '../utils/error-handler';
 import { getRedisClient } from '../utils/redis-client';
 
 export interface RateLimitConfig {
-  windowMs: number; // Time window in milliseconds
-  maxRequests: number; // Maximum requests per window
+  windowMs: number;
+  maxRequests: number;
 }
 
 export interface RateLimitResult {
@@ -28,21 +28,15 @@ export interface RateLimitResult {
   retryAfter?: number;
 }
 
-/**
- * Rate limiter configuration factory
- * Creates appropriate rate limiter based on Redis availability
- */
 function createRateLimiter(endpointType: string) {
   const config = getRateLimitConfig(endpointType);
 
-  // Common options for both Redis and Memory limiters
   const commonOptions = {
     points: config.maxRequests,
-    duration: Math.ceil(config.windowMs / 1000), // Convert to seconds
-    blockDuration: 0, // Don't block, just reject
+    duration: Math.ceil(config.windowMs / 1000),
+    blockDuration: 0,
   };
 
-  // Try to use Redis first, fallback to memory
   return async (
     key: string,
   ): Promise<{
@@ -64,22 +58,16 @@ function createRateLimiter(endpointType: string) {
       console.warn('Redis rate limiter failed, falling back to memory:', error);
     }
 
-    // Fallback to memory limiter
     const memoryLimiter = new RateLimiterMemory(commonOptions);
     return { limiter: memoryLimiter, isRedis: false };
   };
 }
 
-/**
- * Get client IP address from request with spoofing protection
- * Only trusts X-Forwarded-For from known proxy configurations
- */
+// Only trusts X-Forwarded-For from known proxy configurations (spoofing protection)
 function getClientIP(request: NextRequest): string {
-  // Get trusted proxy IPs from environment (comma-separated)
   const trustedProxies = process.env.TRUSTED_PROXY_IPS?.split(',').map(ip => ip.trim()) || [];
   const useProxy = trustedProxies.length > 0;
 
-  // Check X-Forwarded-For header (only if proxy is trusted)
   const forwardedFor = request.headers.get('x-forwarded-for');
   if (forwardedFor) {
     const ips = forwardedFor.split(',').map(ip => ip.trim());
@@ -95,13 +83,11 @@ function getClientIP(request: NextRequest): string {
     }
   }
 
-  // Use X-Real-IP header as fallback
   const realIP = request.headers.get('x-real-ip');
   if (realIP) {
     return realIP;
   }
 
-  // Try to get IP from connection remote address
   // @ts-expect-error Next.js 13+ may have ip property on request
   const reqIp = request.ip || (request as { ip?: string }).ip;
   if (reqIp) {
@@ -111,9 +97,6 @@ function getClientIP(request: NextRequest): string {
   return 'unknown';
 }
 
-/**
- * Determine endpoint type from request
- */
 function getEndpointType(request: NextRequest): string {
   const url = new URL(request.url);
   const path = url.pathname;
@@ -126,9 +109,6 @@ function getEndpointType(request: NextRequest): string {
   return 'default';
 }
 
-/**
- * Create rate limit response headers
- */
 function createRateLimitHeaders(
   points: number,
   remainingPoints: number,
@@ -142,14 +122,6 @@ function createRateLimitHeaders(
   };
 }
 
-/**
- * Rate limit middleware function
- * Uses rate-limiter-flexible library for robust distributed rate limiting
- *
- * @param request - Next.js request object
- * @param endpointType - Type of endpoint (default, publish, register, subscribe, revoke)
- * @returns Promise<RateLimitResult> indicating if request is allowed
- */
 export async function rateLimit(
   request: NextRequest,
   endpointType?: string,
@@ -172,7 +144,7 @@ export async function rateLimit(
     };
   } catch (error: any) {
     if (error.remainingPoints !== undefined) {
-      // Rate limit exceeded - this is expected
+      // Rate limit exceeded - this is expected, not an error
       return {
         success: false,
         limit: config.maxRequests,
@@ -193,10 +165,6 @@ export async function rateLimit(
   }
 }
 
-/**
- * Get rate limit configuration for a specific endpoint type
- * Uses cached configuration from config module
- */
 function getRateLimitConfig(endpointType: string): RateLimitConfig {
   return {
     windowMs: getRateLimitWindowMs(),
@@ -204,10 +172,6 @@ function getRateLimitConfig(endpointType: string): RateLimitConfig {
   };
 }
 
-/**
- * Create a Next.js Response with rate limit headers
- * Uses unified error handling
- */
 export function createRateLimitedResponse(result: RateLimitResult): NextResponse {
   const context = extractRequestContext({} as NextRequest);
   const error = new RateLimitError(result.retryAfter || 60, {
@@ -216,7 +180,6 @@ export function createRateLimitedResponse(result: RateLimitResult): NextResponse
 
   const response = error.toNextResponse(context.requestId);
 
-  // Add rate limit headers
   for (const [key, value] of Object.entries(
     createRateLimitHeaders(result.limit, result.remaining, result.resetAt - Date.now()),
   )) {
@@ -226,9 +189,6 @@ export function createRateLimitedResponse(result: RateLimitResult): NextResponse
   return response;
 }
 
-/**
- * Helper to add rate limit headers to a successful response
- */
 export function addRateLimitHeaders(response: NextResponse, result: RateLimitResult): NextResponse {
   for (const [key, value] of Object.entries(
     createRateLimitHeaders(result.limit, result.remaining, result.resetAt - Date.now()),
@@ -238,10 +198,6 @@ export function addRateLimitHeaders(response: NextResponse, result: RateLimitRes
   return response;
 }
 
-/**
- * Check rate limit and return error response if exceeded
- * Convenience function for use in API routes
- */
 export async function checkRateLimit(
   request: NextRequest,
   endpointType?: string,

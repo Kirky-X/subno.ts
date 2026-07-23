@@ -4,9 +4,6 @@
 /**
  * @file securenotify.c
  * @brief SecureNotify C SDK main implementation
- *
- * This file implements all public API functions for the SecureNotify SDK
- * using libcurl for HTTP/HTTPS requests.
  */
 
 #define _POSIX_C_SOURCE 200809L
@@ -17,13 +14,11 @@
 #include <pthread.h>
 #include "securenotify.h"
 
-/* SDK Version */
 #define SECURENOTIFY_VERSION_MAJOR 0
 #define SECURENOTIFY_VERSION_MINOR 1
 #define SECURENOTIFY_VERSION_PATCH 0
 #define SECURENOTIFY_VERSION_STRING "0.1.0"
 
-/* Internal client structure */
 struct securenotify_client {
     char* base_url;
     char* api_key;
@@ -32,7 +27,6 @@ struct securenotify_client {
     bool initialized;
 };
 
-/* Internal subscription structure */
 struct securenotify_subscription {
     securenotify_client_t* client;
     char* channel;
@@ -52,7 +46,6 @@ struct securenotify_subscription {
     securenotify_subscription_status_t status;
 };
 
-/* Response buffer for curl */
 typedef struct {
     char* data;
     size_t size;
@@ -80,10 +73,7 @@ static int curl_init_count = 0;
 /* ========== Input Validation Functions ========== */
 
 /**
- * @brief Validate a string parameter
- * @param str String to validate
  * @param max_length Maximum allowed length (0 for no limit)
- * @return true if valid, false otherwise
  */
 static bool validate_string(const char* str, size_t max_length) {
     if (!str) return false;
@@ -99,11 +89,6 @@ static bool validate_string(const char* str, size_t max_length) {
     return true;
 }
 
-/**
- * @brief Validate a channel ID format
- * @param channel_id Channel ID to validate
- * @return true if valid, false otherwise
- */
 static bool validate_channel_id(const char* channel_id) {
     if (!validate_string(channel_id, 256)) return false;
 
@@ -125,11 +110,6 @@ static bool validate_channel_id(const char* channel_id) {
     return true;
 }
 
-/**
- * @brief Validate a public key format
- * @param public_key Public key to validate
- * @return true if valid, false otherwise
- */
 static bool validate_public_key(const char* public_key) {
     if (!validate_string(public_key, 16384)) return false;
 
@@ -143,11 +123,6 @@ static bool validate_public_key(const char* public_key) {
     return true;
 }
 
-/**
- * @brief Validate an algorithm string
- * @param algorithm Algorithm to validate
- * @return true if valid, false otherwise
- */
 static bool validate_algorithm(const char* algorithm) {
     if (!validate_string(algorithm, 64)) return false;
 
@@ -167,11 +142,6 @@ static bool validate_algorithm(const char* algorithm) {
     return false;
 }
 
-/**
- * @brief Validate a message content
- * @param message Message to validate
- * @return true if valid, false otherwise
- */
 static bool validate_message(const char* message) {
     if (!validate_string(message, 1048576)) return false; /* 1MB max */
 
@@ -243,7 +213,6 @@ static bool parse_json_string(const char* json, const char* key, char** out_valu
 
     pos += strlen(pattern);
 
-    /* Skip whitespace */
     while (*pos == ' ' || *pos == '\t' || *pos == '\n') pos++;
 
     if (*pos != '"') return false;
@@ -273,7 +242,6 @@ static bool parse_json_int64(const char* json, const char* key, int64_t* out_val
 
     pos += strlen(pattern);
 
-    /* Skip whitespace */
     while (*pos == ' ' || *pos == '\t' || *pos == '\n') pos++;
 
     *out_value = strtoll(pos, NULL, 10);
@@ -291,7 +259,6 @@ static bool parse_json_bool(const char* json, const char* key, bool* out_value) 
 
     pos += strlen(pattern);
 
-    /* Skip whitespace */
     while (*pos == ' ' || *pos == '\t' || *pos == '\n') pos++;
 
     *out_value = (strncmp(pos, "true", 4) == 0);
@@ -313,10 +280,8 @@ static int http_request(
     struct curl_slist* headers = NULL;
     response_buffer_t buf = {0};
 
-    /* Set URL */
     curl_easy_setopt(curl, CURLOPT_URL, url);
 
-    /* Set method */
     if (strcmp(method, "GET") == 0) {
         curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
     } else if (strcmp(method, "POST") == 0) {
@@ -328,10 +293,9 @@ static int http_request(
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
     }
 
-    /* Set headers */
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "Accept: application/json");
-    headers = curl_slist_append(headers, "User-Agent: SecureNotify-C/0.1.0");  /* Add User-Agent header */
+    headers = curl_slist_append(headers, "User-Agent: SecureNotify-C/0.1.0");
     if (client->api_key) {
         char auth_header[512];
         snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s", client->api_key);
@@ -339,11 +303,9 @@ static int http_request(
     }
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-    /* Set write callback */
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, securenotify_write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
 
-    /* Set timeout */
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
 
@@ -356,14 +318,11 @@ static int http_request(
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
     curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
 
-    /* Perform request */
     CURLcode res = curl_easy_perform(curl);
 
-    /* Get response code */
     long http_code = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 
-    /* Cleanup headers */
     curl_slist_free_all(headers);
 
     if (res != CURLE_OK) {
@@ -446,7 +405,7 @@ securenotify_client_t* securenotify_client_new(
 
     /* Configure connection pooling for performance (PERFORMANCE FIX) */
     curl_easy_setopt(client->curl, CURLOPT_FORBID_REUSE, 0L);  /* Enable connection reuse */
-    curl_easy_setopt(client->curl, CURLOPT_TCP_KEEPALIVE, 1L);  /* Enable TCP keep-alive */
+    curl_easy_setopt(client->curl, CURLOPT_TCP_KEEPALIVE, 1L);
     curl_easy_setopt(client->curl, CURLOPT_TCP_KEEPIDLE, 60L);  /* Keep idle connections for 60s */
     curl_easy_setopt(client->curl, CURLOPT_TCP_KEEPINTVL, 30L);  /* Send keep-alive every 30s */
 
@@ -513,35 +472,30 @@ securenotify_public_key_t* securenotify_keys_register(
     int32_t expires_in_seconds,
     securenotify_error_t* error
 ) {
-    /* Validate client */
     if (!client) {
         if (error) securenotify_error_set(error, SECURENOTIFY_ERROR_VALIDATION,
                                           "Client is NULL", 0);
         return NULL;
     }
 
-    /* Validate public key */
     if (!validate_public_key(public_key)) {
         if (error) securenotify_error_set(error, SECURENOTIFY_ERROR_VALIDATION,
                                           "Invalid public key format or length", 0);
         return NULL;
     }
 
-    /* Validate algorithm */
     if (!validate_algorithm(algorithm)) {
         if (error) securenotify_error_set(error, SECURENOTIFY_ERROR_VALIDATION,
                                           "Invalid algorithm. Must be RSA-2048, RSA-4096, or ECC-SECP256K1", 0);
         return NULL;
     }
 
-    /* Validate expires_in_seconds */
     if (expires_in_seconds < 0) {
         if (error) securenotify_error_set(error, SECURENOTIFY_ERROR_VALIDATION,
                                           "expires_in_seconds must be non-negative", 0);
         return NULL;
     }
 
-    /* Build request body */
     char body[8192];
     if (expires_in_seconds > 0) {
         snprintf(body, sizeof(body),
@@ -574,7 +528,6 @@ securenotify_public_key_t* securenotify_keys_register(
         return NULL;
     }
 
-    /* Parse response */
     securenotify_public_key_t* key = malloc(sizeof(securenotify_public_key_t));
     if (!key) {
         free(response);
@@ -1204,7 +1157,6 @@ securenotify_subscription_t* securenotify_subscribe(
     pthread_mutex_init(&sub->mutex, NULL);
     pthread_cond_init(&sub->cond, NULL);
 
-    /* Start subscription thread */
     pthread_mutex_lock(&sub->mutex);
     int result = pthread_create(&sub->thread, NULL, subscription_thread, sub);
     if (result == 0) {

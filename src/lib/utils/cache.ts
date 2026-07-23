@@ -3,18 +3,12 @@
 
 import { LRUCache } from 'lru-cache';
 
-/**
- * Cache entry with metadata
- */
 interface CacheEntry<T> {
   value: T;
   timestamp: number;
   ttl?: number;
 }
 
-/**
- * Cache statistics
- */
 export interface CacheStats {
   size: number;
   maxSize: number;
@@ -23,9 +17,6 @@ export interface CacheStats {
   hitRate: number;
 }
 
-/**
- * Generic cache configuration
- */
 export interface CacheConfig<K, V> {
   /** Maximum number of items in the cache */
   max: number | Map<K, V>;
@@ -54,7 +45,6 @@ export class Cache<K extends string | number, V> {
       },
     };
 
-    // Add TTL check function if TTL is configured
     if (config.ttl) {
       options.ttl = config.ttl;
       options.ttlAutopurge = true;
@@ -63,9 +53,6 @@ export class Cache<K extends string | number, V> {
     this.cache = new LRUCache<K, CacheEntry<V>>(options);
   }
 
-  /**
-   * Get a value from the cache
-   */
   get(key: K): V | undefined {
     const entry = this.cache.get(key);
 
@@ -74,7 +61,6 @@ export class Cache<K extends string | number, V> {
       return undefined;
     }
 
-    // Check TTL if configured
     if (entry.ttl !== undefined) {
       const now = Date.now();
       if (now - entry.timestamp > entry.ttl) {
@@ -88,9 +74,6 @@ export class Cache<K extends string | number, V> {
     return entry.value;
   }
 
-  /**
-   * Set a value in the cache
-   */
   set(key: K, value: V, ttl?: number): void {
     const entry: CacheEntry<V> = {
       value,
@@ -101,21 +84,14 @@ export class Cache<K extends string | number, V> {
     this.cache.set(key, entry);
   }
 
-  /**
-   * Delete a value from the cache
-   */
   delete(key: K): boolean {
     return this.cache.delete(key);
   }
 
-  /**
-   * Check if a key exists in the cache
-   */
   has(key: K): boolean {
     const entry = this.cache.get(key);
     if (!entry) return false;
 
-    // Check TTL if configured
     if (entry.ttl !== undefined) {
       const now = Date.now();
       if (now - entry.timestamp > entry.ttl) {
@@ -127,25 +103,16 @@ export class Cache<K extends string | number, V> {
     return true;
   }
 
-  /**
-   * Clear all entries from the cache
-   */
   clear(): void {
     this.cache.clear();
     this.hits = 0;
     this.misses = 0;
   }
 
-  /**
-   * Get current cache size
-   */
   size(): number {
     return this.cache.size;
   }
 
-  /**
-   * Get cache statistics
-   */
   stats(): CacheStats {
     const total = this.hits + this.misses;
     return {
@@ -157,9 +124,6 @@ export class Cache<K extends string | number, V> {
     };
   }
 
-  /**
-   * Get or compute a value (with optional async computation)
-   */
   async getOrCompute(key: K, computeFn: () => Promise<V>, ttl?: number): Promise<V> {
     const cached = this.get(key);
     if (cached !== undefined) {
@@ -171,9 +135,6 @@ export class Cache<K extends string | number, V> {
     return value;
   }
 
-  /**
-   * Synchronous version of getOrCompute
-   */
   getOrComputeSync(key: K, computeFn: () => V, ttl?: number): V {
     const cached = this.get(key);
     if (cached !== undefined) {
@@ -223,9 +184,6 @@ export const rateLimitStateCache = new Cache<string, { count: number; windowStar
   ttl: 1 * 60 * 1000, // 1 minute
 });
 
-/**
- * Create a custom cache instance
- */
 export function createCache<K extends string | number, V>(config: CacheConfig<K, V>): Cache<K, V> {
   return new Cache(config);
 }

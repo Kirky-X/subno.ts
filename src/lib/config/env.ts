@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-/**
- * Environment Configuration using @t3-oss/env-nextjs
- * Provides type-safe environment variable validation with Zod
- */
-
 import { createEnv } from '@t3-oss/env-nextjs';
 import { z } from 'zod';
 
@@ -13,9 +8,6 @@ import { z } from 'zod';
 type ServerSchema = typeof serverSchema;
 type ClientSchema = typeof clientSchema;
 
-/**
- * Server-side environment variables schema
- */
 const serverSchema = z.object({
   // Database configuration
   DATABASE_URL: z.string().url().describe('PostgreSQL connection URL'),
@@ -65,19 +57,12 @@ const serverSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 });
 
-/**
- * Client-side environment variables schema
- * These are exposed to the browser via process.env.NEXT_PUBLIC_*
- */
 const clientSchema = z.object({
   // Add client-side env vars here if needed
   // Example: NEXT_PUBLIC_API_URL: z.string().url(),
 });
 
-/**
- * Runtime environment for server-side rendering
- * Note: Using type assertion to work around @t3-oss/env-nextjs type inference issues
- */
+// Using type assertion to work around @t3-oss/env-nextjs type inference issues
 export const env = createEnv({
   server: serverSchema as any,
   client: clientSchema as any,
@@ -116,17 +101,10 @@ export const env = createEnv({
   emptyStringAsUndefined: true,
 });
 
-/**
- * Type-safe accessor for environment variables
- * Provides validated and transformed values
- */
 export function getEnv() {
   return env;
 }
 
-/**
- * Get database configuration
- */
 export function getDatabaseConfig() {
   const e = env as unknown as {
     DATABASE_URL: string;
@@ -143,9 +121,6 @@ export function getDatabaseConfig() {
   };
 }
 
-/**
- * Get Redis configuration
- */
 export function getRedisConfig() {
   const e = env as unknown as { REDIS_URL: string };
   return {
@@ -153,9 +128,6 @@ export function getRedisConfig() {
   };
 }
 
-/**
- * Get rate limit configuration
- */
 export function getRateLimitConfig() {
   const e = env as unknown as {
     RATE_LIMIT_WINDOW_SECONDS: number;
@@ -175,9 +147,6 @@ export function getRateLimitConfig() {
   };
 }
 
-/**
- * Get message TTL configuration
- */
 export function getMessageTTLConfig() {
   const e = env as unknown as {
     PUBLIC_MESSAGE_TTL: number;
@@ -189,9 +158,6 @@ export function getMessageTTLConfig() {
   };
 }
 
-/**
- * Get channel configuration
- */
 export function getChannelConfig() {
   const e = env as unknown as {
     TEMPORARY_CHANNEL_TTL: number;
@@ -203,9 +169,6 @@ export function getChannelConfig() {
   };
 }
 
-/**
- * Get key revocation configuration
- */
 export function getKeyRevocationConfig() {
   const e = env as unknown as {
     REVOCATION_CONFIRMATION_HOURS: number;
@@ -221,9 +184,6 @@ export function getKeyRevocationConfig() {
   };
 }
 
-/**
- * Validate that ADMIN_MASTER_KEY is properly configured in production
- */
 export function validateProductionSecurity(): void {
   const e = env as unknown as {
     NODE_ENV: 'development' | 'production' | 'test';

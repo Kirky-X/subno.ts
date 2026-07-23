@@ -25,30 +25,12 @@ public class MetricsCollector {
     private final ReentrantReadWriteLock lock;
 
     /**
-     * Create a new metrics collector.
-     *
-     * @param maxSamples Maximum number of samples to keep per endpoint
-     */
-    public MetricsCollector(int maxSamples) {
-        this.maxSamples = maxSamples;
-        this.samples = new ConcurrentHashMap<>();
-        this.lock = new ReentrantReadWriteLock();
-    }
-
-    /**
      * Create a metrics collector with default max samples (1000).
      */
     public MetricsCollector() {
         this(1000);
     }
 
-    /**
-     * Record a metric sample.
-     *
-     * @param endpoint    API endpoint
-     * @param durationMs  Request duration in milliseconds
-     * @param success     Whether the request was successful
-     */
     public void record(String endpoint, long durationMs, boolean success) {
         lock.writeLock().lock();
         try {
@@ -59,7 +41,6 @@ public class MetricsCollector {
 
             queue.add(new MetricSample(System.currentTimeMillis(), durationMs, success));
 
-            // Trim to max samples
             while (queue.size() > maxSamples) {
                 queue.poll();
             }
@@ -68,12 +49,6 @@ public class MetricsCollector {
         }
     }
 
-    /**
-     * Get statistics for an endpoint.
-     *
-     * @param endpoint API endpoint
-     * @return Metric statistics
-     */
     public MetricStats getStats(String endpoint) {
         lock.readLock().lock();
         try {
@@ -89,11 +64,6 @@ public class MetricsCollector {
         }
     }
 
-    /**
-     * Get statistics for all endpoints.
-     *
-     * @return Map of endpoint to statistics
-     */
     public Map<String, MetricStats> getAllStats() {
         lock.readLock().lock();
         try {
@@ -108,11 +78,6 @@ public class MetricsCollector {
         }
     }
 
-    /**
-     * Get a summary of all metrics.
-     *
-     * @return Summary statistics
-     */
     public MetricsSummary getSummary() {
         lock.readLock().lock();
         try {
@@ -139,9 +104,6 @@ public class MetricsCollector {
         }
     }
 
-    /**
-     * Reset all metrics.
-     */
     public void reset() {
         lock.writeLock().lock();
         try {
@@ -152,9 +114,6 @@ public class MetricsCollector {
         }
     }
 
-    /**
-     * Calculate statistics from a list of samples.
-     */
     private MetricStats calculateStats(List<MetricSample> sampleList) {
         if (sampleList.isEmpty()) {
             return new MetricStats();
@@ -183,7 +142,6 @@ public class MetricsCollector {
         stats.maxDurationMs = durations.get(durations.size() - 1);
         stats.avgDurationMs = (double) totalDuration / stats.count;
 
-        // Calculate percentiles
         int n = durations.size();
         stats.p50DurationMs = durations.get(n / 2);
         stats.p95DurationMs = durations.get((int) (n * 0.95));
@@ -192,9 +150,6 @@ public class MetricsCollector {
         return stats;
     }
 
-    /**
-     * Metric sample data class.
-     */
     private static class MetricSample {
         final long timestamp;
         final long durationMs;
@@ -207,9 +162,6 @@ public class MetricsCollector {
         }
     }
 
-    /**
-     * Metric statistics data class.
-     */
     public static class MetricStats {
         public int count;
         public int successCount;
@@ -230,9 +182,6 @@ public class MetricsCollector {
         }
     }
 
-    /**
-     * Metrics summary data class.
-     */
     public static class MetricsSummary {
         public final int totalRequests;
         public final int totalSuccess;

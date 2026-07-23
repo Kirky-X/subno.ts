@@ -41,9 +41,6 @@ public class ChannelInfo {
     @JsonProperty("metadata")
     private Object metadata;
 
-    /**
-     * Response from channel creation.
-     */
     @Data
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class ChannelCreateResponse extends ChannelInfo {

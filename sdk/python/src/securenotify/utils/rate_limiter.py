@@ -1,7 +1,7 @@
-"""Rate Limiter Utility.
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 KirkyX. All rights reserved.
 
-Implements token bucket rate limiting to prevent API abuse.
-"""
+"""Token bucket rate limiting to prevent API abuse."""
 
 import asyncio
 import time
@@ -20,13 +20,6 @@ class RateLimiter:
         refill_rate: float = 1.0,
         refill_interval: float = 1.0,
     ):
-        """Initialize rate limiter.
-
-        Args:
-            max_tokens: Maximum number of tokens in the bucket.
-            refill_rate: Number of tokens to add per refill interval.
-            refill_interval: Time interval between refills in seconds.
-        """
         self.max_tokens = max_tokens
         self.refill_rate = refill_rate
         self.refill_interval = refill_interval
@@ -45,7 +38,6 @@ class RateLimiter:
             True if token acquired, False if timeout exceeded.
         """
         async with self._lock:
-            # Refill tokens
             now = time.time()
             elapsed = now - self.last_refill
 
@@ -55,16 +47,13 @@ class RateLimiter:
                 self.tokens = min(self.max_tokens, self.tokens + tokens_to_add)
                 self.last_refill = now
 
-            # Check if token available
             if self.tokens >= 1:
                 self.tokens -= 1
                 return True
 
-            # Wait for token
             if timeout is not None and timeout <= 0:
                 return False
 
-            # Calculate wait time
             tokens_needed = 1
             refill_cycles_needed = (tokens_needed - self.tokens) / self.refill_rate
             wait_time = refill_cycles_needed * self.refill_interval
@@ -77,18 +66,11 @@ class RateLimiter:
             return True
 
     async def __aenter__(self):
-        """Async context manager entry."""
         await self.acquire()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
         pass
 
     def get_available_tokens(self) -> int:
-        """Get current number of available tokens.
-
-        Returns:
-            Number of available tokens.
-        """
         return int(self.tokens)

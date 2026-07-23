@@ -9,9 +9,6 @@
 import retry, { type Options as RetryOptions } from 'async-retry';
 import { logger } from './logger';
 
-/**
- * Default retry configuration
- */
 const DEFAULT_RETRY_OPTIONS: RetryOptions = {
   retries: 3,
   minTimeout: 1000,
@@ -20,9 +17,6 @@ const DEFAULT_RETRY_OPTIONS: RetryOptions = {
   randomize: true,
 };
 
-/**
- * Retry operation options
- */
 export interface RetryOperationOptions<T> extends Partial<RetryOptions> {
   /** Operation name for logging */
   name?: string;
@@ -63,13 +57,11 @@ export async function withRetry<T>(options: RetryOperationOptions<T>): Promise<T
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
 
-      // Check if error is retryable
       if (isRetryable && !isRetryable(err)) {
         bail(err);
         throw err;
       }
 
-      // Log retry attempt
       if (logRetries) {
         logger.warn(
           {
@@ -81,7 +73,6 @@ export async function withRetry<T>(options: RetryOperationOptions<T>): Promise<T
         );
       }
 
-      // Call custom error handler
       if (onError) {
         try {
           await onError(err, mergedOptions.retries!);
@@ -95,9 +86,6 @@ export async function withRetry<T>(options: RetryOperationOptions<T>): Promise<T
   }, mergedOptions);
 }
 
-/**
- * Retry database operations with appropriate settings
- */
 export async function withDatabaseRetry<T>(operation: () => Promise<T>, name?: string): Promise<T> {
   return withRetry({
     name: name || 'Database operation',
@@ -120,9 +108,6 @@ export async function withDatabaseRetry<T>(operation: () => Promise<T>, name?: s
   });
 }
 
-/**
- * Retry Redis operations with appropriate settings
- */
 export async function withRedisRetry<T>(operation: () => Promise<T>, name?: string): Promise<T> {
   return withRetry({
     name: name || 'Redis operation',
@@ -144,9 +129,6 @@ export async function withRedisRetry<T>(operation: () => Promise<T>, name?: stri
   });
 }
 
-/**
- * Retry HTTP requests with appropriate settings
- */
 export async function withHttpRetry<T>(operation: () => Promise<T>, name?: string): Promise<T> {
   return withRetry({
     name: name || 'HTTP request',
@@ -168,9 +150,6 @@ export async function withHttpRetry<T>(operation: () => Promise<T>, name?: strin
   });
 }
 
-/**
- * Retry SSE connection establishment
- */
 export async function withSSERetry<T>(operation: () => Promise<T>, name?: string): Promise<T> {
   return withRetry({
     name: name || 'SSE connection',
@@ -205,9 +184,6 @@ export function createRetryableFunction<T extends unknown[], R>(
   };
 }
 
-/**
- * Check if an error is likely a transient/network error
- */
 export function isTransientError(error: Error): boolean {
   const transientIndicators = [
     'ETIMEDOUT',
@@ -222,9 +198,6 @@ export function isTransientError(error: Error): boolean {
   return transientIndicators.some(indicator => error.message.toLowerCase().includes(indicator));
 }
 
-/**
- * Wrap a promise with timeout and retry
- */
 export async function withTimeoutAndRetry<T>(
   promise: Promise<T>,
   timeoutMs: number,

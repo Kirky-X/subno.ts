@@ -39,32 +39,16 @@ public class SecureNotifyClient implements AutoCloseable {
 
     private boolean closed = false;
 
-    /**
-     * Create a client with minimal configuration.
-     *
-     * @param apiKey The API key for authentication
-     */
     public SecureNotifyClient(String apiKey) {
         this(DEFAULT_BASE_URL, apiKey);
     }
 
-    /**
-     * Create a client with base URL and API key.
-     *
-     * @param baseUrl The base URL of the API
-     * @param apiKey  The API key for authentication
-     */
     public SecureNotifyClient(String baseUrl, String apiKey) {
         this(baseUrl, apiKey, null, 30000);
     }
 
     /**
-     * Create a client with full configuration.
-     *
-     * @param baseUrl  The base URL of the API
-     * @param apiKey   The API key for authentication
-     * @param apiKeyId Optional API key ID header
-     * @param timeout  Request timeout in milliseconds
+     * @param timeout Request timeout in milliseconds
      */
     public SecureNotifyClient(String baseUrl, String apiKey, String apiKeyId, int timeout) {
         this.baseUrl = baseUrl != null && !baseUrl.isEmpty() ? baseUrl : DEFAULT_BASE_URL;
@@ -72,7 +56,6 @@ public class SecureNotifyClient implements AutoCloseable {
         this.connectionManager = new ConnectionManager(this.baseUrl, apiKey, apiKeyId, timeout);
         this.retryHandler = RetryHandler.DEFAULT;
 
-        // Initialize managers
         this.keys = new KeyManager(httpClient, retryHandler);
         this.channels = new ChannelManager(httpClient, retryHandler);
         this.publish = new PublishManager(httpClient, retryHandler);
@@ -82,77 +65,37 @@ public class SecureNotifyClient implements AutoCloseable {
         logger.info("SecureNotifyClient initialized with baseUrl: {}", this.baseUrl);
     }
 
-    /**
-     * Get the keys manager.
-     *
-     * @return The keys manager
-     */
     public KeyManager keys() {
         checkClosed();
         return keys;
     }
 
-    /**
-     * Get the channels manager.
-     *
-     * @return The channels manager
-     */
     public ChannelManager channels() {
         checkClosed();
         return channels;
     }
 
-    /**
-     * Get the publish manager.
-     *
-     * @return The publish manager
-     */
     public PublishManager publish() {
         checkClosed();
         return publish;
     }
 
-    /**
-     * Get the subscribe manager.
-     *
-     * @return The subscribe manager
-     */
     public SubscribeManager subscribe() {
         checkClosed();
         return subscribe;
     }
 
-    /**
-     * Get the API keys manager.
-     *
-     * @return The API keys manager
-     */
     public ApiKeyManager apiKeys() {
         checkClosed();
         return apiKeys;
     }
 
-    /**
-     * Subscribe to a channel for real-time messages.
-     *
-     * @param channelId The channel ID to subscribe to
-     * @param handler   The message handler callback
-     * @return A subscription object for managing the subscription
-     */
     public ConnectionManager.Subscription connect(String channelId,
                                                    Consumer<SseEvent.SseMessageEvent> handler) {
         checkClosed();
         return subscribe().subscribe(channelId, handler);
     }
 
-    /**
-     * Subscribe to a channel with error handling.
-     *
-     * @param channelId    The channel ID to subscribe to
-     * @param handler      The message handler callback
-     * @param errorHandler The error handler callback
-     * @return A subscription object for managing the subscription
-     */
     public ConnectionManager.Subscription connect(String channelId,
                                                    Consumer<SseEvent.SseMessageEvent> handler,
                                                    Consumer<SseEvent.SseErrorEvent> errorHandler) {
@@ -160,55 +103,27 @@ public class SecureNotifyClient implements AutoCloseable {
         return subscribe().subscribe(channelId, handler, errorHandler);
     }
 
-    /**
-     * Disconnect from all channels.
-     */
     public void disconnect() {
         checkClosed();
         subscribe().unsubscribeAll();
     }
 
-    /**
-     * Get the base URL.
-     *
-     * @return The base URL
-     */
     public String getBaseUrl() {
         return baseUrl;
     }
 
-    /**
-     * Check if API key is configured.
-     *
-     * @return true if API key is set
-     */
     public boolean hasApiKey() {
         return httpClient.hasApiKey();
     }
 
-    /**
-     * Check if connected to any channel.
-     *
-     * @return true if connected
-     */
     public boolean isConnected() {
         return subscribe().isConnected();
     }
 
-    /**
-     * Check if the client is closed.
-     *
-     * @return true if closed
-     */
     public boolean isClosed() {
         return closed;
     }
 
-    /**
-     * Get the number of subscribed channels.
-     *
-     * @return The count
-     */
     public int getSubscriptionCount() {
         return subscribe().getSubscriptionCount();
     }
@@ -219,9 +134,6 @@ public class SecureNotifyClient implements AutoCloseable {
         }
     }
 
-    /**
-     * Close the client and release all resources.
-     */
     @Override
     public void close() {
         if (closed) {
@@ -252,18 +164,10 @@ public class SecureNotifyClient implements AutoCloseable {
         logger.info("SecureNotifyClient closed");
     }
 
-    /**
-     * Create a builder for configuring the client.
-     *
-     * @return A new builder instance
-     */
     public static Builder builder() {
         return new Builder();
     }
 
-    /**
-     * Builder for SecureNotifyClient.
-     */
     public static class Builder {
         private String baseUrl = DEFAULT_BASE_URL;
         private String apiKey;
@@ -304,23 +208,10 @@ public class SecureNotifyClient implements AutoCloseable {
         }
     }
 
-    /**
-     * Create a client with the specified API key.
-     *
-     * @param apiKey The API key
-     * @return A new client instance
-     */
     public static SecureNotifyClient create(String apiKey) {
         return new SecureNotifyClient(apiKey);
     }
 
-    /**
-     * Create a client with base URL and API key.
-     *
-     * @param baseUrl The base URL
-     * @param apiKey  The API key
-     * @return A new client instance
-     */
     public static SecureNotifyClient create(String baseUrl, String apiKey) {
         return new SecureNotifyClient(baseUrl, apiKey);
     }

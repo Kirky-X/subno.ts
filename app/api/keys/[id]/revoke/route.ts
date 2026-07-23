@@ -26,8 +26,6 @@ export const POST = withErrorHandler(async (
   const context = extractRequestContext(request);
   const { id: keyId } = await params;
   
-  // Validate API key and check permissions
-  // Requires either 'key_revoke' or 'admin' permission
   // SECURITY NOTE: Ownership verification is performed in the service layer
   // The KeyRevocationService.validateApiKeyPermission method verifies that:
   // 1. The API key has 'key_revoke' or 'admin' permission
@@ -40,7 +38,6 @@ export const POST = withErrorHandler(async (
     });
   }
 
-  // Get API key info for audit logging
   const apiKeyInfo = await getApiKeyInfo(request);
   if (!apiKeyInfo) {
     throw new AuthenticationError('无法获取 API 密钥信息', {
@@ -61,7 +58,6 @@ export const POST = withErrorHandler(async (
   });
 
   if (!result.success) {
-    // Log failed revocation attempt
     await auditService.log({
       action: 'key_revoke_request',
       keyId,
@@ -73,7 +69,6 @@ export const POST = withErrorHandler(async (
       metadata: { code: result.code },
     });
 
-    // 根据错误码抛出对应的错误
     switch (result.code) {
       case 'NOT_FOUND':
         throw Errors.notFound('密钥', context.requestId);
@@ -106,7 +101,6 @@ export const POST = withErrorHandler(async (
     }
   }
 
-  // Log successful revocation request
   await auditService.log({
     action: 'key_revoke_request',
     keyId,
@@ -139,7 +133,6 @@ export const GET = withErrorHandler(async (
 ) => {
   const context = extractRequestContext(request);
   
-  // Validate API key - requires at least read permission
   const authError = await requireApiKeyWithPermissions(request, [ApiKeyPermission.READ]);
   if (authError) {
     throw new AuthorizationError('权限不足以查看撤销状态', {

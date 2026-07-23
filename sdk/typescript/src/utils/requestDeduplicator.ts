@@ -1,15 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-/**
- * Request deduplication utility for SDK operations.
- *
- * This module provides functionality to prevent duplicate requests from being sent
- * to the server within a short time window. This is useful for:
- * - Reducing server load
- * - Improving response speed (return cached result immediately)
- * - Preventing duplicate operations (e.g., duplicate registration)
- */
+/** Request deduplication utility to prevent duplicate requests within a short time window. */
 
 export interface PendingRequest {
   timestamp: number;
@@ -80,15 +72,11 @@ export class RequestDeduplicator {
     this.completed = new Map();
   }
 
-  /**
-   * Generate a unique key for the request.
-   */
   private generateKey(endpoint: string, params: Record<string, any> | undefined): string {
     // Create a deterministic string from the parameters
     const paramsStr = params ? JSON.stringify(params, Object.keys(params).sort()) : '';
     const key = `${endpoint}:${paramsStr}`;
 
-    // Use SHA256 for better distribution
     let hash = 0;
     for (let i = 0; i < key.length; i++) {
       const char = key.charCodeAt(i);
@@ -115,29 +103,23 @@ export class RequestDeduplicator {
   ): Promise<T> {
     const key = this.generateKey(endpoint, params);
 
-    // Check completed cache first
     if (useCache && this.completed.has(key)) {
       this.hits++;
       return this.completed.get(key);
     }
 
-    // Check pending requests
     if (this.pending.has(key)) {
-      // Request is pending, wait for result
       this.hits++;
       const pending = this.pending.get(key)!;
       return pending.promise as T;
     }
 
-    // Execute the request
     this.misses++;
 
-    // Create a promise for this request
     const promise = (async () => {
       try {
         const result = await func();
 
-        // Store result in completed cache
         if (useCache) {
           if (this.completed.size >= (this.options.maxCached || 10000)) {
             // Remove oldest entry (simple FIFO)
@@ -152,12 +134,10 @@ export class RequestDeduplicator {
         this.errors++;
         throw error;
       } finally {
-        // Remove from pending
         this.pending.delete(key);
       }
     })();
 
-    // Store pending request
     if (this.pending.size >= (this.options.maxPending || 1000)) {
       // Remove oldest pending request
       const firstKey = this.pending.keys().next().value;
@@ -181,7 +161,6 @@ export class RequestDeduplicator {
     let removed = 0;
     const cutoff = Date.now() - ((this.options.ttlSeconds || 5.0) * 1000);
 
-    // Remove oldest entries if we exceed maxCached
     while (this.completed.size > (this.options.maxCached || 10000) * 2) {
       const firstKey = this.completed.keys().next().value;
       if (firstKey) {

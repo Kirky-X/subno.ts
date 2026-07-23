@@ -206,7 +206,6 @@ export class SubscribeService {
       let hasActiveConnections = false;
 
       for (const info of connections) {
-        // 清理超时连接
         if (now - info.connectedAt > CONNECTION_TIMEOUT_MS) {
           try {
             info.controller.close();
@@ -219,13 +218,11 @@ export class SubscribeService {
         }
       }
 
-      // 标记空频道以便删除
       if (!hasActiveConnections) {
         channelsToRemove.push(channel);
       }
     }
 
-    // 批量删除空频道
     for (const channel of channelsToRemove) {
       this.activeConnections.delete(channel);
     }
@@ -235,7 +232,6 @@ export class SubscribeService {
       this.enforceChannelLimit();
     }
 
-    // 如果没有连接且定时器存在，停止定时器
     if (this.activeConnections.size === 0 && this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;

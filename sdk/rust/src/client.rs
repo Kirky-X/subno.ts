@@ -40,24 +40,20 @@ pub struct SecureNotifyClient {
 }
 
 impl SecureNotifyClient {
-    /// Create a new client with the specified base URL and API key
     pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Result<Self> {
         Ok(Self {
             http_client: Arc::new(HttpClient::new(&base_url.into(), &api_key.into())?),
         })
     }
 
-    /// Create a builder for configuring the client
     pub fn builder() -> ClientBuilder {
         ClientBuilder::new()
     }
 
-    /// Get the base URL
     pub fn base_url(&self) -> String {
         self.http_client.config().base_url.clone()
     }
 
-    /// Get the API key (masked)
     pub fn api_key_masked(&self) -> String {
         let api_key = &self.http_client.config().api_key;
         if api_key.len() > 8 {
@@ -68,7 +64,6 @@ impl SecureNotifyClient {
     }
 }
 
-/// Builder for SecureNotifyClient
 #[derive(Debug, Clone)]
 pub struct ClientBuilder {
     base_url: String,
@@ -90,7 +85,6 @@ impl Default for ClientBuilder {
 }
 
 impl ClientBuilder {
-    /// Create a new builder with default settings
     pub fn new() -> Self {
         Self {
             base_url: "https://api.securenotify.dev".to_string(),
@@ -106,49 +100,41 @@ impl ClientBuilder {
         }
     }
 
-    /// Set the base URL
     pub fn base_url(mut self, base_url: impl Into<String>) -> Self {
         self.base_url = base_url.into();
         self
     }
 
-    /// Set the API key
     pub fn api_key(mut self, api_key: impl Into<String>) -> Self {
         self.api_key = api_key.into();
         self
     }
 
-    /// Set the request timeout
     pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
         self.timeout = timeout;
         self
     }
 
-    /// Set the maximum number of retries
     pub fn max_retries(mut self, max_retries: u32) -> Self {
         self.max_retries = max_retries;
         self
     }
 
-    /// Set the initial delay for retries (in milliseconds)
     pub fn initial_delay_ms(mut self, delay_ms: u64) -> Self {
         self.initial_delay_ms = delay_ms;
         self
     }
 
-    /// Set the maximum delay for retries (in milliseconds)
     pub fn max_delay_ms(mut self, delay_ms: u64) -> Self {
         self.max_delay_ms = delay_ms;
         self
     }
 
-    /// Set the backoff multiplier
     pub fn backoff_multiplier(mut self, multiplier: f64) -> Self {
         self.backoff_multiplier = multiplier;
         self
     }
 
-    /// Build the client
     pub fn build(self) -> Result<SecureNotifyClient> {
         if self.api_key.is_empty() {
             return Err(SecureNotifyError::AuthError(
@@ -173,7 +159,6 @@ impl ClientBuilder {
     }
 }
 
-// Macro to implement all manager traits for SecureNotifyClient
 macro_rules! implement_managers {
     ($client:ident) => {
         #[async_trait]

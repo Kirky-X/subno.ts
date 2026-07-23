@@ -1,20 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-//! SSE (Server-Sent Events) connection manager for SecureNotify SDK
-
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use futures::StreamExt;
 use crate::{SecureNotifyError, Result, SseEvent};
 
-/// Configuration for SSE connection
 #[derive(Debug, Clone)]
 pub struct SseConfig {
-    /// URL to connect to
     pub url: String,
-    /// API key for authentication
     pub api_key: String,
     /// Heartbeat interval (default: 30 seconds)
     pub heartbeat_interval: Duration,
@@ -40,7 +35,6 @@ impl Default for SseConfig {
 }
 
 impl SseConfig {
-    /// Create a new configuration
     pub fn new(url: impl Into<String>, api_key: impl Into<String>) -> Self {
         Self {
             url: url.into(),
@@ -49,25 +43,21 @@ impl SseConfig {
         }
     }
 
-    /// Set the heartbeat interval
     pub fn with_heartbeat_interval(mut self, interval: Duration) -> Self {
         self.heartbeat_interval = interval;
         self
     }
 
-    /// Set the reconnect delay
     pub fn with_reconnect_delay(mut self, delay: Duration) -> Self {
         self.reconnect_delay = delay;
         self
     }
 
-    /// Set the maximum reconnect attempts
     pub fn with_max_reconnect_attempts(mut self, attempts: u32) -> Self {
         self.max_reconnect_attempts = attempts;
         self
     }
 
-    /// Build the URL with query parameters
     pub fn build_url(&self) -> Result<String> {
         let mut url = url::Url::parse(&self.url)
             .map_err(|e| SecureNotifyError::ConnectionError(format!("Invalid SSE URL: {}", e)))?;
@@ -79,22 +69,15 @@ impl SseConfig {
     }
 }
 
-/// Message received from SSE stream
 #[derive(Debug, Clone)]
 pub enum SseMessage {
-    /// A regular message event
     Event(SseEvent),
-    /// Heartbeat (keep-alive) signal
     Heartbeat,
-    /// Connection opened
     Connected,
-    /// Connection closed
     Disconnected,
-    /// Error occurred
     Error(SecureNotifyError),
 }
 
-/// SSE connection state
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SseState {
     Disconnected,
@@ -104,7 +87,6 @@ pub enum SseState {
     Failed,
 }
 
-/// SSE connection manager
 #[derive(Clone)]
 pub struct SseConnection {
     _config: SseConfig,
@@ -114,7 +96,6 @@ pub struct SseConnection {
 }
 
 impl SseConnection {
-    /// Create a new SSE connection
     pub fn new(config: SseConfig) -> (Self, mpsc::Receiver<SseMessage>) {
         let (message_tx, message_rx) = mpsc::channel(100);
         let state = Arc::new(tokio::sync::RwLock::new(SseState::Disconnected));
@@ -137,7 +118,6 @@ impl SseConnection {
         )
     }
 
-    /// Run the connection loop
     async fn run_connection(
         config: &SseConfig,
         message_tx: &mpsc::Sender<SseMessage>,
@@ -166,7 +146,6 @@ impl SseConnection {
 
             match result {
                 Ok(()) => {
-                    // Normal disconnect
                     let _ = message_tx.send(SseMessage::Disconnected).await;
                     break;
                 }
@@ -193,7 +172,6 @@ impl SseConnection {
                     }
                     reconnect_attempts += 1;
 
-                    // Backoff before reconnecting
                     let delay = config.reconnect_delay.as_secs_f64()
                         * 2.0f64.powf(reconnect_attempts as f64);
                     let delay = Duration::from_secs_f64(delay).min(Duration::from_secs(60));
@@ -204,7 +182,6 @@ impl SseConnection {
         }
     }
 
-    /// Connect to SSE and process events
     async fn connect_and_process(
         config: &SseConfig,
         url: &str,
@@ -229,10 +206,8 @@ impl SseConnection {
             });
         }
     
-        // Send connected message
         let _ = message_tx.send(SseMessage::Connected).await;
-    
-        // Process SSE stream
+
         let mut stream = response.bytes_stream();
         let mut buffer = String::new();
         let mut event_type = String::from("message");
@@ -242,30 +217,24 @@ impl SseConnection {
             let chunk_str = String::from_utf8_lossy(&chunk);
             buffer.push_str(&chunk_str);
     
-            // Process complete lines
             while let Some(pos) = buffer.find('\n') {
                 let line = buffer[..pos].to_string();
                 buffer = buffer[pos + 1..].to_string();
-    
+
                 let line = line.trim();
                 if line.is_empty() {
-                    // Empty line - dispatch event
                     if !event_type.is_empty() {
-                        // Send event (simplified implementation)
                         let _ = message_tx.send(SseMessage::Heartbeat).await;
                     }
                     event_type = String::from("message");
                 } else if line.starts_with("event:") {
                     event_type = line[6..].trim().to_string();
                 } else if line.starts_with("data:") {
-                    // Parse data (simplified)
                     let data = line[5..].trim();
                     if !data.is_empty() {
-                        // Send message
                         let _ = message_tx.send(SseMessage::Heartbeat).await;
                     }
                 } else if line.starts_with(':') {
-                    // Comment - ignore
                 }
             }
         }
@@ -273,19 +242,16 @@ impl SseConnection {
         Ok(())
     }
 
-    /// Get the current connection state
     pub async fn state(&self) -> SseState {
         let state_guard = self.state.read().await;
         state_guard.clone()
     }
 
-    /// Check if connected
     pub async fn is_connected(&self) -> bool {
         let state_guard = self.state.read().await;
         *state_guard == SseState::Connected
     }
 
-    /// Disconnect from the SSE stream
     pub async fn disconnect(&self) {
         let mut state_guard = self.state.write().await;
         *state_guard = SseState::Disconnected;

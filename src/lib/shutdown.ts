@@ -27,12 +27,10 @@ export function setupGracefulShutdown(): void {
     console.log(`Received ${signal}, starting graceful shutdown...`);
 
     try {
-      // Close database connections
       console.log('Closing database connections...');
       await closeDatabase();
       console.log('Database connections closed successfully');
 
-      // Close Redis connections
       console.log('Closing Redis connections...');
       await closeRedisClient();
       console.log('Redis connections closed successfully');
@@ -48,11 +46,9 @@ export function setupGracefulShutdown(): void {
     }
   };
 
-  // Register shutdown handlers
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
-  // Handle uncaught exceptions
   process.on('uncaughtException', async error => {
     console.error('Uncaught exception:', error);
     await shutdown('uncaughtException');
@@ -64,9 +60,6 @@ export function setupGracefulShutdown(): void {
   });
 }
 
-/**
- * Check if the server is currently shutting down
- */
 export function isShuttingDownProcess(): boolean {
   return isShuttingDown;
 }

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-//! Request deduplication utility for SDK operations
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -10,14 +8,12 @@ use sha2::{Sha256, Digest};
 use serde::{Serialize, Deserialize};
 use tokio::sync::Mutex as TokioMutex;
 
-/// A pending request waiting for completion
 #[derive(Debug)]
 struct PendingRequest {
     _timestamp: Instant,
     result: Option<Result<String, String>>,
 }
 
-/// Deduplicator statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeduplicatorStats {
     pub hits: u64,
@@ -29,10 +25,6 @@ pub struct DeduplicatorStats {
     pub ttl_seconds: f64,
 }
 
-/// Prevents duplicate requests from being sent within a short time window
-///
-/// This struct tracks in-flight requests and returns the same result to all
-/// concurrent requests for the same endpoint and parameters.
 pub struct RequestDeduplicator {
     pending: Arc<TokioMutex<HashMap<String, PendingRequest>>>,
     completed: Arc<TokioMutex<HashMap<String, String>>>,
@@ -43,7 +35,6 @@ pub struct RequestDeduplicator {
 }
 
 impl RequestDeduplicator {
-    /// Create a new request deduplicator
     pub fn new(ttl_seconds: f64, max_pending: usize, max_completed: usize) -> Self {
         Self {
             pending: Arc::new(TokioMutex::new(HashMap::new())),
@@ -63,14 +54,11 @@ impl RequestDeduplicator {
         }
     }
 
-    /// Create a deduplicator with default settings
     pub fn default() -> Self {
         Self::new(5.0, 1000, 10000)
     }
 
-    /// Generate a unique key for the request
     fn generate_key(&self, endpoint: &str, params: &Option<serde_json::Value>) -> String {
-        // Create a deterministic string from the parameters
         let params_str = if let Some(p) = params {
             serde_json::to_string(p).unwrap_or_default()
         } else {
@@ -84,20 +72,9 @@ impl RequestDeduplicator {
         hasher.update(key.as_bytes());
         let result = hasher.finalize();
 
-        // Convert to hex string
         format!("req_{:x}", result)
     }
 
-    /// Execute a request with deduplication
-    ///
-    /// # Arguments
-    /// * `endpoint` - API endpoint
-    /// * `params` - Request parameters
-    /// * `func` - Async function to execute the request
-    /// * `use_cache` - Whether to use completed request cache
-    ///
-    /// # Returns
-    /// Result from the request function
     pub async fn execute<F, Fut>(
         &self,
         endpoint: &str,
@@ -111,7 +88,6 @@ impl RequestDeduplicator {
     {
         let key = self.generate_key(endpoint, &params);
 
-        // Check completed cache first
         if use_cache {
             let completed = self.completed.lock().await;
             if let Some(result) = completed.get(&key) {
@@ -122,11 +98,9 @@ impl RequestDeduplicator {
             }
         }
 
-        // Check pending requests
         {
             let mut pending = self.pending.lock().await;
             if let Some(_pending_req) = pending.get_mut(&key) {
-                // Request is pending, wait for result
                 {
                     let mut stats = self.stats.lock().await;
                     stats.hits += 1;
@@ -146,17 +120,14 @@ impl RequestDeduplicator {
             }
         }
 
-        // Execute the request
         {
             let mut stats = self.stats.lock().await;
             stats.misses += 1;
         }
 
-        // Store pending request
         {
             let mut pending = self.pending.lock().await;
             if pending.len() >= self.max_pending {
-                // Remove oldest pending request
                 if let Some(oldest_key) = pending.keys().next().cloned() {
                     pending.remove(&oldest_key);
                 }
@@ -169,7 +140,6 @@ impl RequestDeduplicator {
 
         let result = func().await;
 
-        // Store result and remove from pending
         {
             let mut pending = self.pending.lock().await;
             if let Some(pending_req) = pending.get_mut(&key) {
@@ -178,7 +148,6 @@ impl RequestDeduplicator {
             pending.remove(&key);
         }
 
-        // Store result in completed cache
         if use_cache && result.is_ok() {
             let mut completed = self.completed.lock().await;
             if completed.len() >= self.max_completed {
@@ -192,7 +161,6 @@ impl RequestDeduplicator {
             }
         }
 
-        // Update stats
         {
             let mut stats = self.stats.lock().await;
             if result.is_err() {
@@ -203,10 +171,6 @@ impl RequestDeduplicator {
         result
     }
 
-    /// Remove expired entries from completed cache
-    ///
-    /// # Returns
-    /// Number of entries removed
     pub async fn cleanup_expired(&self) -> usize {
         let mut removed = 0;
 
@@ -222,10 +186,6 @@ impl RequestDeduplicator {
         removed
     }
 
-    /// Clear all pending requests
-    ///
-    /// # Returns
-    /// Number of pending requests cleared
     pub async fn clear_pending(&self) -> usize {
         let mut pending = self.pending.lock().await;
         let count = pending.len();
@@ -233,10 +193,6 @@ impl RequestDeduplicator {
         count
     }
 
-    /// Clear all completed requests
-    ///
-    /// # Returns
-    /// Number of completed requests cleared
     pub async fn clear_completed(&self) -> usize {
         let mut completed = self.completed.lock().await;
         let count = completed.len();
@@ -244,18 +200,10 @@ impl RequestDeduplicator {
         count
     }
 
-    /// Clear all pending and completed requests
-    ///
-    /// # Returns
-    /// Total number of requests cleared
     pub async fn clear_all(&self) -> usize {
         self.clear_pending().await + self.clear_completed().await
     }
 
-    /// Get statistics about the deduplicator
-    ///
-    /// # Returns
-    /// Dictionary with statistics
     pub async fn get_stats(&self) -> DeduplicatorStats {
         let stats = self.stats.lock().await;
         let pending = self.pending.lock().await;
@@ -272,7 +220,6 @@ impl RequestDeduplicator {
         }
     }
 
-    /// Reset statistics counters
     pub async fn reset_stats(&self) {
         let mut stats = self.stats.lock().await;
         stats.hits = 0;

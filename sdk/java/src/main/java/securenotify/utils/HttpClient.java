@@ -95,14 +95,12 @@ public class HttpClient implements AutoCloseable {
             SSLContext sslContext = SSLContexts.createDefault();
             SSLConnectionSocketFactory sslSocketFactory = SSLConnectionSocketFactory.getSocketFactory();
 
-            // Configure connection pool
             PoolingHttpClientConnectionManagerBuilder connectionManagerBuilder =
                     PoolingHttpClientConnectionManagerBuilder.create()
                             .setMaxConnTotal(100)
                             .setMaxConnPerRoute(20)
                             .setSSLSocketFactory(sslSocketFactory);
 
-            // Build HTTP client with timeouts and SSL configuration
             RequestConfig requestConfig = RequestConfig.custom()
                     .setResponseTimeout(Timeout.ofMilliseconds(timeoutMs))
                     .setConnectTimeout(Timeout.ofMilliseconds(timeoutMs))
@@ -121,17 +119,11 @@ public class HttpClient implements AutoCloseable {
         }
     }
 
-    /**
-     * Execute a GET request.
-     */
     public <T> ApiResponse<T> get(String path, Class<T> responseClass) throws Exception {
         HttpGet request = new HttpGet(buildUrl(path));
         return executeWithDeduplication(request, responseClass, "GET", path, null);
     }
 
-    /**
-     * Execute a GET request with query parameters.
-     */
     public <T> ApiResponse<T> get(String path, Map<String, String> params, Class<T> responseClass) throws Exception {
         String url = buildUrl(path);
         String queryParams = UrlHelper.buildQueryParams(params);
@@ -139,9 +131,6 @@ public class HttpClient implements AutoCloseable {
         return executeWithDeduplication(request, responseClass, "GET", path, params);
     }
 
-    /**
-     * Execute a POST request with a body.
-     */
     public <T> ApiResponse<T> post(String path, Object body, Class<T> responseClass) throws Exception {
         HttpPost request = new HttpPost(buildUrl(path));
         String json = objectMapper.writeValueAsString(body);
@@ -149,24 +138,15 @@ public class HttpClient implements AutoCloseable {
         return executeWithDeduplication(request, responseClass, "POST", path, body);
     }
 
-    /**
-     * Execute a POST request with an ApiRequest wrapper.
-     */
     public <T> ApiResponse<T> post(String path, ApiRequest<?> body, Class<T> responseClass) throws Exception {
         return post(path, (Object) body, responseClass);
     }
 
-    /**
-     * Execute a DELETE request.
-     */
     public <T> ApiResponse<T> delete(String path, Class<T> responseClass) throws Exception {
         HttpDelete request = new HttpDelete(buildUrl(path));
         return executeWithDeduplication(request, responseClass, "DELETE", path, null);
     }
 
-    /**
-     * Execute a DELETE request with a body.
-     */
     public <T> ApiResponse<T> delete(String path, Object body, Class<T> responseClass) throws Exception {
         HttpDelete request = new HttpDelete(buildUrl(path));
         String json = objectMapper.writeValueAsString(body);
@@ -174,9 +154,6 @@ public class HttpClient implements AutoCloseable {
         return executeWithDeduplication(request, responseClass, "DELETE", path, body);
     }
 
-    /**
-     * Execute a request and handle the response.
-     */
     @SuppressWarnings("unchecked")
     private <T> ApiResponse<T> execute(HttpUriRequestBase request, Class<T> responseClass) throws Exception {
         // Apply rate limiting if enabled (PERFORMANCE FIX)
@@ -229,7 +206,7 @@ public class HttpClient implements AutoCloseable {
 
                 if (statusCode >= 400) {
                     String errorCode = "HTTP_" + statusCode;
-                    String sanitizedMessage = responseBody; // Default to full response
+                    String sanitizedMessage = responseBody;
 
                     try {
                         ApiResponse<T> apiResponse = objectMapper.readValue(responseBody,
@@ -289,8 +266,7 @@ public class HttpClient implements AutoCloseable {
                 long duration = System.currentTimeMillis() - startTime;
                 metricsCollector.record(endpoint, duration, false);
             }
-            
-            // Handle specific exception types
+
             if (e instanceof java.net.SocketTimeoutException) {
                 throw new NetworkException("Read timeout", e);
             } else if (e instanceof java.net.ConnectException) {
@@ -309,13 +285,10 @@ public class HttpClient implements AutoCloseable {
         }
     }
 
-    /**
-     * Add required headers to the request.
-     */
     private void addHeaders(HttpUriRequestBase request) {
         request.setHeader("Accept", "application/json");
         request.setHeader("Content-Type", "application/json");
-        request.setHeader("User-Agent", "SecureNotify-Java/0.1.0");  // Add User-Agent header
+        request.setHeader("User-Agent", "SecureNotify-Java/0.1.0");
 
         // Add request ID for tracing
         String requestId = java.util.UUID.randomUUID().toString();
@@ -330,9 +303,6 @@ public class HttpClient implements AutoCloseable {
         }
     }
 
-    /**
-     * Build the full URL from path.
-     */
     private String buildUrl(String path) {
         if (path.startsWith("http://") || path.startsWith("https://")) {
             return path;
@@ -341,16 +311,10 @@ public class HttpClient implements AutoCloseable {
         return UrlHelper.buildUrl(baseUrl, path);
     }
 
-    /**
-     * Get the base URL.
-     */
     public String getBaseUrl() {
         return baseUrl;
     }
 
-    /**
-     * Check if API key is configured.
-     */
     public boolean hasApiKey() {
         return apiKey != null && !apiKey.isEmpty();
     }
@@ -363,8 +327,6 @@ public class HttpClient implements AutoCloseable {
     }
 
     /**
-     * Get performance metrics if enabled.
-     *
      * @return Metrics summary or null if metrics disabled
      */
     public MetricsCollector.MetricsSummary getMetricsSummary() {
@@ -372,18 +334,12 @@ public class HttpClient implements AutoCloseable {
     }
 
     /**
-     * Get performance statistics for a specific endpoint.
-     *
-     * @param endpoint API endpoint
      * @return Metric statistics or null if metrics disabled
      */
     public MetricsCollector.MetricStats getEndpointStats(String endpoint) {
         return enableMetrics && metricsCollector != null ? metricsCollector.getStats(endpoint) : null;
     }
 
-    /**
-     * Reset all metrics.
-     */
     public void resetMetrics() {
         if (enableMetrics && metricsCollector != null) {
             metricsCollector.reset();
@@ -417,8 +373,6 @@ public class HttpClient implements AutoCloseable {
     }
 
     /**
-     * Clear all pending duplicate requests.
-     *
      * @return Number of pending requests cleared
      */
     public int clearPendingRequests() {
@@ -426,8 +380,6 @@ public class HttpClient implements AutoCloseable {
     }
 
     /**
-     * Clear all completed duplicate requests.
-     *
      * @return Number of completed requests cleared
      */
     public int clearCompletedRequests() {
@@ -435,8 +387,6 @@ public class HttpClient implements AutoCloseable {
     }
 
     /**
-     * Clear all pending and completed duplicate requests.
-     *
      * @return Total number of requests cleared
      */
     public int clearAllRequests() {
@@ -444,8 +394,6 @@ public class HttpClient implements AutoCloseable {
     }
 
     /**
-     * Remove expired entries from request deduplicator.
-     *
      * @return Number of entries removed
      */
     public int cleanupExpiredRequests() {
@@ -453,17 +401,12 @@ public class HttpClient implements AutoCloseable {
     }
 
     /**
-     * Get statistics about the request deduplicator.
-     *
      * @return Dictionary with statistics or null if disabled
      */
     public DeduplicatorStats getDeduplicatorStats() {
         return enableDeduplication && requestDeduplicator != null ? requestDeduplicator.getStats() : new DeduplicatorStats();
     }
 
-    /**
-     * Reset deduplicator statistics counters.
-     */
     public void resetDeduplicatorStats() {
         if (enableDeduplication && requestDeduplicator != null) {
             requestDeduplicator.resetStats();
@@ -471,17 +414,12 @@ public class HttpClient implements AutoCloseable {
     }
 
     /**
-     * Check if request deduplication is enabled.
-     *
      * @return True if enabled, false otherwise
      */
     public boolean deduplicationEnabled() {
         return enableDeduplication;
     }
 
-    /**
-     * Close the HTTP client and release resources.
-     */
     @Override
     public void close() throws IOException {
         if (httpClient != null) {

@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-//! Performance metrics collector for SDK operations.
-
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
-/// A single metric sample
 #[derive(Debug, Clone)]
 pub struct MetricSample {
     pub timestamp: Instant,
@@ -16,7 +13,6 @@ pub struct MetricSample {
     pub endpoint: String,
 }
 
-/// Statistics for a metric
 #[derive(Debug, Clone)]
 pub struct MetricStats {
     pub count: u64,
@@ -89,7 +85,6 @@ impl Default for MetricStats {
     }
 }
 
-/// Metrics summary
 #[derive(Debug, Clone)]
 pub struct MetricsSummary {
     pub total_requests: u64,
@@ -99,14 +94,12 @@ pub struct MetricsSummary {
     pub endpoint_count: usize,
 }
 
-/// Performance metrics collector
 pub struct MetricsCollector {
     max_samples: usize,
     samples: Arc<RwLock<HashMap<String, Vec<MetricSample>>>>,
 }
 
 impl MetricsCollector {
-    /// Create a new metrics collector
     pub fn new(max_samples: usize) -> Self {
         Self {
             max_samples,
@@ -114,12 +107,10 @@ impl MetricsCollector {
         }
     }
 
-    /// Create a metrics collector with default max samples (1000)
     pub fn default() -> Self {
         Self::new(1000)
     }
 
-    /// Record a metric sample
     pub fn record(&self, endpoint: &str, duration_ms: f64, success: bool) {
         let sample = MetricSample {
             timestamp: Instant::now(),
@@ -132,13 +123,11 @@ impl MetricsCollector {
         let entry = samples.entry(endpoint.to_string()).or_insert_with(Vec::new);
         entry.push(sample);
 
-        // Trim to max samples
         while entry.len() > self.max_samples {
             entry.remove(0);
         }
     }
 
-    /// Get statistics for an endpoint
     pub fn get_stats(&self, endpoint: &str) -> Option<MetricStats> {
         let samples = self.samples.read().unwrap();
         let entry = samples.get(endpoint)?;
@@ -155,7 +144,6 @@ impl MetricsCollector {
         Some(stats)
     }
 
-    /// Get statistics for all endpoints
     pub fn get_all_stats(&self) -> HashMap<String, MetricStats> {
         let samples = self.samples.read().unwrap();
         let mut result = HashMap::new();
@@ -174,7 +162,6 @@ impl MetricsCollector {
         result
     }
 
-    /// Get a summary of all metrics
     pub fn get_summary(&self) -> MetricsSummary {
         let all_stats = self.get_all_stats();
         let mut total_requests = 0u64;
@@ -200,14 +187,12 @@ impl MetricsCollector {
         }
     }
 
-    /// Reset all metrics
     pub fn reset(&self) {
         let mut samples = self.samples.write().unwrap();
         samples.clear();
     }
 }
 
-/// Context manager for measuring operation duration
 pub struct MetricsContext<'a> {
     collector: &'a MetricsCollector,
     endpoint: String,
@@ -216,7 +201,6 @@ pub struct MetricsContext<'a> {
 }
 
 impl<'a> MetricsContext<'a> {
-    /// Create a new metrics context
     pub fn new(collector: &'a MetricsCollector, endpoint: &str) -> Self {
         Self {
             collector,
@@ -226,12 +210,10 @@ impl<'a> MetricsContext<'a> {
         }
     }
 
-    /// Mark the operation as successful
     pub fn mark_success(&mut self) {
         self.success = true;
     }
 
-    /// Record the metric
     pub fn record(self) {
         let duration_ms = self.start_time.elapsed().as_secs_f64() * 1000.0;
         self.collector.record(&self.endpoint, duration_ms, self.success);

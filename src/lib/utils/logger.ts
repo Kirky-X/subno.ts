@@ -8,23 +8,14 @@
 
 import pino from 'pino';
 
-/**
- * Log levels configuration
- */
 const LOG_LEVELS = {
   development: 'debug',
   production: 'info',
   test: 'warn',
 } as const;
 
-/**
- * Get current environment
- */
 const NODE_ENV = (process.env.NODE_ENV || 'development') as keyof typeof LOG_LEVELS;
 
-/**
- * Create logger instance with pino
- */
 export const logger = pino({
   level: process.env.LOG_LEVEL || LOG_LEVELS[NODE_ENV] || 'info',
   transport:
@@ -39,9 +30,7 @@ export const logger = pino({
           },
         }
       : undefined,
-  // Add timestamp in ISO format
   timestamp: () => `,"time":"${new Date().toISOString()}"`,
-  // Enable error serialization
   formatters: {
     level: (label: string) => ({ level: label.toUpperCase() }),
     err: (err: Error) => ({

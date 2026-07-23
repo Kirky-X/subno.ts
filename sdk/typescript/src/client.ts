@@ -85,7 +85,6 @@ export class SecureNotifyClient {
   constructor(options?: ClientOptions) {
     this.http = new HttpClient(options);
 
-    // Initialize managers
     this._keys = new KeyManager(this.http);
     this._channels = new ChannelManager(this.http);
     this._publish = new PublishManager(this.http);
@@ -237,7 +236,6 @@ export class SecureNotifyClient {
     this._closed = true;
     this._state = "disconnecting";
 
-    // Disconnect from all channels
     await this._subscribe.unsubscribeAll();
 
     this._state = "disconnected";

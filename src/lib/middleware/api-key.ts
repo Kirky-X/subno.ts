@@ -18,21 +18,14 @@ import {
   hasAllPermissions,
 } from '../enums/permission.enums';
 
-/**
- * API Key validation configuration constants
- */
 export const API_KEY_CONFIG = {
-  /** Minimum API key length (increased to 32 for better security) */
+  // Increased to 32 for better security
   MIN_LENGTH: 32,
-  /** Maximum API key length to prevent DoS attacks */
+  // Maximum length to prevent DoS attacks
   MAX_LENGTH: 128,
-  /** Regex pattern for valid API key characters (alphanumeric and hyphens) */
   VALID_PATTERN: /^[a-zA-Z0-9-]+$/,
 } as const;
 
-/**
- * Extended request type with API key info
- */
 interface RequestWithApiKey extends NextRequest {
   apiKey?: {
     id: string;
@@ -41,9 +34,6 @@ interface RequestWithApiKey extends NextRequest {
   };
 }
 
-/**
- * API Key validation result
- */
 export interface ApiKeyValidationResult {
   valid: boolean;
   keyId?: string;
@@ -53,16 +43,12 @@ export interface ApiKeyValidationResult {
   code?: ErrorCode;
 }
 
-/**
- * Validate API key format
- * SECURITY: Ensures API key meets minimum security requirements
- */
+// SECURITY: Ensures API key meets minimum security requirements
 function validateApiKeyFormat(apiKey: string): {
   valid: boolean;
   error?: string;
   code?: ErrorCode;
 } {
-  // Check minimum length
   if (apiKey.length < API_KEY_CONFIG.MIN_LENGTH) {
     return {
       valid: false,
@@ -71,7 +57,7 @@ function validateApiKeyFormat(apiKey: string): {
     };
   }
 
-  // Check maximum length to prevent DoS attacks
+  // Maximum length to prevent DoS attacks
   if (apiKey.length > API_KEY_CONFIG.MAX_LENGTH) {
     return {
       valid: false,
@@ -80,7 +66,6 @@ function validateApiKeyFormat(apiKey: string): {
     };
   }
 
-  // Validate character set (alphanumeric and hyphens only)
   if (!API_KEY_CONFIG.VALID_PATTERN.test(apiKey)) {
     return {
       valid: false,
@@ -92,18 +77,12 @@ function validateApiKeyFormat(apiKey: string): {
   return { valid: true };
 }
 
-/**
- * Hash API key using SHA-256 for secure storage and lookup.
- * This prevents plaintext API keys from being logged or exposed.
- */
+// Hash API key using SHA-256 to prevent plaintext keys from being logged or stored
 function hashApiKey(apiKey: string): string {
   return createHash('sha256').update(apiKey).digest('hex');
 }
 
-/**
- * Validate API key from request headers
- * SECURITY: Uses hashed key lookup to prevent plaintext exposure
- */
+// SECURITY: Uses hashed key lookup to prevent plaintext exposure
 export async function validateApiKey(request: NextRequest): Promise<ApiKeyValidationResult> {
   const apiKey = request.headers.get('X-API-Key');
 
@@ -115,7 +94,6 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
     };
   }
 
-  // Validate API key format (length and character set)
   const formatValidation = validateApiKeyFormat(apiKey);
   if (!formatValidation.valid) {
     return {
@@ -126,11 +104,9 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
   }
 
   try {
-    // Hash the provided API key for lookup
-    // This ensures plaintext keys are never logged or stored
+    // Hash the provided API key to ensure plaintext keys are never logged or stored
     const keyHash = hashApiKey(apiKey);
 
-    // Check cache first for better performance
     const cached = apiKeyCache.get(keyHash);
     if (cached) {
       if (!cached.isValid) {
@@ -148,7 +124,6 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
       };
     }
 
-    // Cache miss - query database
     const key = await apiKeyRepository.findByKeyHash(keyHash);
 
     if (!key) {
@@ -161,7 +136,6 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
       };
     }
 
-    // Verify key is active
     if (!key.isActive) {
       apiKeyCache.set(keyHash, { userId: '', permissions: [], isValid: false }, 60 * 1000);
       return {
@@ -171,7 +145,6 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
       };
     }
 
-    // Verify key has not been revoked
     if (key.isDeleted) {
       apiKeyCache.set(keyHash, { userId: '', permissions: [], isValid: false }, 60 * 1000);
       return {
@@ -181,7 +154,6 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
       };
     }
 
-    // Verify key has not expired
     if (key.expiresAt && new Date(key.expiresAt) < new Date()) {
       apiKeyCache.set(keyHash, { userId: '', permissions: [], isValid: false }, 60 * 1000);
       return {
@@ -191,7 +163,6 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
       };
     }
 
-    // Cache positive result for 5 minutes
     const cacheData = {
       userId: key.userId,
       permissions: key.permissions as string[],
@@ -215,9 +186,6 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
   }
 }
 
-/**
- * Create a middleware-compatible API key validator
- */
 export function createApiKeyValidator(requiredPermissions?: string[]) {
   return async function validate(request: NextRequest): Promise<NextResponse | null> {
     const context = extractRequestContext(request);
@@ -231,11 +199,9 @@ export function createApiKeyValidator(requiredPermissions?: string[]) {
       return error.toNextResponse(context.requestId);
     }
 
-    // Check required permissions using enum-based validation
     if (requiredPermissions && requiredPermissions.length > 0) {
       const keyPermissions = result.permissions || [];
 
-      // Convert string permissions to enum and check
       const hasPermissionCheck = hasAllPermissions(
         keyPermissions as ApiKeyPermission[],
         requiredPermissions as ApiKeyPermission[],
@@ -251,7 +217,6 @@ export function createApiKeyValidator(requiredPermissions?: string[]) {
       }
     }
 
-    // Attach validated key info to request for downstream use
     const reqWithKey = request as RequestWithApiKey;
     reqWithKey.apiKey = {
       id: result.keyId!,
@@ -296,13 +261,6 @@ export async function requireApiKeyWithPermissions(
   return createApiKeyValidator(permissions as unknown as string[])(request);
 }
 
-/**
- * Get API key info from request
- * Returns the validated API key information without returning an error response
- *
- * @param request - The Next.js request object
- * @returns API key info if valid, null otherwise
- */
 export async function getApiKeyInfo(request: NextRequest): Promise<{
   keyId: string;
   userId: string;

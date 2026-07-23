@@ -14,7 +14,6 @@ import {
 } from '@/src/lib/utils/error-handler';
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
-  // 首先验证 API Key 认证
   const authError = await requireApiKey(request);
   if (authError) return authError;
 

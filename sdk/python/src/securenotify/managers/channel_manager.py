@@ -1,7 +1,5 @@
-"""Channel Manager.
-
-Manages channel creation and retrieval.
-"""
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 KirkyX. All rights reserved.
 
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -17,8 +15,6 @@ from .base import BaseManager
 
 
 class ChannelManager(BaseManager):
-    """Manages channel operations."""
-
     async def create(
         self,
         name: str,
@@ -28,16 +24,6 @@ class ChannelManager(BaseManager):
         metadata: Optional[Dict[str, Any]] = None,
     ) -> ChannelCreateResponse:
         """Create a new channel.
-
-        Args:
-            name: Channel name.
-            channel_type: Channel type (public, encrypted, temporary).
-            description: Channel description (optional).
-            ttl: Time-to-live in seconds (optional).
-            metadata: Additional metadata (optional).
-
-        Returns:
-            Channel creation response with channel_id.
 
         Raises:
             ValueError: If name is empty.
@@ -53,17 +39,6 @@ class ChannelManager(BaseManager):
         return await self._execute("create_channel", request)
 
     async def get(self, channel_id: str) -> ChannelInfo:
-        """Get channel information.
-
-        Args:
-            channel_id: The channel ID.
-
-        Returns:
-            Channel information.
-
-        Raises:
-            SecureNotifyApiError: On API error.
-        """
         data = await self._execute("get_channel", channel_id)
         return ChannelInfo(
             id=data["id"],
@@ -78,14 +53,6 @@ class ChannelManager(BaseManager):
         )
 
     async def list(self) -> List[ChannelInfo]:
-        """List all channels.
-
-        Returns:
-            List of channel information.
-
-        Raises:
-            SecureNotifyApiError: On API error.
-        """
         data = await self._execute("list_channels")
         channels = []
         for item in data.get("channels", []):

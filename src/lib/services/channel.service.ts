@@ -51,9 +51,6 @@ export interface QueryChannelsResult {
 
 const MAX_EXPIRATION_SECONDS = 30 * 24 * 60 * 60;
 
-/**
- * Validate and normalize channel type
- */
 function validateChannelType(type: string | undefined): {
   valid: boolean;
   normalizedType: ChannelType;
@@ -65,12 +62,10 @@ function validateChannelType(type: string | undefined): {
     return { valid: true, normalizedType: defaultType };
   }
 
-  // If already a ChannelType enum value
   if (Object.values(ChannelType).includes(type as ChannelType)) {
     return { valid: true, normalizedType: type as ChannelType };
   }
 
-  // Validate string value
   if (validateChannelType(type).valid) {
     return { valid: true, normalizedType: type as ChannelType };
   }
@@ -90,7 +85,6 @@ export class ChannelService {
       userAgent?: string;
     },
   ): Promise<CreateChannelResult> {
-    // Validate and normalize channel type using enum
     const typeValidation = validateChannelType(request.type);
     if (!typeValidation.valid) {
       return {

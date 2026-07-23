@@ -10,9 +10,6 @@ import type { SuccessResponse } from "../types/api.js";
 import { MockResponses, TestDataFactory } from "./config.js";
 import { SecureNotifyError } from "../types/errors.js";
 
-/**
- * Request handler function type
- */
 type RequestHandler = (options: HttpRequestOptions) => Promise<HttpResponse<unknown>>;
 
 /**
@@ -33,9 +30,6 @@ export class MockHttpClient implements Pick<HttpClient, keyof HttpClient> {
     this.setupDefaultHandlers();
   }
 
-  /**
-   * Setup default request handlers for common API endpoints
-   */
   private setupDefaultHandlers(): void {
     // Health check
     this.onGet("/api/health", async () => this.createResponse(MockResponses.healthCheck()));
@@ -152,9 +146,6 @@ export class MockHttpClient implements Pick<HttpClient, keyof HttpClient> {
     });
   }
 
-  /**
-   * Create a mock HTTP response
-   */
   private createResponse<T>(data: T, status: number = 200): HttpResponse<T> {
     return {
       ok: status >= 200 && status < 300,
@@ -205,9 +196,6 @@ export class MockHttpClient implements Pick<HttpClient, keyof HttpClient> {
     this.requestHandlers.set(key, handler);
   }
 
-  /**
-   * Find a matching handler for the request
-   */
   private findHandler(method: string, path: string): RequestHandler | undefined {
     // Try exact match first
     const exactKey = `${method}:${path}`;
@@ -217,7 +205,7 @@ export class MockHttpClient implements Pick<HttpClient, keyof HttpClient> {
 
     // Try regex match - check handlers with query params first (more specific)
     const handlers = Array.from(this.requestHandlers.entries());
-    
+
     // Sort handlers: those with ? in pattern first (more specific), then by pattern length (longer = more specific)
     handlers.sort((a, b) => {
       const aHasQuery = a[0].includes("?") || a[0].includes("\\?");
@@ -232,9 +220,8 @@ export class MockHttpClient implements Pick<HttpClient, keyof HttpClient> {
       const colonIndex = key.indexOf(":");
       const handlerMethod = key.substring(0, colonIndex);
       const pattern = key.substring(colonIndex + 1);
-      
+
       if (handlerMethod === method) {
-        // Use the pattern directly as regex
         const regex = new RegExp(pattern);
         if (regex.test(path)) {
           return handler;
@@ -252,7 +239,6 @@ export class MockHttpClient implements Pick<HttpClient, keyof HttpClient> {
     const method = options.method ?? "GET";
     const path = options.path;
 
-    // Record request history
     this.requestHistory.push({
       method,
       path,
@@ -260,7 +246,6 @@ export class MockHttpClient implements Pick<HttpClient, keyof HttpClient> {
       timestamp: new Date(),
     });
 
-    // Check for response override
     const overrideKey = `${method}:${path}`;
     if (this.responseOverrides.has(overrideKey)) {
       const override = this.responseOverrides.get(overrideKey)!;
@@ -281,7 +266,6 @@ export class MockHttpClient implements Pick<HttpClient, keyof HttpClient> {
       return this.createResponse(override.data as T, override.status);
     }
 
-    // Find and execute handler
     const handler = this.findHandler(method, path);
     if (handler) {
       return handler(options) as Promise<HttpResponse<T>>;

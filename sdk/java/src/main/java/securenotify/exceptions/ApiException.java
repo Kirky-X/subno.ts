@@ -43,36 +43,24 @@ public class ApiException extends SecureNotifyException {
         return responseBody;
     }
 
-    /**
-     * Check if this is a client error (4xx).
-     */
     public boolean isClientError() {
         return statusCode >= 400 && statusCode < 500;
     }
 
-    /**
-     * Check if this is a server error (5xx).
-     */
     public boolean isServerError() {
         return statusCode >= 500;
     }
 
-    /**
-     * Check if this is an authentication error.
-     */
     public boolean isAuthenticationError() {
         return statusCode == 401 || statusCode == 403;
     }
 
-    /**
-     * Check if this is a rate limit error.
-     */
     public boolean isRateLimitError() {
         return statusCode == 429;
     }
 
     /**
-     * Check if this error is retryable (server errors are typically retryable).
+     * Server errors are typically retryable.
      */
     public boolean isRetryable() {
         return isServerError() || statusCode == 408 || statusCode == 502 || statusCode == 503 || statusCode == 504;

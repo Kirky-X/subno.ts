@@ -58,7 +58,6 @@ export class CleanupService {
       return { valid: false, error: 'CRON_SECRET cannot be a default/placeholder value' };
     }
 
-    // Check minimum length
     if (cronSecret.length < 32) {
       return { valid: false, error: 'CRON_SECRET must be at least 32 characters long' };
     }
@@ -92,7 +91,6 @@ export class CleanupService {
 
   async cleanupExpiredRevocations(): Promise<{ count: number; errors: string[] }> {
     try {
-      // Get all expired pending confirmations with proper typing
       const expiredConfirmations = await this.db
         .select({ id: revocationConfirmations.id })
         .from(revocationConfirmations)
@@ -109,7 +107,6 @@ export class CleanupService {
         return { count: 0, errors: [] };
       }
 
-      // Batch update all expired confirmations
       const ids = expiredConfirmations.map(c => c.id);
       await this.db
         .update(revocationConfirmations)

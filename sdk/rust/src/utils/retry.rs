@@ -1,25 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-//! Retry utilities for SecureNotify SDK
-
 use std::time::Duration;
 use rand::Rng;
 use rand::rngs::OsRng;
 use crate::{SecureNotifyError, Result};
 
-/// Retry configuration
 #[derive(Debug, Clone)]
 pub struct RetryConfig {
-    /// Maximum number of retry attempts
     pub max_retries: u32,
-    /// Initial delay before the first retry
     pub initial_delay: Duration,
-    /// Maximum delay between retries
     pub max_delay: Duration,
-    /// Multiplier for exponential backoff
     pub backoff_multiplier: f64,
-    /// Whether to add random jitter to delays
     pub jitter: bool,
 }
 
@@ -36,43 +28,36 @@ impl Default for RetryConfig {
 }
 
 impl RetryConfig {
-    /// Create a new retry configuration with default values
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Set the maximum number of retries
     pub fn with_max_retries(mut self, max_retries: u32) -> Self {
         self.max_retries = max_retries;
         self
     }
 
-    /// Set the initial delay
     pub fn with_initial_delay(mut self, delay: Duration) -> Self {
         self.initial_delay = delay;
         self
     }
 
-    /// Set the maximum delay
     pub fn with_max_delay(mut self, delay: Duration) -> Self {
         self.max_delay = delay;
         self
     }
 
-    /// Set the backoff multiplier
     pub fn with_backoff_multiplier(mut self, multiplier: f64) -> Self {
         self.backoff_multiplier = multiplier;
         self
     }
 
-    /// Enable or disable jitter
     pub fn with_jitter(mut self, jitter: bool) -> Self {
         self.jitter = jitter;
         self
     }
 }
 
-/// Execute an async operation with retry logic
 pub async fn with_retry<T, F, Fut>(
     operation: F,
     config: &RetryConfig,
@@ -91,7 +76,6 @@ where
                 if attempt < config.max_retries && is_retryable(&error) {
                     last_error = Some(error);
 
-                    // Add jitter if enabled (using cryptographically secure random)
                     let actual_delay = if config.jitter {
                         let jitter_range = delay.as_millis() as f64 * 0.1;
                         // Use OsRng for cryptographically secure random jitter
@@ -103,7 +87,6 @@ where
 
                     tokio::time::sleep(actual_delay).await;
 
-                    // Exponential backoff
                     let delay_secs = (delay.as_secs_f64() * config.backoff_multiplier)
                         .min(config.max_delay.as_secs_f64());
                     delay = Duration::from_secs_f64(delay_secs);
@@ -120,7 +103,6 @@ where
     }))
 }
 
-/// Check if an error is retryable
 fn is_retryable(error: &SecureNotifyError) -> bool {
     match error {
         SecureNotifyError::NetworkError(_) => true,
@@ -133,7 +115,6 @@ fn is_retryable(error: &SecureNotifyError) -> bool {
     }
 }
 
-/// Calculate the next delay with exponential backoff
 pub fn calculate_backoff(
     attempt: u32,
     config: &RetryConfig,

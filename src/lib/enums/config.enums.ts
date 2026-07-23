@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-/**
- * 配置键名枚举
- * 提供类型安全的环境变量访问
- */
 export enum ConfigKey {
   // 数据库配置
   DATABASE_URL = 'DATABASE_URL',
@@ -54,9 +50,6 @@ export enum ConfigKey {
   LOG_LEVEL = 'LOG_LEVEL',
 }
 
-/**
- * 配置键类别
- */
 export enum ConfigCategory {
   DATABASE = 'database',
   REDIS = 'redis',
@@ -69,9 +62,6 @@ export enum ConfigCategory {
   LOGGING = 'logging',
 }
 
-/**
- * 配置键分类映射
- */
 export const CONFIG_CATEGORIES: Record<ConfigKey, ConfigCategory> = {
   [ConfigKey.DATABASE_URL]: ConfigCategory.DATABASE,
   [ConfigKey.REDIS_URL]: ConfigCategory.REDIS,

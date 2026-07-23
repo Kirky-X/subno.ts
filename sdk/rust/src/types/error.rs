@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-//! Error types for SecureNotify SDK
-
 use thiserror::Error;
 use crate::SecureNotifyError;
 
-/// Convert from reqwest errors
 impl From<reqwest::Error> for SecureNotifyError {
     fn from(e: reqwest::Error) -> Self {
         if e.is_timeout() {
@@ -28,38 +25,32 @@ impl From<reqwest::Error> for SecureNotifyError {
     }
 }
 
-/// Convert from serde_json errors
 impl From<serde_json::Error> for SecureNotifyError {
     fn from(e: serde_json::Error) -> Self {
         Self::SerializationError(e.to_string())
     }
 }
 
-/// Convert from url parsing errors
 impl From<url::ParseError> for SecureNotifyError {
     fn from(e: url::ParseError) -> Self {
         Self::ConnectionError(format!("URL parsing error: {}", e))
     }
 }
 
-/// Convert from std::io errors
 impl From<std::io::Error> for SecureNotifyError {
     fn from(e: std::io::Error) -> Self {
         Self::ConnectionError(e.to_string())
     }
 }
 
-/// Convert from tokio::time::Elapsed error
 impl From<tokio::time::error::Elapsed> for SecureNotifyError {
     fn from(_: tokio::time::error::Elapsed) -> Self {
         Self::TimeoutError("Request timed out".to_string())
     }
 }
 
-/// Result type for manager operations
 pub type ManagerResult<T> = std::result::Result<T, ManagerError>;
 
-/// Manager-level errors
 #[derive(Debug, Error)]
 pub enum ManagerError {
     #[error("Key manager error: {0}")]
@@ -120,7 +111,6 @@ impl From<ManagerError> for SecureNotifyError {
     }
 }
 
-/// HTTP status codes that indicate retryable errors
 pub fn is_retryable_status(status: u16) -> bool {
     matches!(
         status,
@@ -128,7 +118,6 @@ pub fn is_retryable_status(status: u16) -> bool {
     )
 }
 
-/// Check if an error is retryable
 pub fn is_retryable_error(error: &SecureNotifyError) -> bool {
     match error {
         SecureNotifyError::NetworkError(_) => true,

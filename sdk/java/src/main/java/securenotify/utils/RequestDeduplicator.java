@@ -10,19 +10,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
-/**
- * Request deduplication utility for SDK operations.
- *
- * This class provides functionality to prevent duplicate requests from being sent
- * to the server within a short time window. This is useful for:
- * - Reducing server load
- * - Improving response speed (return cached result immediately)
- * - Preventing duplicate operations (e.g., duplicate registration)
- */
-
-/**
- * Deduplicator statistics
- */
 class DeduplicatorStats {
     public long hits;
     public long misses;
@@ -88,13 +75,6 @@ public class RequestDeduplicator {
     private final DeduplicatorStats stats;
     private final Object lock;
 
-    /**
-     * Create a new request deduplicator
-     *
-     * @param ttlSeconds Time window for deduplication (default: 5.0 seconds)
-     * @param maxPending Maximum number of pending requests to track
-     * @param maxCompleted Maximum number of completed requests to cache
-     */
     public RequestDeduplicator(double ttlSeconds, int maxPending, int maxCompleted) {
         this.ttlSeconds = ttlSeconds;
         this.maxPending = maxPending;
@@ -106,18 +86,11 @@ public class RequestDeduplicator {
         this.lock = new ReentrantReadWriteLock();
     }
 
-    /**
-     * Create a deduplicator with default settings
-     */
     public RequestDeduplicator() {
         this(5.0, 1000, 10000);
     }
 
-    /**
-     * Generate a unique key for the request
-     */
     private String generateKey(String endpoint, Map<String, Object> params) {
-        // Create a deterministic string from the parameters
         StringBuilder sb = new StringBuilder();
         sb.append(endpoint);
         sb.append(":");
@@ -153,16 +126,6 @@ public class RequestDeduplicator {
         }
     }
 
-    /**
-     * Execute a request with deduplication
-     *
-     * @param endpoint API endpoint
-     * @param params Request parameters
-     * @param func Supplier function to execute the request
-     * @param useCache Whether to use completed request cache
-     * @return Result from the request function
-     * @throws Exception If the request function raises an exception
-     */
     public <T> T execute(
         String endpoint,
         Map<String, Object> params,
@@ -171,7 +134,6 @@ public class RequestDeduplicator {
     ) throws Exception {
         String key = generateKey(endpoint, params);
 
-        // Check completed cache first
         if (useCache) {
             synchronized (lock) {
                 if (completed.containsKey(key)) {
@@ -184,11 +146,9 @@ public class RequestDeduplicator {
             }
         }
 
-        // Check pending requests
         synchronized (lock) {
             CompletableFuture<String> existingFuture = pending.get(key);
             if (existingFuture != null) {
-                // Request is pending, wait for result
                 synchronized (stats) {
                     stats.hits++;
                     updateHitRate();
@@ -197,18 +157,15 @@ public class RequestDeduplicator {
             }
         }
 
-        // Execute the request
         synchronized (stats) {
             stats.misses++;
             updateHitRate();
         }
 
-        // Create a future for this request
         CompletableFuture<T> future = new CompletableFuture<>();
 
         synchronized (lock) {
             if (pending.size() >= maxPending) {
-                // Remove oldest pending request
                 String oldestKey = pending.keySet().iterator().next();
                 pending.remove(oldestKey);
             }
@@ -218,7 +175,6 @@ public class RequestDeduplicator {
         try {
             T result = func.get().get();
 
-            // Store result in completed cache
             if (useCache) {
                 synchronized (lock) {
                     if (completed.size() >= maxCompleted) {
@@ -239,7 +195,6 @@ public class RequestDeduplicator {
             future.completeExceptionally(e);
             throw e;
         } finally {
-            // Remove from pending
             synchronized (lock) {
                 pending.remove(key);
             }
@@ -247,14 +202,11 @@ public class RequestDeduplicator {
     }
 
     /**
-     * Remove expired entries from completed cache
-     *
      * @return Number of entries removed
      */
     public int cleanupExpired() {
         int removed = 0;
 
-        // Remove oldest entries if we exceed maxCompleted
         synchronized (lock) {
             while (completed.size() > maxCompleted * 2) {
                 String oldestKey = completed.keySet().iterator().next();
@@ -267,8 +219,6 @@ public class RequestDeduplicator {
     }
 
     /**
-     * Clear all pending requests
-     *
      * @return Number of pending requests cleared
      */
     public int clearPending() {
@@ -280,8 +230,6 @@ public class RequestDeduplicator {
     }
 
     /**
-     * Clear all completed requests
-     *
      * @return Number of completed requests cleared
      */
     public int clearCompleted() {
@@ -293,8 +241,6 @@ public class RequestDeduplicator {
     }
 
     /**
-     * Clear all pending and completed requests
-     *
      * @return Total number of requests cleared
      */
     public int clearAll() {
@@ -302,8 +248,6 @@ public class RequestDeduplicator {
     }
 
     /**
-     * Get statistics about the deduplicator
-     *
      * @return Dictionary with statistics
      */
     public DeduplicatorStats getStats() {
@@ -320,9 +264,6 @@ public class RequestDeduplicator {
         }
     }
 
-    /**
-     * Reset statistics counters
-     */
     public void resetStats() {
         synchronized (stats) {
             stats.hits = 0;
@@ -332,9 +273,6 @@ public class RequestDeduplicator {
         }
     }
 
-    /**
-     * Update hit rate
-     */
     private void updateHitRate() {
         long total = stats.hits + stats.misses;
         if (total > 0) {

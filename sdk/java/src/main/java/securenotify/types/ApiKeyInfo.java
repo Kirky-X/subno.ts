@@ -41,9 +41,6 @@ public class ApiKeyInfo {
     @JsonProperty("expiresAt")
     private String expiresAt;
 
-    /**
-     * Response from creating an API key.
-     */
     @Data
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class ApiKeyCreateResponse extends ApiKeyInfo {

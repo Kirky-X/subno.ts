@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-//! Channel manager for SecureNotify SDK
-
 use async_trait::async_trait;
 use crate::Result;
 use crate::types::api::*;
 
-/// Trait for channel management operations
 #[async_trait]
 pub trait ChannelManager {
-    /// Create a new channel
     async fn create_channel(
         &self,
         name: &str,
@@ -19,10 +15,8 @@ pub trait ChannelManager {
         metadata: Option<serde_json::Value>,
     ) -> Result<ChannelCreateResponse>;
 
-    /// Get channel information
     async fn get_channel(&self, channel_id: &str) -> Result<ChannelInfo>;
 
-    /// List all channels
     async fn list_channels(
         &self,
         channel_type: Option<&str>,
@@ -30,17 +24,14 @@ pub trait ChannelManager {
         offset: Option<u32>,
     ) -> Result<Vec<ChannelInfo>>;
 
-    /// Delete/deactivate a channel
     async fn delete_channel(&self, channel_id: &str) -> Result<()>;
 }
 
-/// Implementation of ChannelManager
 pub struct ChannelManagerImpl {
     http_client: std::sync::Arc<crate::utils::http::HttpClient>,
 }
 
 impl ChannelManagerImpl {
-    /// Create a new ChannelManager
     pub fn new(http_client: std::sync::Arc<crate::utils::http::HttpClient>) -> Self {
         Self { http_client }
     }

@@ -1,13 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 KirkyX. All rights reserved.
 
-"""Request deduplication utility for SDK operations.
+"""Request deduplication to prevent duplicate requests within a short time window.
 
-This module provides functionality to prevent duplicate requests from being sent
-to the server within a short time window. This is useful for:
-- Reducing server load
-- Improving response speed (return cached result immediately)
-- Preventing duplicate operations (e.g., duplicate registration)
+Reduces server load, improves response speed (returns cached result immediately),
+and prevents duplicate operations (e.g., duplicate registration).
 """
 
 import asyncio
@@ -22,7 +19,6 @@ from threading import Lock
 
 @dataclass
 class PendingRequest:
-    """A pending request waiting for completion."""
     timestamp: float
     future: asyncio.Future
 
@@ -30,8 +26,8 @@ class PendingRequest:
 class RequestDeduplicator:
     """Prevents duplicate requests from being sent within a short time window.
 
-    This class tracks in-flight requests and returns the same result to all
-    concurrent requests for the same endpoint and parameters.
+    Tracks in-flight requests and returns the same result to all concurrent
+    requests for the same endpoint and parameters.
 
     Example:
         deduplicator = RequestDeduplicator(ttl_seconds=5.0)
@@ -58,13 +54,6 @@ class RequestDeduplicator:
         max_pending: int = 1000,
         max_cached: int = 10000,
     ):
-        """Initialize the request deduplicator.
-
-        Args:
-            ttl_seconds: Time window for deduplication (default: 5.0 seconds)
-            max_pending: Maximum number of pending requests to track
-            max_cached: Maximum number of completed requests to cache
-        """
         self.ttl_seconds = ttl_seconds
         self.max_pending = max_pending
         self.max_cached = max_cached
@@ -77,21 +66,11 @@ class RequestDeduplicator:
         self._completed: OrderedDict[str, Any] = OrderedDict()
         self._completed_lock = Lock()
 
-        # Metrics
         self._hits = 0
         self._misses = 0
         self._errors = 0
 
     def _generate_key(self, endpoint: str, params: Optional[Dict[str, Any]]) -> str:
-        """Generate a unique key for the request.
-
-        Args:
-            endpoint: API endpoint
-            params: Request parameters
-
-        Returns:
-            Unique key string
-        """
         # Create a deterministic hash of the parameters
         if params:
             params_str = json.dumps(params, sort_keys=True)
@@ -111,21 +90,11 @@ class RequestDeduplicator:
     ) -> Any:
         """Execute a request with deduplication.
 
-        Args:
-            endpoint: API endpoint
-            params: Request parameters
-            func: Async function to execute the request
-            use_cache: Whether to use completed request cache
-
-        Returns:
-            Result from the request function
-
         Raises:
-            Exception: If the request function raises an exception
+            Exception: If the request function raises an exception.
         """
         key = self._generate_key(endpoint, params)
 
-        # Check completed cache first
         if use_cache:
             with self._completed_lock:
                 if key in self._completed:
@@ -135,23 +104,17 @@ class RequestDeduplicator:
                     self._completed.move_to_end(key)
                     return result
 
-        # Check pending requests
         with self._pending_lock:
             if key in self._pending:
-                # Request is pending, wait for result
                 self._hits += 1
                 pending = self._pending[key]
-                # Check if future is still pending
                 if not pending.future.done():
                     return await pending.future
                 else:
-                    # Future is done, remove from pending
                     del self._pending[key]
 
-        # Execute the request
         self._misses += 1
 
-        # Create a future for this request
         future = asyncio.Future()
 
         with self._pending_lock:
@@ -168,7 +131,6 @@ class RequestDeduplicator:
         try:
             result = await func()
 
-            # Store result in completed cache
             if use_cache:
                 with self._completed_lock:
                     if len(self._completed) >= self.max_cached:
@@ -176,18 +138,15 @@ class RequestDeduplicator:
                         self._completed.popitem(last=False)
                     self._completed[key] = result
 
-            # Set result for any waiting futures
             future.set_result(result)
             return result
 
         except Exception as e:
             self._errors += 1
-            # Set exception for any waiting futures
             future.set_exception(e)
             raise
 
         finally:
-            # Remove from pending
             with self._pending_lock:
                 if key in self._pending:
                     del self._pending[key]
@@ -195,8 +154,8 @@ class RequestDeduplicator:
     def cleanup_expired(self) -> int:
         """Remove expired entries from completed cache.
 
-        Returns:
-            Number of entries removed
+        We don't store timestamp in completed cache, so we use LRU order as a
+        proxy for age. Removes oldest entries if we exceed max_cached.
         """
         removed = 0
         cutoff = time.time() - self.ttl_seconds
@@ -204,9 +163,6 @@ class RequestDeduplicator:
         with self._completed_lock:
             keys_to_remove = []
             for key, entry in self._completed.items():
-                # We don't store timestamp in completed cache,
-                # so we use LRU order as a proxy for age
-                # Remove oldest entries if we exceed max_cached
                 if len(self._completed) > self.max_cached * 2:
                     keys_to_remove.append(key)
 
@@ -219,8 +175,7 @@ class RequestDeduplicator:
     def clear_pending(self) -> int:
         """Clear all pending requests.
 
-        Returns:
-            Number of pending requests cleared
+        Cancels all pending futures.
         """
         with self._pending_lock:
             count = len(self._pending)
@@ -232,32 +187,17 @@ class RequestDeduplicator:
             return count
 
     def clear_completed(self) -> int:
-        """Clear all completed requests.
-
-        Returns:
-            Number of completed requests cleared
-        """
         with self._completed_lock:
             count = len(self._completed)
             self._completed.clear()
             return count
 
     def clear_all(self) -> int:
-        """Clear all pending and completed requests.
-
-        Returns:
-            Total number of requests cleared
-        """
         pending_count = self.clear_pending()
         completed_count = self.clear_completed()
         return pending_count + completed_count
 
     def get_stats(self) -> Dict[str, Any]:
-        """Get statistics about the deduplicator.
-
-        Returns:
-            Dictionary with statistics
-        """
         with self._pending_lock, self._completed_lock:
             total_requests = self._hits + self._misses
             hit_rate = self._hits / total_requests if total_requests > 0 else 0.0
@@ -273,7 +213,6 @@ class RequestDeduplicator:
             }
 
     def reset_stats(self) -> None:
-        """Reset statistics counters."""
         self._hits = 0
         self._misses = 0
         self._errors = 0

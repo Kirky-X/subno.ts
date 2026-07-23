@@ -61,7 +61,7 @@ public class ConnectionManager implements AutoCloseable {
         this.subscriptions = new ConcurrentHashMap<>();
         this.activeConnections = new AtomicInteger(0);
         this.closed = new AtomicBoolean(false);
-        this.objectMapper = new ObjectMapper(); // Initialize reusable ObjectMapper
+        this.objectMapper = new ObjectMapper();
 
         logger.info("ConnectionManager initialized with baseUrl: {}", this.baseUrl);
     }
@@ -95,7 +95,6 @@ public class ConnectionManager implements AutoCloseable {
         String subscriptionId = UUID.randomUUID().toString();
         Subscription subscription = new Subscription(subscriptionId, channelId, handler, errorHandler);
 
-        // Check if already subscribed
         if (subscriptions.containsKey(channelId)) {
             logger.warn("Already subscribed to channel: {}", channelId);
             return subscriptions.get(channelId);
@@ -108,9 +107,6 @@ public class ConnectionManager implements AutoCloseable {
         return subscription;
     }
 
-    /**
-     * Start an SSE connection for a channel.
-     */
     private void startConnection(String channelId) {
         Subscription subscription = subscriptions.get(channelId);
         if (subscription == null || subscription.isCancelled()) {
@@ -119,7 +115,6 @@ public class ConnectionManager implements AutoCloseable {
 
         activeConnections.incrementAndGet();
 
-        // Start the SSE reader in a separate thread
         CompletableFuture.runAsync(() -> {
             try {
                 readSseStream(subscription);
@@ -130,13 +125,9 @@ public class ConnectionManager implements AutoCloseable {
             }
         }, scheduler);
 
-        // Start heartbeat monitor
         startHeartbeatMonitor(channelId);
     }
 
-    /**
-     * Read the SSE stream for a subscription.
-     */
     private void readSseStream(Subscription subscription) {
         String channelId = subscription.getChannelId();
         int reconnectDelay = (int) DEFAULT_RECONNECT_DELAY_MS;
@@ -183,21 +174,18 @@ public class ConnectionManager implements AutoCloseable {
                 long lastHeartbeat = System.currentTimeMillis();
 
                 while (!subscription.isCancelled() && (line = reader.readLine()) != null) {
-                    // Parse SSE line
                     if (line.startsWith("event:")) {
                         subscription.setCurrentEventType(line.substring(6).trim());
                     } else if (line.startsWith("data:")) {
                         String data = line.substring(5).trim();
                         subscription.processData(data);
                     } else if (line.isEmpty()) {
-                        // Empty line signals end of event
+                        // Empty line signals end of event in SSE protocol
                         subscription.processEvent();
                     }
 
-                    // Check heartbeat
                     if (System.currentTimeMillis() - lastHeartbeat > DEFAULT_HEARTBEAT_INTERVAL_MS) {
                         lastHeartbeat = System.currentTimeMillis();
-                        // Send heartbeat event
                         SseEvent.SseHeartbeatEvent heartbeat = new SseEvent.SseHeartbeatEvent();
                         heartbeat.setTimestamp(lastHeartbeat);
                         subscription.notifyHeartbeat(heartbeat);
@@ -234,15 +222,11 @@ public class ConnectionManager implements AutoCloseable {
             }
         }
 
-        // Cleanup on exit
         if (!subscription.isCancelled()) {
             logger.info("SSE stream closed for channel: {}", channelId);
         }
     }
 
-    /**
-     * Start heartbeat monitor for a channel.
-     */
     private void startHeartbeatMonitor(String channelId) {
         scheduler.scheduleAtFixedRate(() -> {
             Subscription subscription = subscriptions.get(channelId);
@@ -252,17 +236,11 @@ public class ConnectionManager implements AutoCloseable {
         }, DEFAULT_HEARTBEAT_INTERVAL_MS, DEFAULT_HEARTBEAT_INTERVAL_MS, TimeUnit.MILLISECONDS);
     }
 
-    /**
-     * Build SSE URL for a channel.
-     */
     private String buildSseUrl(String channelId) {
         String base = UrlHelper.buildUrl(baseUrl, "/api/subscribe");
         return base + "?channel=" + channelId;
     }
 
-    /**
-     * Unsubscribe from a channel.
-     */
     public void unsubscribe(String channelId) {
         Subscription subscription = subscriptions.remove(channelId);
         if (subscription != null) {
@@ -271,31 +249,19 @@ public class ConnectionManager implements AutoCloseable {
         }
     }
 
-    /**
-     * Unsubscribe from all channels.
-     */
     public void unsubscribeAll() {
         subscriptions.keySet().forEach(this::unsubscribe);
         logger.info("Unsubscribed from all channels");
     }
 
-    /**
-     * Get the number of active subscriptions.
-     */
     public int getSubscriptionCount() {
         return subscriptions.size();
     }
 
-    /**
-     * Get the number of active connections.
-     */
     public int getActiveConnectionCount() {
         return activeConnections.get();
     }
 
-    /**
-     * Check if connected to any channel.
-     */
     public boolean isConnected() {
         return activeConnections.get() > 0;
     }
@@ -328,9 +294,6 @@ public class ConnectionManager implements AutoCloseable {
         }
     }
 
-    /**
-     * Close the connection manager.
-     */
     @Override
     public void close() {
         if (closed.compareAndSet(false, true)) {
@@ -348,9 +311,6 @@ public class ConnectionManager implements AutoCloseable {
         }
     }
 
-    /**
-     * Subscription object for managing SSE subscriptions.
-     */
     public static class Subscription {
         private final String id;
         private final String channelId;
@@ -423,7 +383,6 @@ public class ConnectionManager implements AutoCloseable {
                         processConnected(data);
                         break;
                     default:
-                        // Unknown event type
                         logger.debug("Unknown SSE event type: {}", currentEventType);
                 }
             } catch (Exception e) {
@@ -433,7 +392,6 @@ public class ConnectionManager implements AutoCloseable {
 
         private void processMessage(String data) {
             try {
-                // Create new ObjectMapper for each message (simpler approach)
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 SseEvent.SseMessageEvent event = mapper.readValue(data, SseEvent.SseMessageEvent.class);
                 lastHeartbeat = System.currentTimeMillis();
@@ -477,13 +435,11 @@ public class ConnectionManager implements AutoCloseable {
         }
 
         private void notifyHeartbeat(SseEvent.SseHeartbeatEvent event) {
-            // Heartbeat can be used for monitoring
         }
 
         private void checkHeartbeat() {
             long now = System.currentTimeMillis();
             if (now - lastHeartbeat > DEFAULT_HEARTBEAT_INTERVAL_MS * 2) {
-                // Heartbeat timeout - connection may be dead
                 logger.warn("Heartbeat timeout for channel: {}", channelId);
             }
         }

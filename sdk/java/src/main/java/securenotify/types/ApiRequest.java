@@ -89,7 +89,6 @@ public class ApiRequest<T> {
     public ApiRequest() {
     }
 
-    // Getters and Setters
     public String getChannel() {
         return channel;
     }
@@ -282,7 +281,6 @@ public class ApiRequest<T> {
         this.data = data;
     }
 
-    // Builder pattern
     public static <T> Builder<T> builder() {
         return new Builder<>();
     }
