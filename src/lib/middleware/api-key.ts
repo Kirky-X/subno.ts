@@ -11,12 +11,7 @@ import {
   extractRequestContext,
 } from '../utils/error-handler';
 import { apiKeyCache } from '../utils/cache';
-import {
-  ApiKeyPermission,
-  hasPermission,
-  hasAnyPermission,
-  hasAllPermissions,
-} from '../enums/permission.enums';
+import { ApiKeyPermission, hasAllPermissions } from '../enums/permission.enums';
 
 /**
  * API Key validation configuration constants
@@ -206,7 +201,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
       permissions: key.permissions as string[],
     };
   } catch (error) {
-    console.error('API key validation error:', error);
+    console.error('API key validation error:', error instanceof Error ? error.message : 'unknown');
     return {
       valid: false,
       error: 'Failed to validate API key',
@@ -224,8 +219,8 @@ export function createApiKeyValidator(requiredPermissions?: string[]) {
     const result = await validateApiKey(request);
 
     if (!result.valid) {
-      const error = new AuthenticationError(result.error || '认证失败', {
-        code: result.code || ErrorCode.AUTH_FAILED,
+      const error = new AuthenticationError(result.error ?? '认证失败', {
+        code: result.code ?? ErrorCode.AUTH_FAILED,
         requestId: context.requestId,
       });
       return error.toNextResponse(context.requestId);
@@ -233,7 +228,7 @@ export function createApiKeyValidator(requiredPermissions?: string[]) {
 
     // Check required permissions using enum-based validation
     if (requiredPermissions && requiredPermissions.length > 0) {
-      const keyPermissions = result.permissions || [];
+      const keyPermissions = result.permissions ?? [];
 
       // Convert string permissions to enum and check
       const hasPermissionCheck = hasAllPermissions(
@@ -254,9 +249,9 @@ export function createApiKeyValidator(requiredPermissions?: string[]) {
     // Attach validated key info to request for downstream use
     const reqWithKey = request as RequestWithApiKey;
     reqWithKey.apiKey = {
-      id: result.keyId!,
-      userId: result.userId!,
-      permissions: result.permissions || [],
+      id: result.keyId ?? '',
+      userId: result.userId ?? '',
+      permissions: result.permissions ?? [],
     };
 
     return null;
@@ -315,8 +310,8 @@ export async function getApiKeyInfo(request: NextRequest): Promise<{
   }
 
   return {
-    keyId: result.keyId!,
-    userId: result.userId!,
-    permissions: result.permissions || [],
+    keyId: result.keyId ?? '',
+    userId: result.userId ?? '',
+    permissions: result.permissions ?? [],
   };
 }

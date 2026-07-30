@@ -2,16 +2,8 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  RateLimiterRedis,
-  RateLimiterMemory,
-  type IRateLimiterStoreOptions,
-} from 'rate-limiter-flexible';
-import {
-  getRateLimitConfig as getConfig,
-  getCleanupIntervalMs,
-  getRateLimitWindowMs,
-} from '../config';
+import { RateLimiterRedis, RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
+import { getRateLimitConfig as getConfig, getRateLimitWindowMs } from '../config';
 import { RateLimitError, extractRequestContext } from '../utils/error-handler';
 import { getRedisClient } from '../utils/redis-client';
 
@@ -29,45 +21,60 @@ export interface RateLimitResult {
 }
 
 /**
- * Rate limiter configuration factory
- * Creates appropriate rate limiter based on Redis availability
+ * Rate limiter instance cache — 按 endpointType 复用 limiter。
+ * 避免每次请求都构造新的 RateLimiterRedis/RateLimiterMemory 实例。
+ * RateLimiterMemory 每次新建会使内存限流完全失效（每个请求独立计数器）。
  */
-function createRateLimiter(endpointType: string) {
+const limiterCache = new Map<
+  string,
+  { limiter: RateLimiterRedis | RateLimiterMemory; isRedis: boolean; clientRef: unknown }
+>();
+
+/**
+ * Get or create rate limiter for endpoint type.
+ * 复用 Redis limiter 实例（同一 Redis 连接），内存 limiter 同样复用。
+ */
+async function getRateLimiter(
+  endpointType: string,
+): Promise<{ limiter: RateLimiterRedis | RateLimiterMemory; isRedis: boolean }> {
   const config = getRateLimitConfig(endpointType);
 
-  // Common options for both Redis and Memory limiters
   const commonOptions = {
     points: config.maxRequests,
-    duration: Math.ceil(config.windowMs / 1000), // Convert to seconds
-    blockDuration: 0, // Don't block, just reject
+    duration: Math.ceil(config.windowMs / 1000),
+    blockDuration: 0,
   };
 
-  // Try to use Redis first, fallback to memory
-  return async (
-    key: string,
-  ): Promise<{
-    limiter: RateLimiterRedis | RateLimiterMemory;
-    isRedis: boolean;
-  }> => {
-    try {
-      const client = await getRedisClient();
+  // 尝试获取 Redis 客户端
+  let client: Awaited<ReturnType<typeof getRedisClient>> = null;
+  try {
+    client = await getRedisClient();
+  } catch (error) {
+    console.warn('Redis rate limiter failed, falling back to memory:', error);
+  }
 
-      if (client) {
-        const redisLimiter = new RateLimiterRedis({
-          ...commonOptions,
-          storeClient: client,
-          keyPrefix: `rl:${endpointType}:`,
-        });
-        return { limiter: redisLimiter, isRedis: true };
-      }
-    } catch (error) {
-      console.warn('Redis rate limiter failed, falling back to memory:', error);
-    }
+  const cached = limiterCache.get(endpointType);
 
-    // Fallback to memory limiter
-    const memoryLimiter = new RateLimiterMemory(commonOptions);
-    return { limiter: memoryLimiter, isRedis: false };
-  };
+  // 缓存命中且客户端引用一致（Redis 连接未变化）→ 复用
+  if (cached?.clientRef === client) {
+    return { limiter: cached.limiter, isRedis: cached.isRedis };
+  }
+
+  // 创建新实例
+  if (client) {
+    const redisLimiter = new RateLimiterRedis({
+      ...commonOptions,
+      storeClient: client,
+      keyPrefix: `rl:${endpointType}:`,
+    });
+    limiterCache.set(endpointType, { limiter: redisLimiter, isRedis: true, clientRef: client });
+    return { limiter: redisLimiter, isRedis: true };
+  }
+
+  // 内存限流器（单例，避免计数器失效）
+  const memoryLimiter = new RateLimiterMemory(commonOptions);
+  limiterCache.set(endpointType, { limiter: memoryLimiter, isRedis: false, clientRef: null });
+  return { limiter: memoryLimiter, isRedis: false };
 }
 
 /**
@@ -76,7 +83,7 @@ function createRateLimiter(endpointType: string) {
  */
 function getClientIP(request: NextRequest): string {
   // Get trusted proxy IPs from environment (comma-separated)
-  const trustedProxies = process.env.TRUSTED_PROXY_IPS?.split(',').map(ip => ip.trim()) || [];
+  const trustedProxies = process.env.TRUSTED_PROXY_IPS?.split(',').map(ip => ip.trim()) ?? [];
   const useProxy = trustedProxies.length > 0;
 
   // Check X-Forwarded-For header (only if proxy is trusted)
@@ -103,7 +110,7 @@ function getClientIP(request: NextRequest): string {
 
   // Try to get IP from connection remote address
   // @ts-expect-error Next.js 13+ may have ip property on request
-  const reqIp = request.ip || (request as { ip?: string }).ip;
+  const reqIp = request.ip ?? (request as { ip?: string }).ip;
   if (reqIp) {
     return reqIp;
   }
@@ -154,13 +161,12 @@ export async function rateLimit(
   request: NextRequest,
   endpointType?: string,
 ): Promise<RateLimitResult> {
-  const type = endpointType || getEndpointType(request);
+  const type = endpointType ?? getEndpointType(request);
   const config = getRateLimitConfig(type);
   const clientIP = getClientIP(request);
 
   try {
-    const limiterFactory = createRateLimiter(type);
-    const { limiter, isRedis } = await limiterFactory(clientIP);
+    const { limiter } = await getRateLimiter(type);
 
     const result = await limiter.consume(clientIP);
 
@@ -170,8 +176,9 @@ export async function rateLimit(
       remaining: result.remainingPoints,
       resetAt: Date.now() + result.msBeforeNext,
     };
-  } catch (error: any) {
-    if (error.remainingPoints !== undefined) {
+  } catch (error: unknown) {
+    // rate-limiter-flexible 抛出 RateLimiterRes 实例表示限流超限
+    if (error instanceof RateLimiterRes) {
       // Rate limit exceeded - this is expected
       return {
         success: false,
@@ -210,7 +217,7 @@ function getRateLimitConfig(endpointType: string): RateLimitConfig {
  */
 export function createRateLimitedResponse(result: RateLimitResult): NextResponse {
   const context = extractRequestContext({} as NextRequest);
-  const error = new RateLimitError(result.retryAfter || 60, {
+  const error = new RateLimitError(result.retryAfter ?? 60, {
     requestId: context.requestId,
   });
 

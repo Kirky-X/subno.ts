@@ -28,7 +28,7 @@ export const DB_CONFIG = {
 /**
  * Get database pool configuration
  */
-export function getDbPoolConfig() {
+export function getDbPoolConfig(): typeof DB_CONFIG.pool {
   return DB_CONFIG.pool;
 }
 

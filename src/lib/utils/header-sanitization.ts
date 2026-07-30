@@ -62,6 +62,7 @@ export function sanitizeHeadersForLog(headers: Headers): Record<string, string> 
   const sanitized: Record<string, string> = {};
 
   for (const [key, value] of headers.entries()) {
+    // eslint-disable-next-line security/detect-object-injection -- key 来自 Headers.entries()，受控
     sanitized[key] = sanitizeHeaderValue(key, value);
   }
 

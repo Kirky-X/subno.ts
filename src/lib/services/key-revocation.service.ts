@@ -46,6 +46,8 @@ export interface RevocationStatusResult {
   expiresAt?: string;
   error?: string;
   code?: string;
+  /** 请求撤销的 API Key ID，用于所有权验证 */
+  requestedByApiKeyId?: string;
 }
 
 export class KeyRevocationService {
@@ -147,7 +149,7 @@ export class KeyRevocationService {
     if (!channelAccess.hasAccess) {
       return {
         valid: false,
-        error: channelAccess.error || 'Not authorized to revoke this key',
+        error: channelAccess.error ?? 'Not authorized to revoke this key',
         code: 'FORBIDDEN',
       };
     }
@@ -190,7 +192,7 @@ export class KeyRevocationService {
     }
 
     // Check for existing pending revocation
-    if (existingConfirmation && existingConfirmation.status === 'pending') {
+    if (existingConfirmation?.status === 'pending') {
       return {
         success: false,
         error: 'Revocation already pending',
@@ -239,6 +241,7 @@ export class KeyRevocationService {
       return { success: false, error: 'Invalid confirmation code', code: 'INVALID_CODE' };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- 前面已检查 !verification.confirmation 返回
     const confirmation = verification.confirmation!;
     const key = await publicKeyRepository.findById(confirmation.keyId);
 
@@ -306,8 +309,9 @@ export class KeyRevocationService {
       keyId: confirmation.keyId,
       channelId: key?.channelId,
       revokedAt: key?.revokedAt?.toISOString(),
-      revokedBy: key?.revokedBy || undefined,
+      revokedBy: key?.revokedBy ?? undefined,
       expiresAt: confirmation.expiresAt.toISOString(),
+      requestedByApiKeyId: confirmation.apiKeyId ?? undefined,
     };
   }
 

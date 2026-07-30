@@ -204,12 +204,12 @@ export function createCorsHeaders(
   const headers: Record<string, string> = {};
 
   // Check if origin is allowed (supports both exact match and wildcard)
-  if (!isOriginMatch(origin, config)) {
+  if (!origin || !isOriginMatch(origin, config)) {
     return headers;
   }
 
   // Set the allowed origin
-  headers['Access-Control-Allow-Origin'] = origin!;
+  headers['Access-Control-Allow-Origin'] = origin;
 
   // Set credentials flag
   if (config.allowCredentials) {
@@ -279,9 +279,7 @@ let cachedConfig: CorsConfig | null = null;
  * Caches the config to avoid re-parsing on every request
  */
 export function getCorsConfigCached(): CorsConfig {
-  if (!cachedConfig) {
-    cachedConfig = getCorsConfig();
-  }
+  cachedConfig ??= getCorsConfig();
   return cachedConfig;
 }
 

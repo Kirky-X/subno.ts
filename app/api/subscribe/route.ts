@@ -22,6 +22,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
 
   const channel = searchParams.get('channel');
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
   const lastEventId = searchParams.get('lastEventId') || undefined;
 
   if (!channel) {
@@ -47,19 +48,22 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     throw Errors.internal(new Error(validation.error), context.requestId);
   }
 
-  const stream = subscribeService.createSSEStream({
-    channel,
-    lastEventId,
-  }, {
-    ip: context.clientIP,
-    userAgent: context.userAgent,
-  });
+  const stream = subscribeService.createSSEStream(
+    {
+      channel,
+      lastEventId,
+    },
+    {
+      ip: context.clientIP,
+      userAgent: context.userAgent,
+    },
+  );
 
   return new NextResponse(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
     },
   });

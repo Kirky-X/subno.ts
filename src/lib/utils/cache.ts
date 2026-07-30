@@ -45,6 +45,7 @@ export class Cache<K extends string | number, V> {
   private misses = 0;
 
   constructor(config: CacheConfig<K, V>) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- LRUCache dispose 签名与 CacheEntry<V> 不匹配，需用 any 绕过
     const options: any = {
       max: typeof config.max === 'number' ? config.max : 1000,
       dispose: (entry: CacheEntry<V>, key: K) => {
@@ -92,10 +93,12 @@ export class Cache<K extends string | number, V> {
    * Set a value in the cache
    */
   set(key: K, value: V, ttl?: number): void {
+    // 仅在有效 TTL（>0）时设置 entry.ttl，避免 0 被误判为"已过期"
+    const effectiveTtl = ttl ?? this.cache.ttl;
     const entry: CacheEntry<V> = {
       value,
       timestamp: Date.now(),
-      ttl: ttl ?? this.cache.ttl,
+      ...(effectiveTtl ? { ttl: effectiveTtl } : {}),
     };
 
     this.cache.set(key, entry);
@@ -198,34 +201,3 @@ export const apiKeyCache = new Cache<
   max: 5000,
   ttl: 5 * 60 * 1000, // 5 minutes
 });
-
-// Channel lookup cache (moderately accessed)
-export const channelCache = new Cache<
-  string,
-  { id: string; name: string; type: string; creator?: string }
->({
-  max: 2000,
-  ttl: 10 * 60 * 1000, // 10 minutes
-});
-
-// Public key cache (security-sensitive, shorter TTL)
-export const publicKeyCache = new Cache<
-  string,
-  { id: string; channelId: string; algorithm: string; expiresAt?: Date }
->({
-  max: 3000,
-  ttl: 2 * 60 * 1000, // 2 minutes
-});
-
-// Rate limit state cache (very frequently accessed)
-export const rateLimitStateCache = new Cache<string, { count: number; windowStart: number }>({
-  max: 10000,
-  ttl: 1 * 60 * 1000, // 1 minute
-});
-
-/**
- * Create a custom cache instance
- */
-export function createCache<K extends string | number, V>(config: CacheConfig<K, V>): Cache<K, V> {
-  return new Cache(config);
-}

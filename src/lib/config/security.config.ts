@@ -26,7 +26,7 @@ validateAdminMasterKey();
 function parsePbkdf2Iterations(): number {
   const minIterations = 100000;
   const maxIterations = 1000000;
-  const value = parseInt(process.env.PBKDF2_ITERATIONS || '100000', 10);
+  const value = parseInt(process.env.PBKDF2_ITERATIONS ?? '100000', 10);
   if (isNaN(value) || value < minIterations) return minIterations;
   if (value > maxIterations) return maxIterations;
   return value;

@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { createCipheriv, createDecipheriv, randomBytes, scrypt } from 'crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  randomBytes,
+  scrypt,
+  createHash,
+  createHmac,
+} from 'crypto';
+import { secureCompare } from './secure-compare';
 
 /**
  * Encryption algorithm configuration
@@ -91,7 +99,7 @@ export async function decrypt(encrypted: EncryptedData, password: string): Promi
 /**
  * Generate a secure random token
  */
-export function generateSecureToken(length: number = 32): string {
+export function generateSecureToken(length = 32): string {
   return randomBytes(length).toString('hex');
 }
 
@@ -99,24 +107,21 @@ export function generateSecureToken(length: number = 32): string {
  * Hash data using SHA-256
  */
 export function hashSHA256(data: string): string {
-  const crypto = require('crypto');
-  return crypto.createHash('sha256').update(data).digest('hex');
+  return createHash('sha256').update(data).digest('hex');
 }
 
 /**
  * Hash data using SHA-512
  */
 export function hashSHA512(data: string): string {
-  const crypto = require('crypto');
-  return crypto.createHash('sha512').update(data).digest('hex');
+  return createHash('sha512').update(data).digest('hex');
 }
 
 /**
  * HMAC signature
  */
 export function hmacSign(data: string, secret: string): string {
-  const crypto = require('crypto');
-  return crypto.createHmac('sha256', secret).update(data).digest('hex');
+  return createHmac('sha256', secret).update(data).digest('hex');
 }
 
 /**
@@ -125,22 +130,6 @@ export function hmacSign(data: string, secret: string): string {
 export function hmacVerify(data: string, secret: string, signature: string): boolean {
   const expectedSignature = hmacSign(data, secret);
   return secureCompare(expectedSignature, signature);
-}
-
-/**
- * Secure constant-time comparison
- */
-export function secureCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-
-  return result === 0;
 }
 
 /**

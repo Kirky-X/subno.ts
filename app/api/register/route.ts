@@ -19,8 +19,13 @@ import { z } from 'zod';
 const registerSchema = z.object({
   publicKey: z.string().min(1, '公钥不能为空'),
   algorithm: z.enum(['RSA-2048', 'RSA-4096', 'ECC-SECP256K1']).optional(),
-  expiresIn: z.number().int().positive().max(30 * 24 * 60 * 60).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  expiresIn: z
+    .number()
+    .int()
+    .positive()
+    .max(30 * 24 * 60 * 60)
+    .optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
@@ -51,9 +56,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   const validationResult = registerSchema.safeParse(body);
   if (!validationResult.success) {
-    throw new ValidationError(validationResult.error.errors[0]?.message || '参数验证失败', {
+    throw new ValidationError(validationResult.error.issues[0]?.message || '参数验证失败', {
       code: ErrorCode.VALIDATION_ERROR,
-      details: { errors: validationResult.error.errors },
+      details: { errors: validationResult.error.issues },
       requestId: context.requestId,
     });
   }
@@ -65,13 +70,13 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   if (!result.success) {
     if (result.code === 'INVALID_PUBLIC_KEY') {
-      throw new ValidationError(result.error || '无效的公钥格式', {
+      throw new ValidationError(result.error ?? '无效的公钥格式', {
         code: ErrorCode.VALIDATION_ERROR,
         requestId: context.requestId,
       });
     }
     if (result.code === 'INVALID_EXPIRATION') {
-      throw new ValidationError(result.error || '无效的有效期', {
+      throw new ValidationError(result.error ?? '无效的有效期', {
         code: ErrorCode.VALIDATION_ERROR,
         requestId: context.requestId,
       });
@@ -87,7 +92,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       expiresAt: result.expiresAt,
       expiresIn: result.expiresIn,
     }),
-    { status: 201 }
+    { status: 201 },
   );
 
   return response;
@@ -95,6 +100,13 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
   const context = extractRequestContext(request);
+
+  // 修复 H4：GET 路由缺失认证
+  const authError = await requireApiKey(request);
+  if (authError) {
+    return authError;
+  }
+
   const searchParams = request.nextUrl.searchParams;
 
   const channelId = searchParams.get('channelId');

@@ -30,7 +30,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       error: validation.error,
     });
 
-    throw new AuthenticationError(validation.error || '无效的 Cron Secret', {
+    throw new AuthenticationError(validation.error ?? '无效的 Cron Secret', {
       code: ErrorCode.AUTH_FAILED,
       requestId: context.requestId,
     });

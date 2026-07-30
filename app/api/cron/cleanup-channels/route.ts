@@ -26,7 +26,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       error: validation.error,
     });
 
-    throw new AuthenticationError(validation.error || '无效的 Cron Secret', {
+    throw new AuthenticationError(validation.error ?? '无效的 Cron Secret', {
       code: ErrorCode.AUTH_FAILED,
       requestId: context.requestId,
     });
@@ -67,12 +67,14 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       },
     });
 
-    return NextResponse.json(successResponse({
-      task: 'all',
-      persistentChannelsMarkedInactive,
-      temporaryChannelsDeleted,
-      duration,
-    }));
+    return NextResponse.json(
+      successResponse({
+        task: 'all',
+        persistentChannelsMarkedInactive,
+        temporaryChannelsDeleted,
+        duration,
+      }),
+    );
   } catch (error) {
     await auditService.log({
       action: 'cron_cleanup_channels_failed',

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { createClient } from 'redis';
+import { createClient, type RedisClientType } from 'redis';
 
-type RedisClient = ReturnType<typeof createClient>;
+type RedisClient = RedisClientType;
 
 /**
  * Redis client manager using IIFE pattern for encapsulation

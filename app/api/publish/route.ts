@@ -52,36 +52,39 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   const validationResult = publishSchema.safeParse(body);
   if (!validationResult.success) {
-    throw new ValidationError(validationResult.error.errors[0]?.message || '参数验证失败', {
+    throw new ValidationError(validationResult.error.issues[0]?.message || '参数验证失败', {
       code: ErrorCode.VALIDATION_ERROR,
-      details: { errors: validationResult.error.errors },
+      details: { errors: validationResult.error.issues },
       requestId: context.requestId,
     });
   }
 
-  const result = await publishService.publish(validationResult.data as {
-    channel: string;
-    message: string;
-    priority?: MessagePriority;
-    sender?: string;
-    cache?: boolean;
-    encrypted?: boolean;
-    autoCreate?: boolean;
-    signature?: string;
-  }, {
-    ip: context.clientIP,
-    userAgent: context.userAgent,
-  });
+  const result = await publishService.publish(
+    validationResult.data as {
+      channel: string;
+      message: string;
+      priority?: MessagePriority;
+      sender?: string;
+      cache?: boolean;
+      encrypted?: boolean;
+      autoCreate?: boolean;
+      signature?: string;
+    },
+    {
+      ip: context.clientIP,
+      userAgent: context.userAgent,
+    },
+  );
 
   if (!result.success) {
     if (result.code === 'MISSING_CHANNEL' || result.code === 'MISSING_MESSAGE') {
-      throw new ValidationError(result.error || '缺少必需参数', {
+      throw new ValidationError(result.error ?? '缺少必需参数', {
         code: ErrorCode.MISSING_PARAMETER,
         requestId: context.requestId,
       });
     }
     if (result.code === 'MESSAGE_TOO_LARGE') {
-      throw new ValidationError(result.error || '消息太大', {
+      throw new ValidationError(result.error ?? '消息太大', {
         code: ErrorCode.VALIDATION_ERROR,
         requestId: context.requestId,
       });
@@ -98,16 +101,26 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     throw Errors.internal(new Error(result.error), context.requestId);
   }
 
-  return NextResponse.json(successResponse({
-    messageId: result.messageId,
-    channel: result.channel,
-    publishedAt: result.publishedAt,
-    autoCreated: result.autoCreated,
-  }), { status: 201 });
+  return NextResponse.json(
+    successResponse({
+      messageId: result.messageId,
+      channel: result.channel,
+      publishedAt: result.publishedAt,
+      autoCreated: result.autoCreated,
+    }),
+    { status: 201 },
+  );
 });
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
   const context = extractRequestContext(request);
+
+  // 修复 H5：GET 路由缺失认证
+  const authError = await requireApiKey(request);
+  if (authError) {
+    return authError;
+  }
+
   const searchParams = request.nextUrl.searchParams;
 
   const channel = searchParams.get('channel');
@@ -120,10 +133,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     });
   }
 
-  const result = await publishService.getQueueStatus(
-    channel,
-    count ? parseInt(count, 10) : 10
-  );
+  const result = await publishService.getQueueStatus(channel, count ? parseInt(count, 10) : 10);
 
   if (!result.success) {
     throw Errors.internal(new Error(result.error), context.requestId);

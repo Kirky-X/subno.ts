@@ -4,7 +4,7 @@
 import { channelRepository } from '../repositories/channel.repository';
 import { auditService } from './audit.service';
 import type { Channel } from '../../db/schema';
-import { ChannelType } from '../enums/channel.enums';
+import { ChannelType, isValidChannelType } from '../enums/channel.enums';
 
 export interface CreateChannelRequest {
   id?: string;
@@ -32,13 +32,13 @@ export interface CreateChannelResult {
 
 export interface QueryChannelsResult {
   success: boolean;
-  data?: Array<{
+  data?: {
     id: string;
     name: string;
     type: string;
     createdAt: string;
     isActive: boolean;
-  }>;
+  }[];
   pagination?: {
     total: number;
     limit: number;
@@ -71,7 +71,7 @@ function validateChannelType(type: string | undefined): {
   }
 
   // Validate string value
-  if (validateChannelType(type).valid) {
+  if (isValidChannelType(type)) {
     return { valid: true, normalizedType: type as ChannelType };
   }
 
@@ -101,7 +101,10 @@ export class ChannelService {
     }
 
     const type = typeValidation.normalizedType;
+    // 空字符串 ID/名称应视为缺失，使用默认值
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     const channelId = request.id || this.generateChannelId(type);
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     const name = request.name || `Channel ${channelId}`;
 
     let expiresAt: Date | undefined;
@@ -190,8 +193,8 @@ export class ChannelService {
     limit?: number;
     offset?: number;
   }): Promise<QueryChannelsResult> {
-    const limit = Math.min(options?.limit || 50, 100);
-    const offset = options?.offset || 0;
+    const limit = Math.min(options?.limit ?? 50, 100);
+    const offset = options?.offset ?? 0;
 
     try {
       if (options?.id) {

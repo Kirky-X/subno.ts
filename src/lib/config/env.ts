@@ -9,10 +9,6 @@
 import { createEnv } from '@t3-oss/env-nextjs';
 import { z } from 'zod';
 
-// Type declaration to work around inference issues
-type ServerSchema = typeof serverSchema;
-type ClientSchema = typeof clientSchema;
-
 /**
  * Server-side environment variables schema
  */
@@ -25,41 +21,41 @@ const serverSchema = z.object({
 
   // API configuration
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().transform(Number).default('3000'),
+  PORT: z.coerce.number().default(3000),
 
   // Security configuration
   ADMIN_MASTER_KEY: z.string().min(32).describe('Master key for admin operations (min 32 chars)'),
   CRON_SECRET: z.string().min(32).describe('Secret token for cron jobs (min 32 chars)'),
 
   // Message configuration
-  PUBLIC_MESSAGE_TTL: z.string().transform(Number).default('43200'),
-  PRIVATE_MESSAGE_TTL: z.string().transform(Number).default('86400'),
+  PUBLIC_MESSAGE_TTL: z.coerce.number().default(43200),
+  PRIVATE_MESSAGE_TTL: z.coerce.number().default(86400),
 
   // Channel configuration
-  TEMPORARY_CHANNEL_TTL: z.string().transform(Number).default('1800'),
-  PERSISTENT_CHANNEL_DEFAULT_TTL: z.string().transform(Number).default('86400'),
+  TEMPORARY_CHANNEL_TTL: z.coerce.number().default(1800),
+  PERSISTENT_CHANNEL_DEFAULT_TTL: z.coerce.number().default(86400),
 
   // Rate limiting configuration
-  RATE_LIMIT_WINDOW_SECONDS: z.string().transform(Number).default('60'),
-  RATE_LIMIT_DEFAULT: z.string().transform(Number).default('100'),
-  RATE_LIMIT_PUBLISH: z.string().transform(Number).default('10'),
-  RATE_LIMIT_SUBSCRIBE: z.string().transform(Number).default('5'),
-  RATE_LIMIT_REGISTER: z.string().transform(Number).default('5'),
-  RATE_LIMIT_REVOKE: z.string().transform(Number).default('20'),
+  RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().default(60),
+  RATE_LIMIT_DEFAULT: z.coerce.number().default(100),
+  RATE_LIMIT_PUBLISH: z.coerce.number().default(10),
+  RATE_LIMIT_SUBSCRIBE: z.coerce.number().default(5),
+  RATE_LIMIT_REGISTER: z.coerce.number().default(5),
+  RATE_LIMIT_REVOKE: z.coerce.number().default(20),
 
   // Key revocation configuration
-  REVOCATION_CONFIRMATION_HOURS: z.string().transform(Number).default('24'),
-  REVOKED_KEY_CLEANUP_DAYS: z.string().transform(Number).default('30'),
-  CONFIRMATION_MAX_ATTEMPTS: z.string().transform(Number).default('5'),
-  CONFIRMATION_LOCKOUT_MINUTES: z.string().transform(Number).default('60'),
+  REVOCATION_CONFIRMATION_HOURS: z.coerce.number().default(24),
+  REVOKED_KEY_CLEANUP_DAYS: z.coerce.number().default(30),
+  CONFIRMATION_MAX_ATTEMPTS: z.coerce.number().default(5),
+  CONFIRMATION_LOCKOUT_MINUTES: z.coerce.number().default(60),
 
   // CORS configuration
   CORS_ORIGINS: z.string().optional().describe('Comma-separated list of allowed origins'),
 
   // Database connection pool configuration
-  DB_POOL_SIZE: z.string().transform(Number).default('20'),
-  DB_IDLE_TIMEOUT: z.string().transform(Number).default('30000'),
-  DB_CONNECT_TIMEOUT: z.string().transform(Number).default('2000'),
+  DB_POOL_SIZE: z.coerce.number().default(20),
+  DB_IDLE_TIMEOUT: z.coerce.number().default(30000),
+  DB_CONNECT_TIMEOUT: z.coerce.number().default(2000),
 
   // Logging configuration
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
@@ -76,11 +72,11 @@ const clientSchema = z.object({
 
 /**
  * Runtime environment for server-side rendering
- * Note: Using type assertion to work around @t3-oss/env-nextjs type inference issues
+ * Note: Using schema.shape to pass field validators directly (Zod 4 compatible)
  */
 export const env = createEnv({
-  server: serverSchema as any,
-  client: clientSchema as any,
+  server: serverSchema.shape,
+  client: clientSchema.shape,
   runtimeEnv: {
     // Server-side
     DATABASE_URL: process.env.DATABASE_URL,
@@ -120,14 +116,19 @@ export const env = createEnv({
  * Type-safe accessor for environment variables
  * Provides validated and transformed values
  */
-export function getEnv() {
+export function getEnv(): typeof env {
   return env;
 }
 
 /**
  * Get database configuration
  */
-export function getDatabaseConfig() {
+export function getDatabaseConfig(): {
+  url: string;
+  poolSize: number;
+  idleTimeout: number;
+  connectTimeout: number;
+} {
   const e = env as unknown as {
     DATABASE_URL: string;
     DB_POOL_SIZE: number;
@@ -146,7 +147,7 @@ export function getDatabaseConfig() {
 /**
  * Get Redis configuration
  */
-export function getRedisConfig() {
+export function getRedisConfig(): { url: string } {
   const e = env as unknown as { REDIS_URL: string };
   return {
     url: e.REDIS_URL,
@@ -156,7 +157,14 @@ export function getRedisConfig() {
 /**
  * Get rate limit configuration
  */
-export function getRateLimitConfig() {
+export function getRateLimitConfig(): {
+  windowSeconds: number;
+  default: number;
+  publish: number;
+  subscribe: number;
+  register: number;
+  revoke: number;
+} {
   const e = env as unknown as {
     RATE_LIMIT_WINDOW_SECONDS: number;
     RATE_LIMIT_DEFAULT: number;
@@ -178,7 +186,10 @@ export function getRateLimitConfig() {
 /**
  * Get message TTL configuration
  */
-export function getMessageTTLConfig() {
+export function getMessageTTLConfig(): {
+  public: number;
+  private: number;
+} {
   const e = env as unknown as {
     PUBLIC_MESSAGE_TTL: number;
     PRIVATE_MESSAGE_TTL: number;
@@ -192,7 +203,10 @@ export function getMessageTTLConfig() {
 /**
  * Get channel configuration
  */
-export function getChannelConfig() {
+export function getChannelConfig(): {
+  temporaryTTL: number;
+  persistentDefaultTTL: number;
+} {
   const e = env as unknown as {
     TEMPORARY_CHANNEL_TTL: number;
     PERSISTENT_CHANNEL_DEFAULT_TTL: number;
@@ -206,7 +220,12 @@ export function getChannelConfig() {
 /**
  * Get key revocation configuration
  */
-export function getKeyRevocationConfig() {
+export function getKeyRevocationConfig(): {
+  confirmationHours: number;
+  cleanupDays: number;
+  maxAttempts: number;
+  lockoutMinutes: number;
+} {
   const e = env as unknown as {
     REVOCATION_CONFIRMATION_HOURS: number;
     REVOKED_KEY_CLEANUP_DAYS: number;

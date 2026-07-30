@@ -23,10 +23,10 @@ export async function validateRequestBody<T>(
 
   const result = schema.safeParse(body);
   if (!result.success) {
-    const firstError = result.error.errors[0];
+    const firstError = result.error.issues[0];
     throw new ValidationError(firstError?.message || '参数验证失败', {
       code: ErrorCode.VALIDATION_ERROR,
-      details: { errors: result.error.errors },
+      details: { errors: result.error.issues },
       requestId,
     });
   }
@@ -48,10 +48,7 @@ export function validateRequiredString(
   return value.trim();
 }
 
-export function validateOptionalString(
-  value: unknown,
-  maxLength: number = 1000,
-): string | undefined {
+export function validateOptionalString(value: unknown, maxLength = 1000): string | undefined {
   if (value === undefined || value === null) {
     return undefined;
   }
