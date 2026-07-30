@@ -11,9 +11,6 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '4.5mb',
     },
   },
-  turbopack: {
-    root: __dirname,
-  },
   images: {
     unoptimized: true,
   },
