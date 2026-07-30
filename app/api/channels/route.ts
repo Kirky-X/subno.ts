@@ -106,13 +106,23 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const limit = searchParams.get('limit');
   const offset = searchParams.get('offset');
 
+  // 边界验证：防止超大 limit 拖垮数据库，防止负数 offset
+  const MAX_LIMIT = 100;
+  const DEFAULT_LIMIT = 50;
+  const parsedLimit = limit ? parseInt(limit, 10) : DEFAULT_LIMIT;
+  const parsedOffset = offset ? parseInt(offset, 10) : 0;
+  const safeLimit = Number.isNaN(parsedLimit)
+    ? DEFAULT_LIMIT
+    : Math.min(Math.max(1, parsedLimit), MAX_LIMIT);
+  const safeOffset = Number.isNaN(parsedOffset) ? 0 : Math.max(0, parsedOffset);
+
   const result = await channelService.query({
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     id: id || undefined,
     type,
     creator,
-    limit: limit ? parseInt(limit, 10) : undefined,
-    offset: offset ? parseInt(offset, 10) : undefined,
+    limit: safeLimit,
+    offset: safeOffset,
   });
 
   if (!result.success) {

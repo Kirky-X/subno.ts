@@ -36,8 +36,16 @@ export const DELETE = withErrorHandler(
       throw Errors.notFound('密钥', context.requestId);
     }
 
-    const searchParams = request.nextUrl.searchParams;
-    const confirmationCode = searchParams.get('confirmationCode');
+    // 读取请求体一次（DELETE 可携带 body），避免重复消费 stream
+    let body: { confirmationCode?: string; reason?: string } = {};
+    try {
+      body = await request.json();
+    } catch {
+      // body 为空时走默认值，后续模式判断会处理
+    }
+
+    // 安全改进：confirmationCode 从 POST body 读取，避免出现在 URL 日志/历史中
+    const confirmationCode = body.confirmationCode;
 
     const apiKey = request.headers.get('X-API-Key');
     const adminKey = request.headers.get('X-Admin-Key');
@@ -141,10 +149,9 @@ export const DELETE = withErrorHandler(
         });
       }
 
-      // 直接删除需要 reason
-      const body = await request.json().catch(() => ({}));
+      // 直接删除需要 reason（body 已在顶部解析）
       const reasonValidation = validateLength(
-        body.reason,
+        body.reason ?? '',
         KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MIN_LENGTH,
         KEY_MANAGEMENT_CONFIG.REVOCATION_REASON_MAX_LENGTH,
       );

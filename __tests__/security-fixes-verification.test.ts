@@ -140,20 +140,17 @@ describe('🔐 安全漏洞修复验证', () => {
     });
 
     describe('4. 确认码传输方式改进', () => {
-      it('应该将 confirmationCode 从 URL 参数移至 POST body（建议）', () => {
+      it('应该将 confirmationCode 从 URL 参数移至 POST body', () => {
         const routePath = join(projectRoot, 'app/api/keys/[id]/route.ts');
         const content = readFileSync(routePath, 'utf-8');
 
-        // 检查当前实现
+        // confirmationCode 不应从 URL searchParams 读取（会出现在日志/浏览器历史）
         const usesSearchParams = content.includes("searchParams.get('confirmationCode')");
+        expect(usesSearchParams).toBe(false);
+
+        // 应从 request body 读取
         const usesBody = content.includes('body.confirmationCode');
-
-        // 这只是记录当前状态，不强制失败
-        if (usesSearchParams && !usesBody) {
-          console.log('⚠️  建议：将 confirmationCode 从 URL 参数移至 POST body 以提高安全性');
-        }
-
-        expect(true).toBe(true); // 总是通过，仅作为建议
+        expect(usesBody).toBe(true);
       });
     });
   });
@@ -164,19 +161,14 @@ describe('🔐 安全漏洞修复验证', () => {
         const routePath = join(projectRoot, 'app/api/channels/route.ts');
         const content = readFileSync(routePath, 'utf-8');
 
-        // 检查是否有 Math.min 或 Math.max 限制
+        // 必须有 Math.min 或 Math.max 限制
         const hasLimitCheck =
           content.includes('Math.min') ||
           content.includes('Math.max') ||
           /limit.*<=/.test(content) ||
           /offset.*>=/.test(content);
 
-        // 这只是建议，不强制失败
-        if (!hasLimitCheck) {
-          console.log('⚠️  建议：为 limit 和 offset 参数添加边界检查');
-        }
-
-        expect(true).toBe(true);
+        expect(hasLimitCheck).toBe(true);
       });
     });
 
