@@ -84,5 +84,6 @@ export function getLogLevelValue(level: LogLevel): number {
     [LogLevel.DEBUG]: 4,
     [LogLevel.TRACE]: 5,
   };
+  // eslint-disable-next-line security/detect-object-injection -- 枚举键受类型约束，安全
   return values[level] ?? 999;
 }

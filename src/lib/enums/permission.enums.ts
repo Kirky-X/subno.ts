@@ -143,5 +143,6 @@ export function getPermissionLabel(permission: ApiKeyPermission): string {
     [ApiKeyPermission.REVOKE]: '撤销',
     [ApiKeyPermission.ADMIN]: '管理',
   };
+  // eslint-disable-next-line security/detect-object-injection -- 枚举键受类型约束，安全
   return labels[permission] || '未知';
 }

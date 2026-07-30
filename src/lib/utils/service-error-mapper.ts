@@ -3,7 +3,11 @@
 
 import { ValidationError, ResourceError, Errors, ErrorCode } from './error-handler';
 
-export type ServiceResult = { success: false; error?: string; code?: string };
+export interface ServiceResult {
+  success: false;
+  error?: string;
+  code?: string;
+}
 
 const SERVICE_ERROR_MAP: Record<string, (error: string, requestId: string) => Error> = {
   CHANNEL_NOT_FOUND: (error, requestId) => Errors.notFound('频道', requestId),
@@ -52,11 +56,11 @@ const SERVICE_ERROR_MAP: Record<string, (error: string, requestId: string) => Er
 
 export function mapServiceError(result: ServiceResult, requestId: string): Error {
   if (!result.code) {
-    return Errors.internal(new Error(result.error || '操作失败'), requestId);
+    return Errors.internal(new Error(result.error ?? '操作失败'), requestId);
   }
 
   const mapper = SERVICE_ERROR_MAP[result.code];
   return mapper
-    ? mapper(result.error || '操作失败', requestId)
+    ? mapper(result.error ?? '操作失败', requestId)
     : Errors.internal(new Error(result.error), requestId);
 }

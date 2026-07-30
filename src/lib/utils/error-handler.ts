@@ -274,17 +274,17 @@ export interface RequestContext {
  */
 export function extractRequestContext(request: NextRequest): RequestContext {
   const requestId =
-    request.headers.get('x-request-id') ||
-    request.headers.get('x-correlation-id') ||
+    request.headers.get('x-request-id') ??
+    request.headers.get('x-correlation-id') ??
     generateRequestId();
 
   const path = new URL(request.url).pathname;
   const method = request.method;
   const clientIP =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    request.headers.get('x-real-ip') ??
     'unknown';
-  const userAgent = request.headers.get('user-agent') || 'unknown';
+  const userAgent = request.headers.get('user-agent') ?? 'unknown';
 
   return {
     requestId,
@@ -366,11 +366,14 @@ export class AppError extends Error {
       requestId?: string;
     },
   ) {
-    super(message || USER_FRIENDLY_MESSAGES[code]);
+    // eslint-disable-next-line security/detect-object-injection -- code 受 ErrorCode 类型约束，安全
+    super(message ?? USER_FRIENDLY_MESSAGES[code]);
     this.name = 'AppError';
     this.code = code;
-    this.status = HTTP_STATUS_MAP[code] || 500;
-    this.severity = options?.severity || DEFAULT_SEVERITY_MAP[code];
+    // eslint-disable-next-line security/detect-object-injection -- code 受 ErrorCode 类型约束，安全
+    this.status = HTTP_STATUS_MAP[code] ?? 500;
+    // eslint-disable-next-line security/detect-object-injection -- code 受 ErrorCode 类型约束，安全
+    this.severity = options?.severity ?? DEFAULT_SEVERITY_MAP[code];
     this.details = options?.details;
     this.originalError = options?.originalError;
     this.requestId = options?.requestId;
@@ -398,7 +401,7 @@ export class AppError extends Error {
       error: {
         code: this.code,
         message: this.getUserMessage(),
-        requestId: requestId || this.requestId || generateRequestId(),
+        requestId: requestId ?? this.requestId ?? generateRequestId(),
         timestamp: this.timestamp.toISOString(),
         // 仅在非生产环境或特定错误码返回详细信息
         ...(this.shouldIncludeDetails() && this.details ? { details: this.details } : {}),
@@ -440,7 +443,7 @@ export class AppError extends Error {
       errorMessage: this.message,
       errorStatus: this.status,
       severity: this.severity,
-      requestId: context?.requestId || this.requestId,
+      requestId: context?.requestId ?? this.requestId,
       path: context?.path,
       method: context?.method,
       clientIP: context?.clientIP,
@@ -468,9 +471,9 @@ export class AuthenticationError extends AppError {
       severity?: ErrorSeverity;
     },
   ) {
-    super(options?.code || ErrorCode.AUTH_FAILED, message, {
+    super(options?.code ?? ErrorCode.AUTH_FAILED, message, {
       ...options,
-      severity: options?.severity || 'medium',
+      severity: options?.severity ?? 'medium',
     });
     this.name = 'AuthenticationError';
   }
@@ -490,9 +493,9 @@ export class AuthorizationError extends AppError {
       severity?: ErrorSeverity;
     },
   ) {
-    super(options?.code || ErrorCode.FORBIDDEN, message, {
+    super(options?.code ?? ErrorCode.FORBIDDEN, message, {
       ...options,
-      severity: options?.severity || 'medium',
+      severity: options?.severity ?? 'medium',
     });
     this.name = 'AuthorizationError';
   }
@@ -512,9 +515,9 @@ export class ValidationError extends AppError {
       severity?: ErrorSeverity;
     },
   ) {
-    super(options?.code || ErrorCode.VALIDATION_ERROR, message, {
+    super(options?.code ?? ErrorCode.VALIDATION_ERROR, message, {
       ...options,
-      severity: options?.severity || 'low',
+      severity: options?.severity ?? 'low',
     });
     this.name = 'ValidationError';
   }
@@ -534,9 +537,9 @@ export class ResourceError extends AppError {
       severity?: ErrorSeverity;
     },
   ) {
-    super(options?.code || ErrorCode.NOT_FOUND, message, {
+    super(options?.code ?? ErrorCode.NOT_FOUND, message, {
       ...options,
-      severity: options?.severity || 'low',
+      severity: options?.severity ?? 'low',
     });
     this.name = 'ResourceError';
   }
@@ -549,7 +552,7 @@ export class RateLimitError extends AppError {
   public readonly retryAfter: number;
 
   constructor(
-    retryAfter: number = 60,
+    retryAfter = 60,
     options?: {
       message?: string;
       details?: Record<string, unknown>;
@@ -593,9 +596,9 @@ export class ServerError extends AppError {
       requestId?: string;
     },
   ) {
-    super(options?.code || ErrorCode.INTERNAL_ERROR, message, {
+    super(options?.code ?? ErrorCode.INTERNAL_ERROR, message, {
       ...options,
-      severity: options?.severity || 'high',
+      severity: options?.severity ?? 'high',
     });
     this.name = 'ServerError';
   }
@@ -797,12 +800,13 @@ export function errorResponse(
     requestId?: string;
   },
 ): StandardErrorResponse {
-  const requestId = options?.requestId || generateRequestId();
+  const requestId = options?.requestId ?? generateRequestId();
   return {
     success: false,
     error: {
       code,
-      message: message || USER_FRIENDLY_MESSAGES[code],
+      // eslint-disable-next-line security/detect-object-injection -- code 受 ErrorCode 类型约束，安全
+      message: message ?? USER_FRIENDLY_MESSAGES[code],
       requestId,
       timestamp: new Date().toISOString(),
       ...(options?.details && { details: options.details }),
@@ -880,7 +884,7 @@ export const Errors = {
       requestId,
     }),
 
-  rateLimited: (retryAfter: number = 60, requestId?: string) =>
+  rateLimited: (retryAfter = 60, requestId?: string) =>
     new RateLimitError(retryAfter, { requestId }),
 
   internal: (originalError?: Error, requestId?: string) =>

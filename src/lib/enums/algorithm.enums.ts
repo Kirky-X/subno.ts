@@ -54,5 +54,6 @@ export function getAlgorithmRecommendation(algo: EncryptionAlgorithm): string {
     [EncryptionAlgorithm.ECDSA_P384]: '需要更高安全性的 ECC 场景',
     [EncryptionAlgorithm.ED25519]: '现代应用，最佳性能和安全性',
   };
+  // eslint-disable-next-line security/detect-object-injection -- 枚举键受类型约束，安全
   return recommendations[algo] || '未知算法';
 }

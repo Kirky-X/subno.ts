@@ -73,7 +73,7 @@ export class RevocationConfirmationRepository {
   private calculateExpiryDate(expiresInHours?: number): Date {
     const minHours = 1; // Minimum 1 hour
     const maxHours = 24 * 365; // Maximum 1 year
-    const validatedHours = Math.min(Math.max(expiresInHours || 24, minHours), maxHours);
+    const validatedHours = Math.min(Math.max(expiresInHours ?? 24, minHours), maxHours);
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + validatedHours);
     return expiresAt;
@@ -213,7 +213,7 @@ export class RevocationConfirmationRepository {
     return result;
   }
 
-  async getPendingConfirmations(limit: number = 1000): Promise<RevocationConfirmation[]> {
+  async getPendingConfirmations(limit = 1000): Promise<RevocationConfirmation[]> {
     const result = await this.db
       .select()
       .from(revocationConfirmations)

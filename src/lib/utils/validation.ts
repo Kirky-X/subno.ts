@@ -106,7 +106,7 @@ export const publicKeyRegistrationSchema = z.object({
   /** Optional expiry in seconds */
   expiresIn: z.number().positive().max(2592000).optional(), // Max 30 days
   /** Optional metadata */
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -180,7 +180,7 @@ export type ValidationResult<T> =
 export function validateData<T>(
   data: unknown,
   schema: z.ZodSchema<T>,
-  errorCode: string = 'VALIDATION_ERROR',
+  errorCode = 'VALIDATION_ERROR',
 ): ValidationResult<T> {
   const result = schema.safeParse(data);
 
@@ -188,7 +188,7 @@ export function validateData<T>(
     return { success: true, data: result.data };
   }
 
-  const firstError = result.error.errors[0];
+  const firstError = result.error.issues[0];
   return {
     success: false,
     error: firstError?.message || 'Validation failed',

@@ -34,5 +34,6 @@ export function getRateLimitEndpointLabel(type: RateLimitEndpointType): string {
     [RateLimitEndpointType.SUBSCRIBE]: '订阅',
     [RateLimitEndpointType.REVOKE]: '撤销',
   };
+  // eslint-disable-next-line security/detect-object-injection -- 枚举键受类型约束，安全
   return labels[type] || '未知';
 }

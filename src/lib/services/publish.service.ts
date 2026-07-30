@@ -35,13 +35,13 @@ export interface QueueStatusResult {
   success: boolean;
   data?: {
     channel: string;
-    messages: Array<{
+    messages: {
       id: string;
       message: string;
       sender?: string;
       timestamp: number;
       priority: string;
-    }>;
+    }[];
     queueLength: number;
   };
   error?: string;
@@ -93,7 +93,8 @@ export class PublishService {
       };
     }
 
-    const priority = request.priority || 'normal';
+    const priority = request.priority ?? 'normal';
+    // eslint-disable-next-line security/detect-object-injection -- priority 来自受控的请求类型，安全
     const priorityValue = PRIORITY_MAP[priority];
 
     let channel = await channelRepository.findById(request.channel);
@@ -134,7 +135,7 @@ export class PublishService {
       content: request.message,
       priority: priorityValue,
       sender: request.sender,
-      encrypted: request.encrypted || false,
+      encrypted: request.encrypted ?? false,
       cached: request.cache !== false,
       signature: request.signature,
       createdAt: now,
@@ -218,7 +219,7 @@ export class PublishService {
       const messageList = result.map(r => ({
         id: r.message.id,
         message: r.message.content,
-        sender: r.message.sender || undefined,
+        sender: r.message.sender ?? undefined,
         timestamp: r.message.createdAt.getTime(),
         priority: this.getPriorityName(r.message.priority),
       }));

@@ -78,6 +78,7 @@ export function getRevocationStatusLabel(status: RevocationStatus): string {
     [RevocationStatus.CANCELLED]: '已取消',
     [RevocationStatus.EXPIRED]: '已过期',
   };
+  // eslint-disable-next-line security/detect-object-injection -- 枚举键受类型约束，安全
   return labels[status] || '未知';
 }
 
@@ -92,5 +93,6 @@ export function getDeliveryStatusLabel(status: DeliveryStatus): string {
     [DeliveryStatus.FAILED]: '失败',
     [DeliveryStatus.PARTIAL]: '部分成功',
   };
+  // eslint-disable-next-line security/detect-object-injection -- 枚举键受类型约束，安全
   return labels[status] || '未知';
 }

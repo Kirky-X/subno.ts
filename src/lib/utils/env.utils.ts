@@ -6,7 +6,8 @@
  */
 
 export function parseEnvInt(key: string, defaultValue: number, min: number, max: number): number {
-  const value = parseInt(process.env[key] || String(defaultValue), 10);
+  // eslint-disable-next-line security/detect-object-injection -- process.env 访问安全
+  const value = parseInt(process.env[key] ?? String(defaultValue), 10);
   if (isNaN(value) || value < min) return defaultValue;
   if (value > max) return max;
   return value;

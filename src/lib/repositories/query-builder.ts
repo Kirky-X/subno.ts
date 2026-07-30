@@ -80,10 +80,3 @@ export class QueryBuilder {
     this.conditions = [];
   }
 }
-
-/**
- * Create a new query builder instance
- */
-export function createQueryBuilder(): QueryBuilder {
-  return new QueryBuilder();
-}

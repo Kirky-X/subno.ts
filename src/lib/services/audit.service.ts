@@ -92,6 +92,7 @@ function sanitizeMetadata(metadata?: Record<string, unknown>): Record<string, un
     // Check if key contains sensitive patterns
     const isSensitive = SENSITIVE_KEYS.some(sk => key.toLowerCase().includes(sk));
 
+    /* eslint-disable security/detect-object-injection -- key 来自 Object.entries(metadata)，受控 */
     if (isSensitive) {
       sanitized[key] = '[REDACTED]';
     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
@@ -100,6 +101,7 @@ function sanitizeMetadata(metadata?: Record<string, unknown>): Record<string, un
     } else {
       sanitized[key] = value;
     }
+    /* eslint-enable security/detect-object-injection */
   }
 
   return sanitized;
@@ -132,7 +134,7 @@ export class AuditService {
    * Supports dependency injection for testing
    */
   constructor(db?: ReturnType<typeof getDatabase>) {
-    this.db = db || getDatabase();
+    this.db = db ?? getDatabase();
   }
 
   /**
@@ -160,7 +162,7 @@ export class AuditService {
         userAgent: data.userAgent,
         success: data.success,
         error: sanitizedError,
-        metadata: sanitizedMetadata || {},
+        metadata: sanitizedMetadata ?? {},
       })
       .returning();
     return result[0];
@@ -266,8 +268,8 @@ export class AuditService {
       .from(auditLogs)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(auditLogs.createdAt))
-      .limit(query.limit || 100)
-      .offset(query.offset || 0);
+      .limit(query.limit ?? 100)
+      .offset(query.offset ?? 0);
 
     return result;
   }
@@ -303,7 +305,7 @@ export class AuditService {
       userAgent: data.userAgent,
       success: data.success,
       error: sanitizeError(data.error),
-      metadata: sanitizeMetadata(data.metadata) || {},
+      metadata: sanitizeMetadata(data.metadata) ?? {},
     }));
 
     const result = await this.db.insert(auditLogs).values(values).returning();
@@ -311,7 +313,7 @@ export class AuditService {
     return result;
   }
 
-  async cleanup(olderThanDays: number = 90): Promise<number> {
+  async cleanup(olderThanDays = 90): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 

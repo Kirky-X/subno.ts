@@ -66,6 +66,7 @@ export class RegisterService {
       return false;
     }
 
+    // eslint-disable-next-line security/detect-object-injection -- algorithm 来自受控的枚举类型，安全
     const pattern = ALGORITHM_REGEX_MAP[algorithm];
     if (!pattern) {
       return false;
@@ -86,7 +87,7 @@ export class RegisterService {
       userAgent?: string;
     },
   ): Promise<RegisterResult> {
-    const algorithm = request.algorithm || 'RSA-2048';
+    const algorithm = request.algorithm ?? 'RSA-2048';
 
     if (!this.validatePublicKey(request.publicKey, algorithm)) {
       return {
@@ -126,7 +127,7 @@ export class RegisterService {
         channelId,
         publicKey: request.publicKey.trim(),
         algorithm,
-        metadata: request.metadata || {},
+        metadata: request.metadata ?? {},
         expiresAt,
       };
 

@@ -23,7 +23,6 @@ const MAX_TOTAL_CONNECTIONS = 10000;
 const CONNECTION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const CLEANUP_INTERVAL_MS = 60 * 1000; // 1 minute
 const MAX_CHANNELS = 5000; // 最大频道数量，防止内存泄漏
-const MESSAGE_QUEUE_SIZE_LIMIT = 1000; // 每个频道的消息队列限制
 
 interface ConnectionInfo {
   controller: ReadableStreamDefaultController;
@@ -74,7 +73,7 @@ export class SubscribeService {
       throw new Error('Maximum total connections reached');
     }
 
-    const channelConnections = this.activeConnections.get(channel)?.size || 0;
+    const channelConnections = this.activeConnections.get(channel)?.size ?? 0;
     if (channelConnections >= MAX_CONNECTIONS_PER_CHANNEL) {
       throw new Error('Maximum connections for this channel reached');
     }
@@ -160,6 +159,7 @@ export class SubscribeService {
     if (!this.activeConnections.has(channel)) {
       this.activeConnections.set(channel, new Set());
     }
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- 前面已确保 has(channel) 为 true
     this.activeConnections.get(channel)!.add({
       controller,
       connectedAt: Date.now(),
@@ -251,7 +251,7 @@ export class SubscribeService {
 
     for (const channel of channelsToRemove) {
       const connections = this.activeConnections.get(channel);
-      if (connections && connections.size === 0) {
+      if (connections?.size === 0) {
         this.activeConnections.delete(channel);
       }
     }
@@ -311,7 +311,7 @@ export class SubscribeService {
 
   getActiveConnectionCount(channel?: string): number {
     if (channel) {
-      return this.activeConnections.get(channel)?.size || 0;
+      return this.activeConnections.get(channel)?.size ?? 0;
     }
 
     let total = 0;

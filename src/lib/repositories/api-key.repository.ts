@@ -93,7 +93,7 @@ export class ApiKeyRepository {
       offset?: number;
     },
   ): Promise<ApiKey[]> {
-    const { includeDeleted = false, limit = 50, offset = 0 } = options || {};
+    const { includeDeleted = false, limit = 50, offset = 0 } = options ?? {};
 
     const condition = this.buildFindConditions({
       includeDeleted,
@@ -116,7 +116,7 @@ export class ApiKeyRepository {
     limit?: number;
     offset?: number;
   }): Promise<ApiKey[]> {
-    const { includeExpired = false, limit = 100, offset = 0 } = options || {};
+    const { includeExpired = false, limit = 100, offset = 0 } = options ?? {};
 
     const condition = this.buildFindConditions({ includeExpired });
 

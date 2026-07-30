@@ -83,7 +83,7 @@ export class PublicKeyRepository {
     limit?: number;
     offset?: number;
   }): Promise<PublicKey[]> {
-    const { includeDeleted = false, limit = 50, offset = 0 } = options || {};
+    const { includeDeleted = false, limit = 50, offset = 0 } = options ?? {};
 
     let condition;
     if (includeDeleted) {
@@ -135,7 +135,7 @@ export class PublicKeyRepository {
     const result = await this.db
       .select()
       .from(publicKeys)
-      .where(and(eq(publicKeys.isDeleted, true), lt(publicKeys.revokedAt!, olderThan)));
+      .where(and(eq(publicKeys.isDeleted, true), lt(publicKeys.revokedAt, olderThan)));
     return result;
   }
 

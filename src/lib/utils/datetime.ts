@@ -175,6 +175,7 @@ export function sleep(ms: number): Promise<void> {
 /**
  * Debounce function
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- 通用工具函数泛型约束，any 为标准模式
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number,
@@ -182,7 +183,7 @@ export function debounce<T extends (...args: any[]) => any>(
   let timeout: NodeJS.Timeout | null = null;
 
   return function executedFunction(...args: Parameters<T>) {
-    const later = () => {
+    const later = (): void => {
       timeout = null;
       func(...args);
     };
@@ -197,9 +198,11 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * Throttle function
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- 通用工具函数泛型约束，any 为标准模式
 export function throttle<T extends (...args: any[]) => any>(func: T, limit: number): T {
   let inThrottle: boolean;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 通用工具函数 this 上下文类型
   return function (this: any, ...args: Parameters<T>) {
     if (!inThrottle) {
       func.apply(this, args);

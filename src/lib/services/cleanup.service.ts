@@ -64,7 +64,7 @@ export class CleanupService {
     }
 
     const requestSecret =
-      request.headers.get('X-Cron-Secret') ||
+      request.headers.get('X-Cron-Secret') ??
       request.headers.get('Authorization')?.replace('Bearer ', '');
 
     if (!requestSecret) {
@@ -125,7 +125,7 @@ export class CleanupService {
   }
 
   async cleanupRevokedKeys(olderThanDays?: number): Promise<{ count: number; errors: string[] }> {
-    const days = olderThanDays || this.getRevokedKeysCleanupDays();
+    const days = olderThanDays ?? this.getRevokedKeysCleanupDays();
 
     try {
       const cutoffDate = new Date();
@@ -139,7 +139,7 @@ export class CleanupService {
           and(
             eq(publicKeys.isDeleted, true),
             sql`${publicKeys.revokedAt} IS NOT NULL`,
-            lt(publicKeys.revokedAt!, cutoffDate),
+            lt(publicKeys.revokedAt, cutoffDate),
           ),
         );
 
@@ -205,7 +205,7 @@ export class CleanupService {
         and(
           eq(publicKeys.isDeleted, true),
           sql`${publicKeys.revokedAt} IS NOT NULL`,
-          lt(publicKeys.revokedAt!, cutoffDate),
+          lt(publicKeys.revokedAt, cutoffDate),
         ),
       );
 

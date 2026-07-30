@@ -210,7 +210,7 @@ export function rateLimitError(retryAfter?: number): AppError {
  */
 export function internalError(originalError?: unknown): AppError {
   return handleError(
-    originalError || new Error('Internal server error'),
+    originalError ?? new Error('Internal server error'),
     ERROR_CODES.INTERNAL_ERROR,
     'high',
   );

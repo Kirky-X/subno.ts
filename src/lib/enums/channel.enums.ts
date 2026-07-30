@@ -63,6 +63,7 @@ export function getChannelTypeLabel(type: ChannelType): string {
     [ChannelType.ENCRYPTED]: '加密',
     [ChannelType.TEMPORARY]: '临时',
   };
+  // eslint-disable-next-line security/detect-object-injection -- 枚举键受类型约束，安全
   return labels[type] || '未知';
 }
 
@@ -78,5 +79,6 @@ export function getChannelStatusLabel(status: ChannelStatus): string {
     [ChannelStatus.SUSPENDED]: '已暂停',
     [ChannelStatus.CLOSED]: '已关闭',
   };
+  // eslint-disable-next-line security/detect-object-injection -- 枚举键受类型约束，安全
   return labels[status] || '未知';
 }

@@ -3,7 +3,7 @@
 
 import { getDatabase } from '../../db';
 import { channels, type Channel } from '../../db/schema';
-import { eq, and, desc, sql, count } from 'drizzle-orm';
+import { eq, and, desc, count } from 'drizzle-orm';
 
 export class ChannelRepository {
   private db = getDatabase();

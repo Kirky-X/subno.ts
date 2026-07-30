@@ -85,6 +85,7 @@ export function permissionImplies(
   userPermission: Permission,
   requiredPermission: Permission,
 ): boolean {
+  // eslint-disable-next-line security/detect-object-injection -- 枚举键受类型约束，安全
   return PermissionHierarchy[userPermission]?.includes(requiredPermission) ?? false;
 }
 
