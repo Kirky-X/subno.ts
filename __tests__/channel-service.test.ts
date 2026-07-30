@@ -11,8 +11,8 @@ vi.mock('@/src/lib/repositories/channel.repository', () => ({
   channelRepository: {
     create: vi.fn(),
     findById: vi.fn(),
-    findByType: vi.fn(),
-    findAll: vi.fn(),
+    findByCreatorWithPagination: vi.fn(),
+    findActiveWithPagination: vi.fn(),
   },
 }));
 
@@ -34,14 +34,19 @@ describe('ChannelService', () => {
     it('应该成功创建公共频道', async () => {
       const mockRequest = {
         name: 'Test Channel',
-        type: 'public',
+        type: 'public' as const,
       };
 
+      vi.mocked(channelRepository.findById).mockResolvedValueOnce(null);
       vi.mocked(channelRepository.create).mockResolvedValueOnce({
         id: 'ch_123',
         name: 'Test Channel',
         type: ChannelType.PUBLIC,
+        description: null,
+        creator: null,
+        metadata: {},
         createdAt: new Date(),
+        expiresAt: null,
         isActive: true,
       });
 
@@ -55,13 +60,19 @@ describe('ChannelService', () => {
 
     it('应该成功创建加密频道', async () => {
       const mockRequest = {
-        type: 'encrypted',
+        type: 'encrypted' as const,
       };
 
+      vi.mocked(channelRepository.findById).mockResolvedValueOnce(null);
       vi.mocked(channelRepository.create).mockResolvedValueOnce({
         id: 'ch_enc456',
+        name: 'Channel ch_enc456',
         type: ChannelType.ENCRYPTED,
+        description: null,
+        creator: null,
+        metadata: {},
         createdAt: new Date(),
+        expiresAt: null,
         isActive: true,
       });
 
@@ -73,13 +84,19 @@ describe('ChannelService', () => {
 
     it('应该成功创建临时频道', async () => {
       const mockRequest = {
-        type: 'temporary',
+        type: 'temporary' as const,
         expiresIn: 3600,
       };
 
+      vi.mocked(channelRepository.findById).mockResolvedValueOnce(null);
       vi.mocked(channelRepository.create).mockResolvedValueOnce({
         id: 'ch_temp789',
+        name: 'Channel ch_temp789',
         type: ChannelType.TEMPORARY,
+        description: null,
+        creator: null,
+        metadata: {},
+        createdAt: new Date(),
         expiresAt: new Date(Date.now() + 3600 * 1000),
         isActive: true,
       });
@@ -93,10 +110,16 @@ describe('ChannelService', () => {
     it('应该使用默认类型（public）当未指定时', async () => {
       const mockRequest = { name: 'Default Channel' };
 
+      vi.mocked(channelRepository.findById).mockResolvedValueOnce(null);
       vi.mocked(channelRepository.create).mockResolvedValueOnce({
         id: 'ch_default',
+        name: 'Default Channel',
         type: ChannelType.PUBLIC,
+        description: null,
+        creator: null,
+        metadata: {},
         createdAt: new Date(),
+        expiresAt: null,
         isActive: true,
       });
 
@@ -109,10 +132,16 @@ describe('ChannelService', () => {
     it('应该生成自动 ID 当未提供时', async () => {
       const mockRequest = {};
 
+      vi.mocked(channelRepository.findById).mockResolvedValueOnce(null);
       vi.mocked(channelRepository.create).mockResolvedValueOnce({
         id: 'ch_auto_generated',
+        name: 'Channel ch_auto_generated',
         type: ChannelType.PUBLIC,
+        description: null,
+        creator: null,
+        metadata: {},
         createdAt: new Date(),
+        expiresAt: null,
         isActive: true,
       });
 
@@ -135,7 +164,7 @@ describe('ChannelService', () => {
 
     it('应该拒绝超过最大有效期的请求', async () => {
       const mockRequest = {
-        type: 'temporary',
+        type: 'temporary' as const,
         expiresIn: 30 * 24 * 60 * 60 + 1, // 超过 30 天
       };
 
@@ -150,10 +179,16 @@ describe('ChannelService', () => {
         metadata: { custom: 'data', nested: { key: 'value' } },
       };
 
+      vi.mocked(channelRepository.findById).mockResolvedValueOnce(null);
       vi.mocked(channelRepository.create).mockResolvedValueOnce({
         id: 'ch_meta',
+        name: 'Channel ch_meta',
         type: ChannelType.PUBLIC,
+        description: null,
+        creator: null,
+        metadata: {},
         createdAt: new Date(),
+        expiresAt: null,
         isActive: true,
       });
 
@@ -163,16 +198,24 @@ describe('ChannelService', () => {
       expect(channelRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           metadata: expect.any(Object),
-        })
+        }),
       );
     });
 
     it('应该处理频道已存在的错误', async () => {
       const mockRequest = { id: 'existing_id' };
 
-      vi.mocked(channelRepository.create).mockRejectedValueOnce(
-        new Error('Channel already exists')
-      );
+      vi.mocked(channelRepository.findById).mockResolvedValueOnce({
+        id: 'existing_id',
+        name: 'Existing Channel',
+        type: ChannelType.PUBLIC,
+        description: null,
+        creator: null,
+        metadata: {},
+        createdAt: new Date(),
+        expiresAt: null,
+        isActive: true,
+      });
 
       const result = await service.create(mockRequest);
 
@@ -183,10 +226,16 @@ describe('ChannelService', () => {
     it('应该记录审计日志', async () => {
       const mockRequest = { name: 'Audit Test' };
 
+      vi.mocked(channelRepository.findById).mockResolvedValueOnce(null);
       vi.mocked(channelRepository.create).mockResolvedValueOnce({
         id: 'ch_audit',
+        name: 'Audit Test',
         type: ChannelType.PUBLIC,
+        description: null,
+        creator: null,
+        metadata: {},
         createdAt: new Date(),
+        expiresAt: null,
         isActive: true,
       });
 
@@ -196,18 +245,26 @@ describe('ChannelService', () => {
         expect.objectContaining({
           action: 'channel_created',
           success: true,
-        })
+        }),
       );
     });
   });
 
   describe('query', () => {
     it('应该通过 ID 查询频道', async () => {
-      const mockChannels = [
-        { id: 'ch_123', name: 'Test', type: ChannelType.PUBLIC, isActive: true },
-      ];
+      const mockChannel = {
+        id: 'ch_123',
+        name: 'Test',
+        type: ChannelType.PUBLIC,
+        description: null,
+        creator: null,
+        metadata: {},
+        createdAt: new Date(),
+        expiresAt: null,
+        isActive: true,
+      };
 
-      vi.mocked(channelRepository.findById).mockResolvedValueOnce(mockChannels[0]);
+      vi.mocked(channelRepository.findById).mockResolvedValueOnce(mockChannel);
 
       const result = await service.query({ id: 'ch_123' });
 
@@ -217,26 +274,62 @@ describe('ChannelService', () => {
 
     it('应该按类型查询频道', async () => {
       const mockChannels = [
-        { id: 'ch_enc1', type: ChannelType.ENCRYPTED },
-        { id: 'ch_enc2', type: ChannelType.ENCRYPTED },
+        {
+          id: 'ch_enc1',
+          name: 'Encrypted 1',
+          type: ChannelType.ENCRYPTED,
+          description: null,
+          creator: null,
+          metadata: {},
+          createdAt: new Date(),
+          expiresAt: null,
+          isActive: true,
+        },
+        {
+          id: 'ch_enc2',
+          name: 'Encrypted 2',
+          type: ChannelType.ENCRYPTED,
+          description: null,
+          creator: null,
+          metadata: {},
+          createdAt: new Date(),
+          expiresAt: null,
+          isActive: true,
+        },
       ];
 
-      vi.mocked(channelRepository.findByType).mockResolvedValueOnce(mockChannels);
+      vi.mocked(channelRepository.findActiveWithPagination).mockResolvedValueOnce({
+        channels: mockChannels,
+        total: 2,
+      });
 
       const result = await service.query({ type: 'encrypted' });
 
       expect(result.success).toBe(true);
       expect(result.data).toHaveLength(2);
-      expect(channelRepository.findByType).toHaveBeenCalledWith(ChannelType.ENCRYPTED);
+      expect(channelRepository.findActiveWithPagination).toHaveBeenCalledWith(
+        expect.any(Number),
+        expect.any(Number),
+        'encrypted',
+      );
     });
 
     it('应该支持分页查询', async () => {
-      const mockChannels = Array(20).fill(null).map((_, i) => ({
-        id: `ch_${i}`,
-        type: ChannelType.PUBLIC,
-      }));
+      const mockChannels = Array(20)
+        .fill(null)
+        .map((_, i) => ({
+          id: `ch_${i}`,
+          name: `Channel ${i}`,
+          type: ChannelType.PUBLIC,
+          description: null,
+          creator: null,
+          metadata: {},
+          createdAt: new Date(),
+          expiresAt: null,
+          isActive: true,
+        }));
 
-      vi.mocked(channelRepository.findAll).mockResolvedValueOnce({
+      vi.mocked(channelRepository.findActiveWithPagination).mockResolvedValueOnce({
         channels: mockChannels.slice(0, 10),
         total: 20,
       });
@@ -259,11 +352,31 @@ describe('ChannelService', () => {
 
     it('应该按创建者查询', async () => {
       const mockChannels = [
-        { id: 'ch_1', creator: 'user123' },
-        { id: 'ch_2', creator: 'user123' },
+        {
+          id: 'ch_1',
+          name: 'Channel 1',
+          type: ChannelType.PUBLIC,
+          description: null,
+          creator: 'user123',
+          metadata: {},
+          createdAt: new Date(),
+          expiresAt: null,
+          isActive: true,
+        },
+        {
+          id: 'ch_2',
+          name: 'Channel 2',
+          type: ChannelType.PUBLIC,
+          description: null,
+          creator: 'user123',
+          metadata: {},
+          createdAt: new Date(),
+          expiresAt: null,
+          isActive: true,
+        },
       ];
 
-      vi.mocked(channelRepository.findAll).mockResolvedValueOnce({
+      vi.mocked(channelRepository.findByCreatorWithPagination).mockResolvedValueOnce({
         channels: mockChannels,
         total: 2,
       });
@@ -275,7 +388,10 @@ describe('ChannelService', () => {
     });
 
     it('应该返回空数组当没有匹配结果', async () => {
-      vi.mocked(channelRepository.findByType).mockResolvedValueOnce([]);
+      vi.mocked(channelRepository.findActiveWithPagination).mockResolvedValueOnce({
+        channels: [],
+        total: 0,
+      });
 
       const result = await service.query({ type: 'encrypted' });
 

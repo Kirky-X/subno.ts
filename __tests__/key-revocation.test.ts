@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // Mock crypto module
 vi.mock('crypto', () => ({
-  randomBytes: vi.fn((n) => Buffer.alloc(n).fill(0)),
+  randomBytes: vi.fn(n => Buffer.alloc(n).fill(0)),
   pbkdf2: vi.fn((password, salt, iterations, keylen, digest, callback) => {
     callback(null, Buffer.alloc(keylen).fill(0));
   }),
@@ -28,7 +28,7 @@ describe('Key Revocation Service', () => {
   describe('Confirmation Code Hashing', () => {
     it('should produce consistent hashes for the same input', async () => {
       const crypto = await import('crypto');
-      
+
       const hash1 = await new Promise<string>((resolve, reject) => {
         crypto.pbkdf2('test-code', 'salt123', 100000, 64, 'sha256', (err, derivedKey) => {
           if (err) reject(err);

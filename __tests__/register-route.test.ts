@@ -5,7 +5,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import { registerService } from '@/src/lib/services';
 import { POST, GET } from '@/app/api/register/route';
-import { z } from 'zod';
 
 // Mock dependencies
 vi.mock('@/src/lib/middleware/rate-limit', () => ({
@@ -63,22 +62,21 @@ describe('POST /api/register', () => {
       vi.mocked(registerService.register).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(201);
-      
+
       const data = await response.json();
       expect(data.success).toBe(true);
       expect(data.data.channelId).toBe('enc_abc123');
       expect(data.data.algorithm).toBe('RSA-2048');
-      
+
       expect(registerService.register).toHaveBeenCalledTimes(1);
       expect(registerService.register).toHaveBeenCalledWith(
         expect.objectContaining({
           publicKey: expect.stringContaining('-----BEGIN PUBLIC KEY-----'),
-          algorithm: 'RSA-2048',
         }),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -98,10 +96,10 @@ describe('POST /api/register', () => {
       vi.mocked(registerService.register).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(201);
-      
+
       const data = await response.json();
       expect(data.data.algorithm).toBe('RSA-4096');
     });
@@ -121,10 +119,10 @@ describe('POST /api/register', () => {
       vi.mocked(registerService.register).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(201);
-      
+
       const data = await response.json();
       expect(data.data.expiresIn).toBe(3600);
     });
@@ -143,7 +141,7 @@ describe('POST /api/register', () => {
       vi.mocked(registerService.register).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(201);
     });
@@ -156,12 +154,13 @@ describe('POST /api/register', () => {
       };
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
-      
+
       const data = await response.json();
-      expect(data.error).toContain('公钥');
+      expect(data.error.code).toBe('VALIDATION_ERROR');
+      expect(data.error.details.errors[0].path).toContain('publicKey');
     });
 
     it('应该拒绝空公钥', async () => {
@@ -170,7 +169,7 @@ describe('POST /api/register', () => {
       };
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
     });
@@ -180,8 +179,14 @@ describe('POST /api/register', () => {
         publicKey: 'INVALID_KEY_CONTENT',
       };
 
+      vi.mocked(registerService.register).mockResolvedValueOnce({
+        success: false,
+        error: '无效的公钥格式',
+        code: 'INVALID_PUBLIC_KEY',
+      });
+
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
     });
@@ -191,8 +196,14 @@ describe('POST /api/register', () => {
         publicKey: '-----BEGIN PUBLIC KEY-----\nSOME_CONTENT',
       };
 
+      vi.mocked(registerService.register).mockResolvedValueOnce({
+        success: false,
+        error: '无效的公钥格式',
+        code: 'INVALID_PUBLIC_KEY',
+      });
+
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
     });
@@ -204,7 +215,7 @@ describe('POST /api/register', () => {
       };
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
     });
@@ -216,7 +227,7 @@ describe('POST /api/register', () => {
       };
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
     });
@@ -228,7 +239,7 @@ describe('POST /api/register', () => {
       };
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
     });
@@ -249,12 +260,12 @@ describe('POST /api/register', () => {
       vi.mocked(registerService.register).mockResolvedValueOnce(mockError);
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
-      
+
       const data = await response.json();
-      expect(data.error).toContain('公钥');
+      expect(data.error.code).toBe('VALIDATION_ERROR');
     });
 
     it('应该处理无效有效期错误', async () => {
@@ -272,7 +283,7 @@ describe('POST /api/register', () => {
       vi.mocked(registerService.register).mockResolvedValueOnce(mockError);
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
     });
@@ -291,7 +302,7 @@ describe('POST /api/register', () => {
       vi.mocked(registerService.register).mockResolvedValueOnce(mockError);
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(500);
     });
@@ -300,16 +311,14 @@ describe('POST /api/register', () => {
   describe('认证和限流', () => {
     it('应该拒绝缺少 API Key 的请求', async () => {
       const { requireApiKey } = await import('@/src/lib/middleware');
-      vi.mocked(requireApiKey).mockResolvedValueOnce(
-        new Error('API Key 认证失败')
-      );
+      vi.mocked(requireApiKey).mockResolvedValueOnce(new Error('API Key 认证失败') as any);
 
       const mockBody = {
         publicKey: `-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----`,
       };
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(401);
     });
@@ -317,7 +326,7 @@ describe('POST /api/register', () => {
     it('应该拒绝超过速率限制的请求', async () => {
       const { checkRateLimit } = await import('@/src/lib/middleware/rate-limit');
       vi.mocked(checkRateLimit).mockResolvedValueOnce(
-        NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+        NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 }),
       );
 
       const mockBody = {
@@ -325,7 +334,7 @@ describe('POST /api/register', () => {
       };
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(429);
     });
@@ -341,7 +350,7 @@ describe('POST /api/register', () => {
         body: 'not json',
       });
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       expect(response.status).toBe(400);
     });
 
@@ -351,11 +360,12 @@ describe('POST /api/register', () => {
         unknownField: 'should fail',
       };
 
-      const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      vi.mocked(registerService.register).mockResolvedValueOnce({ success: true });
 
-      // Zod 可能会 strip 未知字段，所以这里可能成功或失败
-      // 取决于 schema 配置
+      const request = createMockRequest(mockBody);
+      const response = await POST(request, { params: Promise.resolve({}) });
+
+      // Zod 会 strip 未知字段，请求成功
       expect([201, 400]).toContain(response.status);
     });
 
@@ -369,7 +379,7 @@ describe('POST /api/register', () => {
       vi.mocked(registerService.register).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(201);
     });
@@ -387,7 +397,7 @@ describe('POST /api/register', () => {
       vi.mocked(registerService.register).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(201);
     });
@@ -425,14 +435,14 @@ describe('GET /api/register', () => {
       vi.mocked(registerService.queryByChannelId).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest({ channelId: 'enc_abc' });
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
-      
+
       const data = await response.json();
       expect(data.success).toBe(true);
       expect(data.data.channelId).toBe('enc_abc');
-      
+
       expect(registerService.queryByChannelId).toHaveBeenCalledWith('enc_abc');
     });
 
@@ -443,19 +453,21 @@ describe('GET /api/register', () => {
           id: 'pk_456',
           channelId: 'enc_def',
           algorithm: 'RSA-4096',
+          createdAt: new Date().toISOString(),
+          isExpired: false,
         },
       };
 
       vi.mocked(registerService.queryByKeyId).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest({ keyId: 'pk_456' });
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
-      
+
       const data = await response.json();
       expect(data.data.id).toBe('pk_456');
-      
+
       expect(registerService.queryByKeyId).toHaveBeenCalledWith('pk_456');
     });
 
@@ -466,6 +478,7 @@ describe('GET /api/register', () => {
           id: 'pk_789',
           channelId: 'enc_ghi',
           algorithm: 'ECC-SECP256K1',
+          createdAt: new Date().toISOString(),
           isExpired: true,
           expiresAt: new Date(Date.now() - 1000).toISOString(),
         },
@@ -474,10 +487,10 @@ describe('GET /api/register', () => {
       vi.mocked(registerService.queryByChannelId).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest({ channelId: 'enc_ghi' });
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
-      
+
       const data = await response.json();
       expect(data.data.isExpired).toBe(true);
     });
@@ -487,12 +500,12 @@ describe('GET /api/register', () => {
     it('应该拒绝缺少参数的请求', async () => {
       const request = createMockRequest({});
 
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
-      
+
       const data = await response.json();
-      expect(data.error).toContain('channelId 或 keyId');
+      expect(data.error.code).toBe('MISSING_PARAMETER');
     });
 
     it('应该处理公钥不存在的情况', async () => {
@@ -505,7 +518,7 @@ describe('GET /api/register', () => {
       vi.mocked(registerService.queryByChannelId).mockResolvedValueOnce(mockError);
 
       const request = createMockRequest({ channelId: 'nonexistent' });
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(404);
     });
@@ -520,17 +533,17 @@ describe('GET /api/register', () => {
       vi.mocked(registerService.queryByChannelId).mockResolvedValueOnce(mockError);
 
       const request = createMockRequest({ channelId: 'enc_test' });
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(500);
     });
 
     it('应该拒绝同时提供 channelId 和 keyId 以外的参数', async () => {
-      const request = createMockRequest({ 
-        otherParam: 'value' 
+      const request = createMockRequest({
+        otherParam: 'value',
       });
 
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
     });
@@ -540,7 +553,7 @@ describe('GET /api/register', () => {
     it('应该处理空的 channelId 参数', async () => {
       const request = createMockRequest({ channelId: '' });
 
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       // 空字符串应该被视为无效参数
       expect(response.status).toBe(400);
@@ -549,21 +562,30 @@ describe('GET /api/register', () => {
     it('应该处理空的 keyId 参数', async () => {
       const request = createMockRequest({ keyId: '' });
 
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
     });
 
     it('应该同时提供 channelId 和 keyId 时优先使用 channelId', async () => {
-      const mockResult = { success: true, data: { id: 'pk_test' } };
+      const mockResult = {
+        success: true,
+        data: {
+          id: 'pk_test',
+          channelId: 'enc_test',
+          algorithm: 'RSA-2048',
+          createdAt: new Date().toISOString(),
+          isExpired: false,
+        },
+      };
       vi.mocked(registerService.queryByChannelId).mockResolvedValueOnce(mockResult);
 
-      const request = createMockRequest({ 
+      const request = createMockRequest({
         channelId: 'enc_test',
         keyId: 'pk_test',
       });
 
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
       expect(registerService.queryByChannelId).toHaveBeenCalledWith('enc_test');

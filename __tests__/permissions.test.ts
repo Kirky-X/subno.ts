@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   Permission,
   PermissionGroups,
@@ -233,7 +233,7 @@ describe('Permission Middleware Integration', () => {
   describe('Permission hierarchy enforcement', () => {
     it('should enforce that admin can do everything', () => {
       const adminPerms = [Permission.ADMIN];
-      
+
       // Admin should be able to perform all operations
       expect(hasPermission(adminPerms, Permission.READ)).toBe(true);
       expect(hasPermission(adminPerms, Permission.WRITE)).toBe(true);
@@ -243,7 +243,7 @@ describe('Permission Middleware Integration', () => {
 
     it('should enforce that key_revoke can read and revoke', () => {
       const revokePerms = [Permission.KEY_REVOKE];
-      
+
       expect(hasPermission(revokePerms, Permission.READ)).toBe(true);
       expect(hasPermission(revokePerms, Permission.KEY_REVOKE)).toBe(true);
       expect(hasPermission(revokePerms, Permission.WRITE)).toBe(false);
@@ -252,7 +252,7 @@ describe('Permission Middleware Integration', () => {
 
     it('should enforce that write can read and write', () => {
       const writePerms = [Permission.WRITE];
-      
+
       expect(hasPermission(writePerms, Permission.READ)).toBe(true);
       expect(hasPermission(writePerms, Permission.WRITE)).toBe(true);
       expect(hasPermission(writePerms, Permission.KEY_REVOKE)).toBe(false);
@@ -261,7 +261,7 @@ describe('Permission Middleware Integration', () => {
 
     it('should enforce that read can only read', () => {
       const readPerms = [Permission.READ];
-      
+
       expect(hasPermission(readPerms, Permission.READ)).toBe(true);
       expect(hasPermission(readPerms, Permission.WRITE)).toBe(false);
       expect(hasPermission(readPerms, Permission.KEY_REVOKE)).toBe(false);
@@ -272,7 +272,7 @@ describe('Permission Middleware Integration', () => {
   describe('Real-world permission scenarios', () => {
     it('should allow standard user to read and write', () => {
       const userPerms = [...PermissionGroups.STANDARD];
-      
+
       expect(hasAllPermissions(userPerms, [Permission.READ, Permission.WRITE])).toBe(true);
       expect(hasPermission(userPerms, Permission.KEY_REVOKE)).toBe(false);
       expect(isAdmin(userPerms)).toBe(false);
@@ -280,14 +280,16 @@ describe('Permission Middleware Integration', () => {
 
     it('should allow key manager to manage keys', () => {
       const managerPerms = [...PermissionGroups.KEY_MANAGER];
-      
-      expect(hasAllPermissions(managerPerms, [Permission.READ, Permission.WRITE, Permission.KEY_REVOKE])).toBe(true);
+
+      expect(
+        hasAllPermissions(managerPerms, [Permission.READ, Permission.WRITE, Permission.KEY_REVOKE]),
+      ).toBe(true);
       expect(isAdmin(managerPerms)).toBe(false);
     });
 
     it('should allow admin full access', () => {
       const adminPerms = [...PermissionGroups.ADMIN];
-      
+
       expect(isAdmin(adminPerms)).toBe(true);
       expect(hasAllPermissions(adminPerms, Object.values(Permission))).toBe(true);
     });
@@ -298,7 +300,7 @@ describe('Permission Security Tests', () => {
   describe('Privilege escalation prevention', () => {
     it('should not allow read-only user to escalate to write', () => {
       const readOnlyPerms = [...PermissionGroups.READ_ONLY];
-      
+
       expect(hasPermission(readOnlyPerms, Permission.WRITE)).toBe(false);
       expect(hasPermission(readOnlyPerms, Permission.KEY_REVOKE)).toBe(false);
       expect(hasPermission(readOnlyPerms, Permission.ADMIN)).toBe(false);
@@ -306,14 +308,14 @@ describe('Permission Security Tests', () => {
 
     it('should not allow standard user to escalate to key_revoke', () => {
       const standardPerms = [...PermissionGroups.STANDARD];
-      
+
       expect(hasPermission(standardPerms, Permission.KEY_REVOKE)).toBe(false);
       expect(hasPermission(standardPerms, Permission.ADMIN)).toBe(false);
     });
 
     it('should not allow key manager to escalate to admin', () => {
       const managerPerms = [...PermissionGroups.KEY_MANAGER];
-      
+
       expect(hasPermission(managerPerms, Permission.ADMIN)).toBe(false);
       expect(isAdmin(managerPerms)).toBe(false);
     });
@@ -343,20 +345,20 @@ describe('Permission Security Tests', () => {
   describe('Multiple permission checks', () => {
     it('should correctly check multiple permissions at once', () => {
       const userPerms = [Permission.READ, Permission.KEY_REVOKE];
-      
+
       // Has read and key_revoke
       expect(hasAllPermissions(userPerms, [Permission.READ, Permission.KEY_REVOKE])).toBe(true);
-      
+
       // Does not have write
       expect(hasAllPermissions(userPerms, [Permission.READ, Permission.WRITE])).toBe(false);
-      
+
       // Does not have admin
       expect(hasAllPermissions(userPerms, [Permission.ADMIN])).toBe(false);
     });
 
     it('should handle checking against empty required permissions', () => {
       const userPerms = [Permission.READ];
-      
+
       expect(hasAllPermissions(userPerms, [])).toBe(true);
     });
   });

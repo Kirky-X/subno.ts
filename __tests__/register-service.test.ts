@@ -6,7 +6,6 @@ import { RegisterService } from '@/src/lib/services/register.service';
 import { channelRepository } from '@/src/lib/repositories/channel.repository';
 import { auditService } from '@/src/lib/services/audit.service';
 import { getDatabase } from '@/src/db';
-import { publicKeys } from '@/src/db/schema';
 
 vi.mock('@/src/db', () => ({
   getDatabase: vi.fn(),
@@ -30,18 +29,19 @@ describe('RegisterService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     mockDb = {
       insert: vi.fn().mockReturnThis(),
       values: vi.fn().mockReturnThis(),
       returning: vi.fn(),
       update: vi.fn().mockReturnThis(),
+      set: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       from: vi.fn().mockReturnThis(),
     };
-    
+
     vi.mocked(getDatabase).mockReturnValue(mockDb);
     service = new RegisterService();
   });
@@ -49,17 +49,17 @@ describe('RegisterService', () => {
   describe('validatePublicKey', () => {
     it('应该验证有效的 RSA 公钥', () => {
       const validKey = `-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----`;
-      
+
       const result = service.validatePublicKey(validKey, 'RSA-2048');
-      
+
       expect(result).toBe(true);
     });
 
     it('应该验证有效的 ECC 公钥', () => {
       const validKey = `-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE...\n-----END PUBLIC KEY-----`;
-      
+
       const result = service.validatePublicKey(validKey, 'ECC-SECP256K1');
-      
+
       expect(result).toBe(true);
     });
 
@@ -101,21 +101,21 @@ describe('RegisterService', () => {
   describe('generateChannelId', () => {
     it('应该生成以 enc_开头的频道 ID', () => {
       const channelId = service.generateChannelId();
-      
+
       expect(channelId).toMatch(/^enc_[a-f0-9]+$/);
     });
 
     it('应该生成唯一 ID', () => {
       const id1 = service.generateChannelId();
       const id2 = service.generateChannelId();
-      
+
       expect(id1).not.toBe(id2);
     });
 
-    it('应该生成 16 字符的 hex（加上 enc_前缀共 21 字符）', () => {
+    it('应该生成 16 字符的 hex（加上 enc_前缀共 20 字符）', async () => {
       const channelId = service.generateChannelId();
-      
-      expect(channelId.length).toBe(21); // enc_ (4) + 16 hex chars
+
+      expect(channelId.length).toBe(20); // enc_ (4) + 16 hex chars
     });
   });
 
@@ -123,10 +123,10 @@ describe('RegisterService', () => {
     const validPublicKey = `-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----`;
 
     it('应该成功注册公钥（默认算法）', async () => {
-      const mockChannelId = 'enc_abc123';
+      const _mockChannelId = 'enc_abc123';
       const mockKeyId = 'pk_xyz789';
-      
-      vi.mocked(channelRepository.create).mockResolvedValueOnce(undefined);
+
+      vi.mocked(channelRepository.create).mockResolvedValueOnce(undefined as any);
       vi.mocked(mockDb.insert).mockReturnValue(mockDb);
       vi.mocked(mockDb.values).mockReturnValue(mockDb);
       vi.mocked(mockDb.returning).mockResolvedValueOnce([{ id: mockKeyId }]);
@@ -143,7 +143,7 @@ describe('RegisterService', () => {
         expect.objectContaining({
           action: 'public_key_registered',
           success: true,
-        })
+        }),
       );
     });
 
@@ -208,7 +208,7 @@ describe('RegisterService', () => {
         expect.objectContaining({
           action: 'public_key_registration_failed',
           success: false,
-        })
+        }),
       );
     });
 
@@ -228,14 +228,16 @@ describe('RegisterService', () => {
 
   describe('queryByChannelId', () => {
     it('应该查询到公钥信息', async () => {
-      const mockResult = [{
-        id: 'pk_123',
-        channelId: 'enc_abc',
-        algorithm: 'RSA-2048',
-        createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400 * 1000),
-        isDeleted: false,
-      }];
+      const mockResult = [
+        {
+          id: 'pk_123',
+          channelId: 'enc_abc',
+          algorithm: 'RSA-2048',
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + 86400 * 1000),
+          isDeleted: false,
+        },
+      ];
 
       vi.mocked(mockDb.select).mockReturnValue(mockDb);
       vi.mocked(mockDb.from).mockReturnValue(mockDb);
@@ -262,14 +264,16 @@ describe('RegisterService', () => {
     });
 
     it('应该检测过期的公钥', async () => {
-      const mockResult = [{
-        id: 'pk_123',
-        channelId: 'enc_abc',
-        algorithm: 'RSA-2048',
-        createdAt: new Date(Date.now() - 100000),
-        expiresAt: new Date(Date.now() - 1000), // Expired
-        isDeleted: false,
-      }];
+      const mockResult = [
+        {
+          id: 'pk_123',
+          channelId: 'enc_abc',
+          algorithm: 'RSA-2048',
+          createdAt: new Date(Date.now() - 100000),
+          expiresAt: new Date(Date.now() - 1000), // Expired
+          isDeleted: false,
+        },
+      ];
 
       vi.mocked(mockDb.select).mockReturnValue(mockDb);
       vi.mocked(mockDb.from).mockReturnValue(mockDb);
@@ -297,13 +301,15 @@ describe('RegisterService', () => {
 
   describe('queryByKeyId', () => {
     it('应该通过 keyId 查询公钥', async () => {
-      const mockResult = [{
-        id: 'pk_456',
-        channelId: 'enc_def',
-        algorithm: 'RSA-2048',
-        createdAt: new Date(),
-        isDeleted: false,
-      }];
+      const mockResult = [
+        {
+          id: 'pk_456',
+          channelId: 'enc_def',
+          algorithm: 'RSA-2048',
+          createdAt: new Date(),
+          isDeleted: false,
+        },
+      ];
 
       vi.mocked(mockDb.select).mockReturnValue(mockDb);
       vi.mocked(mockDb.from).mockReturnValue(mockDb);
@@ -350,4 +356,3 @@ describe('RegisterService', () => {
     });
   });
 });
-

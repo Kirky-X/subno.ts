@@ -10,7 +10,7 @@ describe('Security Implementation Files', () => {
     it('should have rate-limit.ts file', () => {
       const filePath = path.join(process.cwd(), 'src/lib/middleware/rate-limit.ts');
       expect(fs.existsSync(filePath)).toBe(true);
-      
+
       const content = fs.readFileSync(filePath, 'utf-8');
       // Check for new implementation using rate-limiter-flexible library
       expect(content).toContain('rateLimit');
@@ -31,7 +31,7 @@ describe('Security Implementation Files', () => {
     it('should have app/middleware.ts file', () => {
       const filePath = path.join(process.cwd(), 'app/middleware.ts');
       expect(fs.existsSync(filePath)).toBe(true);
-      
+
       const content = fs.readFileSync(filePath, 'utf-8');
       expect(content).toContain('rateLimit');
       expect(content).toContain('X-RateLimit');
@@ -43,7 +43,7 @@ describe('Security Implementation Files', () => {
     it('should have security headers in next.config.ts', () => {
       const filePath = path.join(process.cwd(), 'next.config.ts');
       const content = fs.readFileSync(filePath, 'utf-8');
-      
+
       expect(content).toContain('Strict-Transport-Security');
       expect(content).toContain('X-Frame-Options');
       expect(content).toContain('X-Content-Type-Options');
@@ -58,12 +58,10 @@ describe('Security Implementation Files', () => {
     it('should have permission validation in cancel route', () => {
       const filePath = path.join(process.cwd(), 'app/api/keys/[id]/revoke/cancel/route.ts');
       const content = fs.readFileSync(filePath, 'utf-8');
-      
-      // Check for permission validation
-      expect(content).toContain('validatePermission');
-      expect(content).toContain('key_revoke');
-      expect(content).toContain('AuthorizationError');
-      expect(content).toContain('INSUFFICIENT_PERMISSIONS');
+
+      // Check for permission validation using standard middleware
+      expect(content).toContain('requireApiKeyWithPermissions');
+      expect(content).toContain('ApiKeyPermission.REVOKE');
       expect(content).toContain('auditService.log');
     });
   });
@@ -72,7 +70,7 @@ describe('Security Implementation Files', () => {
     it('should have validateCronSecret in cleanup.service.ts', () => {
       const filePath = path.join(process.cwd(), 'src/lib/services/cleanup.service.ts');
       const content = fs.readFileSync(filePath, 'utf-8');
-      
+
       expect(content).toContain('validateCronSecret');
       expect(content).toContain('CRON_SECRET');
       expect(content).toContain('X-Cron-Secret');
@@ -83,7 +81,7 @@ describe('Security Implementation Files', () => {
     it('should include new audit action types', () => {
       const filePath = path.join(process.cwd(), 'src/lib/services/audit.service.ts');
       const content = fs.readFileSync(filePath, 'utf-8');
-      
+
       expect(content).toContain('cancel_revocation_unauthorized');
       expect(content).toContain('key_revoke_unauthorized');
     });
@@ -93,7 +91,7 @@ describe('Security Implementation Files', () => {
     it('should have rate limit variables in .env.example', () => {
       const filePath = path.join(process.cwd(), '.env.example');
       const content = fs.readFileSync(filePath, 'utf-8');
-      
+
       expect(content).toContain('RATE_LIMIT_WINDOW_SECONDS');
       expect(content).toContain('RATE_LIMIT_DEFAULT');
       expect(content).toContain('RATE_LIMIT_REVOKE');
@@ -105,7 +103,7 @@ describe('Security Implementation Files', () => {
     it('should export apiKeyRepository from services index', () => {
       const filePath = path.join(process.cwd(), 'src/lib/services/index.ts');
       const content = fs.readFileSync(filePath, 'utf-8');
-      
+
       expect(content).toContain('apiKeyRepository');
       expect(content).toContain('ApiKeyRepository');
     });

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { channelService } from '@/src/lib/services';
 import { POST, GET } from '@/app/api/channels/route';
 
@@ -30,11 +30,16 @@ describe('/api/channels', () => {
     vi.resetAllMocks();
   });
 
-  const createMockRequest = (bodyOrParams: any, method: string = 'POST', headers: Record<string, string> = {}) => {
-    const url = method === 'POST' 
-      ? 'http://localhost:3000/api/channels'
-      : `http://localhost:3000/api/channels?${new URLSearchParams(bodyOrParams).toString()}`;
-    
+  const createMockRequest = (
+    bodyOrParams: any,
+    method = 'POST',
+    headers: Record<string, string> = {},
+  ) => {
+    const url =
+      method === 'POST'
+        ? 'http://localhost:3000/api/channels'
+        : `http://localhost:3000/api/channels?${new URLSearchParams(bodyOrParams).toString()}`;
+
     return new NextRequest(url, {
       method,
       headers: {
@@ -48,15 +53,21 @@ describe('/api/channels', () => {
   describe('POST /api/channels - 创建频道', () => {
     it('应该成功创建公共频道', async () => {
       const mockBody = { name: 'Test Channel', type: 'public' };
-      const mockResult = { 
-        success: true, 
-        channel: { id: 'ch_123', name: 'Test Channel', type: 'public' } 
+      const mockResult = {
+        success: true,
+        channel: {
+          id: 'ch_123',
+          name: 'Test Channel',
+          type: 'public',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          isActive: true,
+        },
       };
 
       vi.mocked(channelService.create).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(201);
       const data = await response.json();
@@ -66,16 +77,25 @@ describe('/api/channels', () => {
 
     it('应该成功创建加密频道', async () => {
       const mockBody = { type: 'encrypted' };
-      const mockResult = { success: true, channel: { type: 'encrypted' } };
+      const mockResult = {
+        success: true,
+        channel: {
+          id: 'ch_enc',
+          name: 'Encrypted',
+          type: 'encrypted',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          isActive: true,
+        },
+      };
 
       vi.mocked(channelService.create).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest(mockBody);
-      await POST(request);
+      await POST(request, { params: Promise.resolve({}) });
 
       expect(channelService.create).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'encrypted' }),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -86,7 +106,7 @@ describe('/api/channels', () => {
       vi.mocked(channelService.create).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(201);
     });
@@ -95,7 +115,7 @@ describe('/api/channels', () => {
       const mockBody = { expiresIn: 30 * 24 * 60 * 60 + 1 };
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
     });
@@ -104,7 +124,7 @@ describe('/api/channels', () => {
       const mockBody = { name: 'a'.repeat(256) };
 
       const request = createMockRequest(mockBody);
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(400);
     });
@@ -115,17 +135,22 @@ describe('/api/channels', () => {
       vi.mocked(channelService.create).mockResolvedValueOnce(mockError);
 
       const request = createMockRequest({ name: 'Existing Channel' });
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(409);
     });
 
     it('应该拒绝缺少认证的请求', async () => {
       const { requireApiKey } = await import('@/src/lib/middleware/api-key');
-      vi.mocked(requireApiKey).mockResolvedValueOnce(new Error('认证失败'));
+      vi.mocked(requireApiKey).mockResolvedValueOnce(
+        NextResponse.json(
+          { success: false, error: { code: 'AUTH_FAILED', message: '认证失败' } },
+          { status: 401 },
+        ),
+      );
 
       const request = createMockRequest({ name: 'Test' });
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(401);
     });
@@ -133,15 +158,23 @@ describe('/api/channels', () => {
 
   describe('GET /api/channels - 查询频道', () => {
     it('应该通过 ID 查询频道', async () => {
-      const mockResult = { 
-        success: true, 
-        data: [{ id: 'ch_123', name: 'Test' }] 
+      const mockResult = {
+        success: true,
+        data: [
+          {
+            id: 'ch_123',
+            name: 'Test',
+            type: 'public',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            isActive: true,
+          },
+        ],
       };
 
       vi.mocked(channelService.query).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest({ id: 'ch_123' }, 'GET');
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
       const data = await response.json();
@@ -154,24 +187,24 @@ describe('/api/channels', () => {
       vi.mocked(channelService.query).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest({ type: 'public' }, 'GET');
-      await GET(request);
+      await GET(request, { params: Promise.resolve({}) });
 
       expect(channelService.query).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'public' })
+        expect.objectContaining({ type: 'public' }),
       );
     });
 
     it('应该支持分页查询', async () => {
-      const mockResult = { 
-        success: true, 
+      const mockResult = {
+        success: true,
         data: [],
-        pagination: { limit: 10, offset: 0, total: 0 }
+        pagination: { limit: 10, offset: 0, total: 0, hasMore: false },
       };
 
       vi.mocked(channelService.query).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest({ limit: '10', offset: '20' }, 'GET');
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
       const data = await response.json();
@@ -184,7 +217,7 @@ describe('/api/channels', () => {
       vi.mocked(channelService.query).mockResolvedValueOnce(mockError);
 
       const request = createMockRequest({ id: 'nonexistent' }, 'GET');
-      const response = await GET(request);
+      const response = await GET(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(404);
     });
@@ -195,10 +228,10 @@ describe('/api/channels', () => {
       vi.mocked(channelService.query).mockResolvedValueOnce(mockResult);
 
       const request = createMockRequest({ creator: 'user123' }, 'GET');
-      await GET(request);
+      await GET(request, { params: Promise.resolve({}) });
 
       expect(channelService.query).toHaveBeenCalledWith(
-        expect.objectContaining({ creator: 'user123' })
+        expect.objectContaining({ creator: 'user123' }),
       );
     });
   });
