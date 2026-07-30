@@ -32,10 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 不传 languages → CodeQL 自动检测仓库语言（JS/TS）
+      # 显式指定语言，避免 CodeQL 误检测 Java/C++（原生依赖中含 .java 文件）
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
+          languages: javascript-typescript
           config: |
             paths-ignore:
               - node_modules
