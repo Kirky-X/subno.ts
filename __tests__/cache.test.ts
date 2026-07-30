@@ -330,8 +330,18 @@ describe('apiKeyCache（预配置缓存）', () => {
   });
 
   it('应该可以存取 API key 验证结果', () => {
-    apiKeyCache.set('test-key', { userId: 'user1', permissions: ['read'], isValid: true });
+    apiKeyCache.set('test-key', {
+      keyId: 'key-1',
+      userId: 'user1',
+      permissions: ['read'],
+      isValid: true,
+    });
     const result = apiKeyCache.get('test-key');
-    expect(result).toEqual({ userId: 'user1', permissions: ['read'], isValid: true });
+    expect(result).toEqual({
+      keyId: 'key-1',
+      userId: 'user1',
+      permissions: ['read'],
+      isValid: true,
+    });
   });
 });

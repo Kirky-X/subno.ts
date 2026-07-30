@@ -22,6 +22,8 @@ import {
 } from '@/src/lib/utils/error-handler';
 import { requireApiKey, getApiKeyInfo } from '@/src/lib/middleware/api-key';
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // DELETE /api/keys/:id
 // - 新模式: 带 confirmationCode 参数，执行两阶段确认删除
 // - 旧模式: 直接删除 (需要 ADMIN_MASTER_KEY)
@@ -29,6 +31,11 @@ export const DELETE = withErrorHandler(
   async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const context = extractRequestContext(request);
     const { id: keyId } = await params;
+
+    if (!UUID_PATTERN.test(keyId)) {
+      throw Errors.notFound('密钥', context.requestId);
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const confirmationCode = searchParams.get('confirmationCode');
 

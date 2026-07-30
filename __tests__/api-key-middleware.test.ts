@@ -775,15 +775,15 @@ describe('API Key Middleware', () => {
       expect(apiKeyRepository.findByKeyHash).toHaveBeenCalledTimes(1);
     });
 
-    it('应该从缓存的 userId 中提取 keyId（split(":") 路径）', async () => {
-      // 缓存命中有效 key 时，keyId = cached.userId.split(':')[0]
-      // 通过手动设置缓存来测试此路径
+    it('应该从缓存中正确返回 keyId 和 userId', async () => {
+      // 缓存命中有效 key 时，应直接返回缓存的 keyId 和 userId
       const { createHash } = await import('crypto');
       const keyHash = createHash('sha256').update(VALID_API_KEY).digest('hex');
       apiKeyCache.set(
         keyHash,
         {
-          userId: 'key-from-cache:user-123',
+          keyId: 'key-uuid-123',
+          userId: 'user-123',
           permissions: [ApiKeyPermission.READ],
           isValid: true,
         },
@@ -793,10 +793,9 @@ describe('API Key Middleware', () => {
       const request = createMockRequest({ 'x-api-key': VALID_API_KEY });
       const info = await getApiKeyInfo(request);
 
-      // keyId 应该是 userId.split(':')[0] = 'key-from-cache'
       expect(info).not.toBeNull();
-      expect(info!.keyId).toBe('key-from-cache');
-      expect(info!.userId).toBe('key-from-cache:user-123');
+      expect(info!.keyId).toBe('key-uuid-123');
+      expect(info!.userId).toBe('user-123');
       // 不应该查询数据库
       expect(apiKeyRepository.findByKeyHash).not.toHaveBeenCalled();
     });

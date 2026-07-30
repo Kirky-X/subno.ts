@@ -18,11 +18,17 @@ import {
   AuthorizationError,
 } from '@/src/lib/utils/error-handler';
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // POST /api/keys/:id/revoke - Request key revocation
 export const POST = withErrorHandler(
   async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const context = extractRequestContext(request);
     const { id: keyId } = await params;
+
+    if (!UUID_PATTERN.test(keyId)) {
+      throw Errors.notFound('密钥', context.requestId);
+    }
 
     // Validate API key and check permissions
     // Requires either 'key_revoke' or 'admin' permission
@@ -163,6 +169,11 @@ export const GET = withErrorHandler(
     }
 
     const { id: revocationId } = await params;
+
+    if (!UUID_PATTERN.test(revocationId)) {
+      throw Errors.notFound('撤销记录', context.requestId);
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const keyId = searchParams.get('keyId');
 

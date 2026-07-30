@@ -137,7 +137,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
       }
       return {
         valid: true,
-        keyId: cached.userId.split(':')[0], // Extract keyId from cache format
+        keyId: cached.keyId,
         userId: cached.userId,
         permissions: cached.permissions,
       };
@@ -148,7 +148,11 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
 
     if (!key) {
       // Cache negative result for 1 minute to prevent brute force
-      apiKeyCache.set(keyHash, { userId: '', permissions: [], isValid: false }, 60 * 1000);
+      apiKeyCache.set(
+        keyHash,
+        { keyId: '', userId: '', permissions: [], isValid: false },
+        60 * 1000,
+      );
       return {
         valid: false,
         error: 'Invalid API key',
@@ -158,7 +162,11 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
 
     // Verify key is active
     if (!key.isActive) {
-      apiKeyCache.set(keyHash, { userId: '', permissions: [], isValid: false }, 60 * 1000);
+      apiKeyCache.set(
+        keyHash,
+        { keyId: '', userId: '', permissions: [], isValid: false },
+        60 * 1000,
+      );
       return {
         valid: false,
         error: 'API key is inactive',
@@ -168,7 +176,11 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
 
     // Verify key has not been revoked
     if (key.isDeleted) {
-      apiKeyCache.set(keyHash, { userId: '', permissions: [], isValid: false }, 60 * 1000);
+      apiKeyCache.set(
+        keyHash,
+        { keyId: '', userId: '', permissions: [], isValid: false },
+        60 * 1000,
+      );
       return {
         valid: false,
         error: 'API key has been revoked',
@@ -178,7 +190,11 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
 
     // Verify key has not expired
     if (key.expiresAt && new Date(key.expiresAt) < new Date()) {
-      apiKeyCache.set(keyHash, { userId: '', permissions: [], isValid: false }, 60 * 1000);
+      apiKeyCache.set(
+        keyHash,
+        { keyId: '', userId: '', permissions: [], isValid: false },
+        60 * 1000,
+      );
       return {
         valid: false,
         error: 'API key has expired',
@@ -188,6 +204,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyValida
 
     // Cache positive result for 5 minutes
     const cacheData = {
+      keyId: key.id,
       userId: key.userId,
       permissions: key.permissions as string[],
       isValid: true,

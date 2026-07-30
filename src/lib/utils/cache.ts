@@ -196,7 +196,7 @@ export class Cache<K extends string | number, V> {
 // API Key validation cache (frequently accessed)
 export const apiKeyCache = new Cache<
   string,
-  { userId: string; permissions: string[]; isValid: boolean }
+  { keyId: string; userId: string; permissions: string[]; isValid: boolean }
 >({
   max: 5000,
   ttl: 5 * 60 * 1000, // 5 minutes
