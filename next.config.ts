@@ -6,6 +6,10 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   output: 'standalone',
   pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  // 显式指定项目根目录，避免 Next.js 误推断到 /home/dev/package-lock.json
+  turbopack: {
+    root: __dirname,
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '4.5mb',

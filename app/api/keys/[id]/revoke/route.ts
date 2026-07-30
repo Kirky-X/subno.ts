@@ -31,17 +31,16 @@ export const POST = withErrorHandler(
     }
 
     // Validate API key and check permissions
-    // Requires either 'key_revoke' or 'admin' permission
+    // requireApiKeyWithPermissions 已正确区分：
+    //   - 无 API Key / 无效 Key → 401 AuthenticationError
+    //   - Key 有效但权限不足 → 403 AuthorizationError
     // SECURITY NOTE: Ownership verification is performed in the service layer
     // The KeyRevocationService.validateApiKeyPermission method verifies that:
     // 1. The API key has 'key_revoke' or 'admin' permission
     // 2. For non-admin users, only keys from channels they created can be revoked
     const authError = await requireApiKeyWithPermissions(request, [ApiKeyPermission.REVOKE]);
     if (authError) {
-      throw new AuthorizationError('权限不足以执行密钥撤销操作', {
-        code: ErrorCode.INSUFFICIENT_PERMISSIONS,
-        requestId: context.requestId,
-      });
+      return authError;
     }
 
     // Get API key info for audit logging
@@ -151,12 +150,10 @@ export const GET = withErrorHandler(
     const context = extractRequestContext(request);
 
     // Validate API key - requires at least read permission
+    // requireApiKeyWithPermissions 已正确区分 401（无 Key）与 403（权限不足）
     const authError = await requireApiKeyWithPermissions(request, [ApiKeyPermission.READ]);
     if (authError) {
-      throw new AuthorizationError('权限不足以查看撤销状态', {
-        code: ErrorCode.INSUFFICIENT_PERMISSIONS,
-        requestId: context.requestId,
-      });
+      return authError;
     }
 
     // 获取 API 密钥信息用于所有权验证 (修复 H2: IDOR)
