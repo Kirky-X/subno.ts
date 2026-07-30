@@ -39,17 +39,86 @@ interface ErrorResponse {
 
 ## API 实现状态总览
 
-| API 端点 | 方法 | 状态 | 说明 |
-|----------|------|------|------|
-| `/api/keys/[id]` | DELETE | ✅ 已实现 | 密钥删除（两阶段确认） |
-| `/api/keys/[id]/revoke` | POST, GET | ✅ 已实现 | 请求/查询密钥撤销 |
-| `/api/keys/[id]/revoke/cancel` | POST | ✅ 已实现 | 取消撤销请求 |
-| `/api/register` | POST, GET | ✅ 已实现 | 公钥注册与查询 |
-| `/api/channels` | POST, GET | ✅ 已实现 | 频道创建与查询 |
-| `/api/publish` | POST, GET | ✅ 已实现 | 消息发布与队列状态 |
-| `/api/subscribe` | GET (SSE) | ✅ 已实现 | 实时消息订阅 |
-| `/api/cron/cleanup-channels` | GET | ✅ 已实现 | 频道清理 |
-| `/api/cron/cleanup-keys` | GET | ✅ 已实现 | 密钥清理 |
+| API 端点                       | 方法      | 状态      | 说明                                              |
+| ------------------------------ | --------- | --------- | ------------------------------------------------- |
+| `/api/health`                  | GET       | ✅ 已实现 | 存活检查（Liveness probe）                        |
+| `/api/ready`                   | GET       | ✅ 已实现 | 就绪检查（Readiness probe，含 DB/Redis 依赖检查） |
+| `/api/keys/[id]`               | DELETE    | ✅ 已实现 | 密钥删除（两阶段确认）                            |
+| `/api/keys/[id]/revoke`        | POST, GET | ✅ 已实现 | 请求/查询密钥撤销                                 |
+| `/api/keys/[id]/revoke/cancel` | POST      | ✅ 已实现 | 取消撤销请求                                      |
+| `/api/register`                | POST, GET | ✅ 已实现 | 公钥注册与查询                                    |
+| `/api/channels`                | POST, GET | ✅ 已实现 | 频道创建与查询                                    |
+| `/api/publish`                 | POST, GET | ✅ 已实现 | 消息发布与队列状态                                |
+| `/api/subscribe`               | GET (SSE) | ✅ 已实现 | 实时消息订阅                                      |
+| `/api/cron/cleanup-channels`   | GET       | ✅ 已实现 | 频道清理                                          |
+| `/api/cron/cleanup-keys`       | GET       | ✅ 已实现 | 密钥清理                                          |
+
+---
+
+## 健康检查
+
+### GET /api/health
+
+存活检查（Liveness probe）。仅验证进程存活，不检查依赖（DB/Redis），避免因依赖抖动导致重启。用于 K8s livenessProbe / Vercel 健康检查。
+
+**认证**: 无需认证
+
+**响应 (200)**:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-01-13T00:00:00.000Z",
+  "uptime": 1234.56
+}
+```
+
+---
+
+### GET /api/ready
+
+就绪检查（Readiness probe）。检查依赖（DB/Redis）是否就绪，任一依赖不可用返回 503。用于 K8s readinessProbe / 负载均衡流量切换。
+
+**认证**: 无需认证
+
+**检查项**:
+
+- 数据库：执行 `SELECT 1` 验证连接
+- Redis：若配置了 `REDIS_URL` 则 ping 验证，未配置则跳过（允许无 Redis 部署）
+
+**响应 (200)**:
+
+```json
+{
+  "status": "ready",
+  "timestamp": "2026-01-13T00:00:00.000Z",
+  "checks": {
+    "database": {
+      "status": "ok",
+      "latencyMs": 5
+    },
+    "redis": {
+      "status": "ok",
+      "latencyMs": 2
+    }
+  }
+}
+```
+
+**响应 (503)**:
+
+```json
+{
+  "status": "not ready",
+  "timestamp": "2026-01-13T00:00:00.000Z",
+  "checks": {
+    "database": {
+      "status": "error",
+      "error": "database unavailable"
+    }
+  }
+}
+```
 
 ---
 
@@ -59,7 +128,7 @@ interface ErrorResponse {
 
 注册新的加密公钥，自动创建加密频道。
 
-**认证**: 无需认证
+**认证**: X-API-Key (必需)
 
 **请求**:
 
@@ -76,12 +145,12 @@ interface ErrorResponse {
 
 **参数说明**:
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| publicKey | string | 是 | PEM 格式公钥 |
-| algorithm | string | 否 | 算法：RSA-2048, RSA-4096, ECC-SECP256K1 |
-| expiresIn | number | 否 | 有效期秒数（最大 30 天） |
-| metadata | object | 否 | 元数据 |
+| 参数      | 类型   | 必填 | 说明                                    |
+| --------- | ------ | ---- | --------------------------------------- |
+| publicKey | string | 是   | PEM 格式公钥                            |
+| algorithm | string | 否   | 算法：RSA-2048, RSA-4096, ECC-SECP256K1 |
+| expiresIn | number | 否   | 有效期秒数（最大 30 天）                |
+| metadata  | object | 否   | 元数据                                  |
 
 **响应 (201)**:
 
@@ -101,8 +170,6 @@ interface ErrorResponse {
 ---
 
 ### GET /api/register
-
-> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
 
 查询已注册的公钥信息。
 
@@ -136,8 +203,6 @@ GET /api/register?keyId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 ### POST /api/channels
 
-> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
-
 创建新频道。
 
 **请求**:
@@ -158,12 +223,12 @@ GET /api/register?keyId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 **参数说明**:
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| id | string | 否 | 频道 ID |
-| name | string | 否 | 频道名称 |
-| type | string | 否 | 类型：public, encrypted |
-| expiresIn | number | 否 | 有效期秒数 |
+| 参数      | 类型   | 必填 | 说明                    |
+| --------- | ------ | ---- | ----------------------- |
+| id        | string | 否   | 频道 ID                 |
+| name      | string | 否   | 频道名称                |
+| type      | string | 否   | 类型：public, encrypted |
+| expiresIn | number | 否   | 有效期秒数              |
 
 **响应 (201)**:
 
@@ -184,8 +249,6 @@ GET /api/register?keyId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ---
 
 ### GET /api/channels
-
-> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
 
 查询频道列表或获取特定频道。
 
@@ -226,11 +289,9 @@ GET /api/channels?type=public
 
 ### POST /api/publish
 
-> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
-
 发布消息到频道。
 
-**认证**: 可选 (X-API-Key)
+**认证**: X-API-Key (必需)
 
 **请求**:
 
@@ -248,13 +309,13 @@ GET /api/channels?type=public
 
 **参数说明**:
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| channel | string | 是 | 频道 ID |
-| message | string | 是 | 消息内容 |
-| priority | string | 否 | 优先级：critical, high, normal, low, bulk |
-| encrypted | boolean | 否 | 是否加密 |
-| autoCreate | boolean | 否 | 自动创建频道 |
+| 参数       | 类型    | 必填 | 说明                                      |
+| ---------- | ------- | ---- | ----------------------------------------- |
+| channel    | string  | 是   | 频道 ID                                   |
+| message    | string  | 是   | 消息内容                                  |
+| priority   | string  | 否   | 优先级：critical, high, normal, low, bulk |
+| encrypted  | boolean | 否   | 是否加密                                  |
+| autoCreate | boolean | 否   | 自动创建频道                              |
 
 **响应 (201)**:
 
@@ -273,8 +334,6 @@ GET /api/channels?type=public
 ---
 
 ### GET /api/publish
-
-> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
 
 获取频道消息队列状态。
 
@@ -311,8 +370,6 @@ GET /api/publish?channel=my-channel&count=10
 
 ### GET /api/subscribe
 
-> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
-
 通过 Server-Sent Events (SSE) 订阅频道实时消息。
 
 **请求**:
@@ -337,12 +394,12 @@ data: {"id":"msg_1234567890","channel":"my-channel","message":"Hello!"}
 ```javascript
 const eventSource = new EventSource('/api/subscribe?channel=my-channel');
 
-eventSource.addEventListener('message', (event) => {
+eventSource.addEventListener('message', event => {
   const data = JSON.parse(event.data);
   console.log('收到消息:', data.message);
 });
 
-eventSource.onerror = (error) => {
+eventSource.onerror = error => {
   console.log('连接断开，尝试重连...');
 };
 ```
@@ -463,8 +520,6 @@ X-API-Key: <api-key-id>
 
 ### GET /api/cron/cleanup-channels
 
-> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
-
 清理过期频道（需要 cron secret）。
 
 **认证**: X-Cron-Secret (必需)
@@ -493,8 +548,6 @@ X-Cron-Secret: your-cron-secret
 ---
 
 ### GET /api/cron/cleanup-keys
-
-> ⚠️ **注意**：此 API 端点正在开发中，暂不可用。
 
 清理过期密钥和数据（需要 cron secret）。
 
@@ -526,28 +579,28 @@ X-Cron-Secret: your-cron-secret
 
 ### 错误码参考
 
-| HTTP 状态码 | 错误码 | 说明 |
-|------------|--------|------|
-| 400 | VALIDATION_ERROR | 请求参数验证失败 |
-| 401 | AUTH_REQUIRED | API 密钥必需但未提供 |
-| 401 | AUTH_FAILED | API 密钥无效 |
-| 403 | FORBIDDEN | 权限不足 |
-| 404 | NOT_FOUND | 资源不存在 |
-| 409 | CHANNEL_EXISTS | 频道已存在 |
-| 410 | KEY_EXPIRED | 密钥已过期 |
-| 413 | MESSAGE_TOO_LARGE | 消息太大 |
-| 429 | RATE_LIMIT_EXCEEDED | 请求过于频繁 |
-| 500 | INTERNAL_ERROR | 服务器内部错误 |
+| HTTP 状态码 | 错误码              | 说明                 |
+| ----------- | ------------------- | -------------------- |
+| 400         | VALIDATION_ERROR    | 请求参数验证失败     |
+| 401         | AUTH_REQUIRED       | API 密钥必需但未提供 |
+| 401         | AUTH_FAILED         | API 密钥无效         |
+| 403         | FORBIDDEN           | 权限不足             |
+| 404         | NOT_FOUND           | 资源不存在           |
+| 409         | CHANNEL_EXISTS      | 频道已存在           |
+| 410         | KEY_EXPIRED         | 密钥已过期           |
+| 413         | MESSAGE_TOO_LARGE   | 消息太大             |
+| 429         | RATE_LIMIT_EXCEEDED | 请求过于频繁         |
+| 500         | INTERNAL_ERROR      | 服务器内部错误       |
 
 ---
 
 ## 速率限制
 
-| 端点 | 限制 | 时间窗口 |
-|------|------|----------|
-| POST /api/publish | 10 次 | 60 秒 |
-| POST /api/register | 5 次 | 60 秒 |
-| GET /api/subscribe | 5 次 | 60 秒 |
+| 端点               | 限制  | 时间窗口 |
+| ------------------ | ----- | -------- |
+| POST /api/publish  | 10 次 | 60 秒    |
+| POST /api/register | 5 次  | 60 秒    |
+| GET /api/subscribe | 5 次  | 60 秒    |
 
 ---
 

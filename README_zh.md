@@ -32,15 +32,15 @@
 
 ## ✨ 核心特性
 
-| 特性 | 状态 | 说明 |
-|---|---|---|
-| **🔐 公钥注册与管理** | 🚧 开发中 | 支持多种加密算法（RSA-2048、RSA-4096、ECC-SECP256K1）的公钥注册、存储和查询 |
-| **📢 频道管理** | 🚧 开发中 | 支持公开频道、加密频道和临时频道三种类型，满足不同场景需求 |
-| **⚡ 实时消息推送** | 🚧 开发中 | 基于 Server-Sent Events (SSE) 的实时消息分发，即时送达订阅者 |
-| **🔒 消息加密** | 🚧 开发中 | 采用混合加密架构（RSA + AES-256-GCM），支持端到端加密 |
-| **🛡️ 安全控制** | ✅ 已实现 | API 密钥认证、请求限流、审计日志、输入验证等多重安全机制 |
-| **🎯 消息优先级** | 🚧 开发中 | 支持优先级队列（CRITICAL/HIGH/NORMAL/LOW/BULK），确保重要消息优先处理 |
-| **🔑 两阶段撤销** | ✅ 已实现 | 密钥撤销采用两阶段确认机制，防止误操作 |
+| 特性                  | 状态      | 说明                                                                        |
+| --------------------- | --------- | --------------------------------------------------------------------------- |
+| **🔐 公钥注册与管理** | ✅ 已实现 | 支持多种加密算法（RSA-2048、RSA-4096、ECC-SECP256K1）的公钥注册、存储和查询 |
+| **📢 频道管理**       | ✅ 已实现 | 支持公开频道、加密频道和临时频道三种类型，满足不同场景需求                  |
+| **⚡ 实时消息推送**   | ✅ 已实现 | 基于 Server-Sent Events (SSE) 的实时消息分发，即时送达订阅者                |
+| **🔒 消息加密**       | ✅ 已实现 | 采用混合加密架构（RSA + AES-256-GCM），支持端到端加密                       |
+| **🛡️ 安全控制**       | ✅ 已实现 | API 密钥认证、请求限流、审计日志、输入验证等多重安全机制                    |
+| **🎯 消息优先级**     | ✅ 已实现 | 支持优先级队列（CRITICAL/HIGH/NORMAL/LOW/BULK），确保重要消息优先处理       |
+| **🔑 两阶段撤销**     | ✅ 已实现 | 密钥撤销采用两阶段确认机制，防止误操作                                      |
 
 ---
 
@@ -60,7 +60,7 @@
 
 [![Drizzle ORM](https://img.shields.io/badge/Drizzle%20ORM-0.45.1-6291c5)](https://orm.drizzle.team)
 
-[![Zod](https://img.shields.io/badge/Zod-3.24.1-c42427)](https://zod.dev)
+[![Zod](https://img.shields.io/badge/Zod-4.4.3-c42427)](https://zod.dev)
 
 </div>
 
@@ -144,24 +144,25 @@ subno.ts/
 └── scripts/                # 脚本工具
 ```
 
-> ⚠️ **注意**：以下 API 端点正在开发中：`/api/register`、`/api/channels`、`/api/publish`、`/api/subscribe`、`/api/cron`
-
 ---
 
 ## 🔌 API 概览
 
 ### API 实现状态
 
-| API 端点 | 方法 | 状态 | 说明 |
-|----------|------|------|------|
-| `/api/keys/[id]` | DELETE | ✅ 已实现 | 密钥删除（两阶段确认） |
-| `/api/keys/[id]/revoke` | POST, GET | ✅ 已实现 | 请求/查询密钥撤销 |
-| `/api/keys/[id]/revoke/cancel` | POST | ✅ 已实现 | 取消撤销请求 |
-| `/api/register` | POST, GET | 🚧 开发中 | 公钥注册与查询 |
-| `/api/channels` | POST, GET | 🚧 开发中 | 频道创建与查询 |
-| `/api/publish` | POST, GET | 🚧 开发中 | 消息发布与队列状态 |
-| `/api/subscribe` | GET (SSE) | 🚧 开发中 | 实时消息订阅 |
-| `/api/cron/*` | GET | 🚧 开发中 | 定时清理任务 |
+| API 端点                       | 方法      | 状态      | 说明                                              |
+| ------------------------------ | --------- | --------- | ------------------------------------------------- |
+| `/api/health`                  | GET       | ✅ 已实现 | 存活检查（Liveness probe）                        |
+| `/api/ready`                   | GET       | ✅ 已实现 | 就绪检查（Readiness probe，含 DB/Redis 依赖检查） |
+| `/api/keys/[id]`               | DELETE    | ✅ 已实现 | 密钥删除（两阶段确认）                            |
+| `/api/keys/[id]/revoke`        | POST, GET | ✅ 已实现 | 请求/查询密钥撤销                                 |
+| `/api/keys/[id]/revoke/cancel` | POST      | ✅ 已实现 | 取消撤销请求                                      |
+| `/api/register`                | POST, GET | ✅ 已实现 | 公钥注册与查询                                    |
+| `/api/channels`                | POST, GET | ✅ 已实现 | 频道创建与查询                                    |
+| `/api/publish`                 | POST, GET | ✅ 已实现 | 消息发布与队列状态                                |
+| `/api/subscribe`               | GET (SSE) | ✅ 已实现 | 实时消息订阅                                      |
+| `/api/cron/cleanup-channels`   | GET       | ✅ 已实现 | 频道清理                                          |
+| `/api/cron/cleanup-keys`       | GET       | ✅ 已实现 | 密钥清理                                          |
 
 ### 已实现 API 示例
 
@@ -185,12 +186,12 @@ DELETE /api/keys/enc_xxx?confirmationCode=xxxxxx
 X-API-Key: your-api-key
 ```
 
-### 开发中 API 示例
+### 其他 API 示例
 
 <details>
-<summary>📋 点击查看计划中的 API 示例</summary>
+<summary>📋 点击查看 API 示例</summary>
 
-#### 公钥注册（开发中）
+#### 公钥注册
 
 ```bash
 POST /api/register
@@ -203,7 +204,7 @@ Content-Type: application/json
 }
 ```
 
-#### 频道管理（开发中）
+#### 频道管理
 
 ```bash
 POST /api/channels
@@ -215,7 +216,7 @@ Content-Type: application/json
 }
 ```
 
-#### 消息发布（开发中）
+#### 消息发布
 
 ```bash
 POST /api/publish
@@ -228,7 +229,7 @@ Content-Type: application/json
 }
 ```
 
-#### 实时订阅（开发中）
+#### 实时订阅
 
 ```bash
 GET /api/subscribe?channel=my-channel
@@ -244,31 +245,31 @@ GET /api/subscribe?channel=my-channel
 
 ### 频道类型
 
-| 类型 | 说明 | 加密 | 图标 |
-|------|------|------|------|
-| 公开频道 | 所有订阅者可访问 | ❌ | 🌐 |
-| 加密频道 | 端到端加密 | ✅ | 🔒 |
-| 临时频道 | 自动过期 | ❌/✅ | ⏱️ |
+| 类型     | 说明             | 加密  | 图标 |
+| -------- | ---------------- | ----- | ---- |
+| 公开频道 | 所有订阅者可访问 | ❌    | 🌐   |
+| 加密频道 | 端到端加密       | ✅    | 🔒   |
+| 临时频道 | 自动过期         | ❌/✅ | ⏱️   |
 
 ### 消息优先级
 
-| 优先级 | 值 | 说明 | 颜色 |
-|--------|-----|------|------|
-| CRITICAL | 100 | 最高优先级 | 🔴 |
-| HIGH | 75 | 高优先级 | 🟠 |
-| NORMAL | 50 | 默认优先级 | 🟡 |
-| LOW | 25 | 低优先级 | 🟢 |
-| BULK | 0 | 批量消息 | ⚪ |
+| 优先级   | 值  | 说明       | 颜色 |
+| -------- | --- | ---------- | ---- |
+| CRITICAL | 100 | 最高优先级 | 🔴   |
+| HIGH     | 75  | 高优先级   | 🟠   |
+| NORMAL   | 50  | 默认优先级 | 🟡   |
+| LOW      | 25  | 低优先级   | 🟢   |
+| BULK     | 0   | 批量消息   | ⚪   |
 
 ---
 
 ## 📚 文档
 
-| 文档 | 描述 |
-|------|------|
+| 文档                                 | 描述                                               |
+| ------------------------------------ | -------------------------------------------------- |
 | [📖 API 参考](docs/API_REFERENCE.md) | 完整的 API 端点文档，包含请求/响应示例和错误码说明 |
-| [📚 用户指南](docs/USER_GUIDE.md) | 产品概述、核心概念、使用示例、安全最佳实践 |
-| [🏗️ 架构文档](docs/ARCHITECTURE.md) | 系统架构、数据流程、安全性设计、性能考虑 |
+| [📚 用户指南](docs/USER_GUIDE.md)    | 产品概述、核心概念、使用示例、安全最佳实践         |
+| [🏗️ 架构文档](docs/ARCHITECTURE.md)  | 系统架构、数据流程、安全性设计、性能考虑           |
 
 ---
 
@@ -311,6 +312,6 @@ Made with ❤️ by [Kirky.X](https://github.com/KirkyX)
 
 <div align="center">
 
-*© 2026 SecureNotify. All rights reserved.*
+_© 2026 SecureNotify. All rights reserved._
 
 </div>
