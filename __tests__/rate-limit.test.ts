@@ -316,12 +316,37 @@ describe('rate-limit middleware', () => {
         points: number;
         duration: number;
         blockDuration: number;
+        useRedisPackage: boolean;
       };
       expect(opts.storeClient).toBe(fakeClient);
       expect(opts.keyPrefix).toBe('rl:default:');
       expect(opts.points).toBe(100);
       expect(opts.duration).toBe(60); // 60000ms / 1000
       expect(opts.blockDuration).toBe(0);
+      // node-redis v4+ 兼容性：constructor.name 不是 'Commander'，
+      // 库自动检测失效，必须显式声明 useRedisPackage 走 eval 路径
+      expect(opts.useRedisPackage).toBe(true);
+    });
+
+    it('应该为 node-redis v6 客户端传递 useRedisPackage: true（修复 rlflxIncr bug）', async () => {
+      const m = await importRateLimit();
+      // 模拟 node-redis v6 客户端：constructor.name === 'Class'，无 defineCommand
+      const fakeNodeRedisClient = {
+        __id: 'node-redis-v6',
+        constructor: { name: 'Class' },
+        defineCommand: undefined,
+        eval: () => Promise.resolve([1, 60000]),
+      };
+      mocks.getRedisClientMock.mockResolvedValue(fakeNodeRedisClient);
+
+      const request = createRequest();
+      await m.rateLimit(request);
+
+      expect(mocks.RateLimiterRedisCtor).toHaveBeenCalledTimes(1);
+      const opts = mocks.RateLimiterRedisCtor.mock.calls[0][0] as {
+        useRedisPackage: boolean;
+      };
+      expect(opts.useRedisPackage).toBe(true);
     });
 
     it('应该在 Redis 返回 null 时回退到 RateLimiterMemory', async () => {

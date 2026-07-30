@@ -66,6 +66,9 @@ async function getRateLimiter(
       ...commonOptions,
       storeClient: client,
       keyPrefix: `rl:${endpointType}:`,
+      // node-redis v4+ 的 constructor.name 不是 'Commander'，库的自动检测失效，
+      // 会导致错误调用不存在的 rlflxIncr 方法。显式声明走 eval 路径。
+      useRedisPackage: true,
     });
     limiterCache.set(endpointType, { limiter: redisLimiter, isRedis: true, clientRef: client });
     return { limiter: redisLimiter, isRedis: true };
