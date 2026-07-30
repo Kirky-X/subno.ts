@@ -129,6 +129,11 @@ jobs:
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+          # 构建时需要 dummy 值避免 env 验证失败（API 路由在收集页面数据时被求值）
+          ADMIN_MASTER_KEY: ci-build-placeholder-key-32-chars-min!!
+          CRON_SECRET: ci-build-placeholder-cron-secret-32-chars!
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci_dummy?sslmode=disable
+          REDIS_URL: redis://127.0.0.1:6379
 
       - name: Create release package
         run: |
@@ -180,6 +185,11 @@ jobs:
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+          # 构建时需要 dummy 值避免 env 验证失败（API 路由在收集页面数据时被求值）
+          ADMIN_MASTER_KEY: ci-build-placeholder-key-32-chars-min!!
+          CRON_SECRET: ci-build-placeholder-cron-secret-32-chars!
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci_dummy?sslmode=disable
+          REDIS_URL: redis://127.0.0.1:6379
 
       - name: Publish to NPM
         run: npm publish
