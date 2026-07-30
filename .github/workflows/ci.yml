@@ -116,6 +116,9 @@ jobs:
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+          # 构建时需要 dummy 值避免 env 验证失败（API 路由在收集页面数据时被求值）
+          ADMIN_MASTER_KEY: ci-build-placeholder-key-32-chars-min!!
+          CRON_SECRET: ci-build-placeholder-cron-secret-32-chars!
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

@@ -38,11 +38,6 @@ jobs:
       - name: Run unit tests
         run: npm run test:coverage -- --run
 
-      - name: Build project
-        run: npm run build
-        env:
-          NEXT_TELEMETRY_DISABLED: '1'
-
       - name: Install Vercel CLI
         run: npm install --no-save vercel@latest
 
