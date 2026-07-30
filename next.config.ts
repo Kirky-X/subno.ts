@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
+
 import type { NextConfig } from 'next';
-import path from 'path';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
@@ -8,6 +10,9 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '4.5mb',
     },
+  },
+  turbopack: {
+    root: __dirname,
   },
   images: {
     unoptimized: true,
@@ -55,7 +60,8 @@ const nextConfig: NextConfig = {
           // Content Security Policy
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'",
+            value:
+              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'",
           },
         ],
       },

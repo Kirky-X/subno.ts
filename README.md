@@ -99,7 +99,42 @@ npm start
 
 # 运行测试
 npm test
+
+# 代码检查
+npm run lint
+
+# 类型检查
+npx tsc --noEmit
 ```
+
+---
+
+## ☁️ 部署
+
+### Vercel 部署（推荐）
+
+本项目已配置 Vercel 自动部署，推送至 `main` 分支即自动触发。
+
+1. **Fork 仓库后**，在 Vercel 导入项目
+2. **配置环境变量**（Vercel Dashboard → Settings → Environment Variables）：
+   - `DATABASE_URL` - PostgreSQL 连接字符串（必需）
+   - `REDIS_URL` - Redis 连接字符串（必需，推荐 Upstash）
+   - `ADMIN_MASTER_KEY` - 管理主密钥（必需，≥32 字符）
+   - `CRON_SECRET` - 定时任务密钥（必需，≥32 字符）
+3. **配置 GitHub Secrets**（用于 CI/CD 部署工作流）：
+   - `VERCEL_TOKEN` - Vercel 访问令牌
+   - `VERCEL_ORG_ID` - Vercel 团队 ID
+   - `VERCEL_PROJECT_ID` - Vercel 项目 ID
+4. 推送至 `main` 分支，GitHub Actions 自动构建、测试、部署
+
+**Cron 任务**（已在 `vercel.json` 配置）：
+
+- `/api/cron/cleanup-channels` - 每小时执行
+- `/api/cron/cleanup-keys` - 每天 03:30 执行
+
+### Docker 容器部署
+
+详见 [Docker 部署文档](docker/DEPLOYMENT.md)。
 
 ---
 
@@ -109,9 +144,16 @@ npm test
 subno.ts/
 ├── app/                    # Next.js App Router
 │   ├── api/               # API 端点
-│   │   └── keys/          # 密钥管理 ✅ 已实现
-│   │       ├── [id]/           # 密钥操作
-│   │       └── [id]/revoke/    # 两阶段撤销
+│   │   ├── keys/          # 密钥管理 ✅ 已实现
+│   │   │   ├── [id]/           # 密钥操作
+│   │   │   └── [id]/revoke/    # 两阶段撤销
+│   │   ├── cron/          # 定时任务 ✅ 已实现
+│   │   ├── health/        # 存活检查
+│   │   ├── ready/         # 就绪检查
+│   │   ├── register/      # 公钥注册
+│   │   ├── channels/      # 频道管理
+│   │   ├── publish/       # 消息发布
+│   │   └── subscribe/     # 实时订阅（SSE）
 │   ├── components/        # React 组件
 │   └── api-docs/          # API 文档页面
 ├── src/
@@ -127,9 +169,13 @@ subno.ts/
 │   ├── rust/              # Rust SDK
 │   ├── java/              # Java SDK
 │   └── c/                 # C SDK
+├── .github/workflows/     # CI/CD（lint/typecheck/test/build/deploy）
+├── docker/                # Docker 部署配置
 ├── docs/                   # 文档
-├── __tests__/              # 测试
-└── scripts/                # 脚本工具
+├── __tests__/              # 测试（1344 测试，覆盖率 99.31%）
+├── scripts/                # 脚本工具
+├── vercel.json             # Vercel 部署配置（含 Cron 任务）
+└── drizzle.config.ts       # Drizzle ORM 配置
 ```
 
 ---
@@ -183,6 +229,7 @@ X-API-Key: your-api-key
 
 ```bash
 POST /api/register
+X-API-Key: your-api-key
 Content-Type: application/json
 
 {
@@ -196,6 +243,7 @@ Content-Type: application/json
 
 ```bash
 POST /api/channels
+X-API-Key: your-api-key
 Content-Type: application/json
 
 {
@@ -208,6 +256,7 @@ Content-Type: application/json
 
 ```bash
 POST /api/publish
+X-API-Key: your-api-key
 Content-Type: application/json
 
 {
@@ -221,6 +270,7 @@ Content-Type: application/json
 
 ```bash
 GET /api/subscribe?channel=my-channel
+X-API-Key: your-api-key
 ```
 
 </details>
