@@ -152,7 +152,7 @@ jobs:
           tar -czf subno-ts-release.tar.gz release-package/
 
       - name: Upload release artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-package
           path: subno-ts-release.tar.gz
