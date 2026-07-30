@@ -30,6 +30,9 @@ next-env.d.ts
 .env
 .env.local
 .env.*.local
+.env.production
+.env.production.local
+docker/.env.production
 
 # IDE and editor directories
 .idea/
@@ -74,3 +77,11 @@ docker-compose.override.yml
 .husky/_/
 .vercel
 .env*.local
+.gitnexus/
+
+# Specmark 工作目录（规则27：禁止入 git）
+specmark/
+**/specmark/
+
+# Binary executables (trivy 等安全扫描工具)
+bin/

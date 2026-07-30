@@ -1,0 +1,7 @@
+# njsscan configuration - exclude build artifacts and dependencies
+exclude:
+  - ".next/**"
+  - "node_modules/**"
+  - "dist/**"
+  - "coverage/**"
+  - "sdk/**"

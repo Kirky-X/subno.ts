@@ -1,4 +1,4 @@
-#\!/usr/bin/env sh
+#!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
 # 读取提交信息文件
@@ -8,7 +8,7 @@ COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
 # 检查提交信息格式（Conventional Commits 规范）
 # 格式：<type>(<scope>): <description>
 # type: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert
-if \! echo "$COMMIT_MSG" | grep -qE "^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\([a-z-]+\))?: .{1,100}"; then
+if ! echo "$COMMIT_MSG" | grep -qE "^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\([a-z-]+\))?: .{1,100}"; then
   echo ""
   echo "❌ 提交信息格式不正确！"
   echo ""

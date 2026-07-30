@@ -64,8 +64,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run unit tests
-        run: npm test -- --run
+      - name: Run unit tests with coverage
+        run: npm run test:coverage -- --run
+
+      - name: Enforce coverage threshold (≥95%)
+        run: |
+          node -e "
+          const fs = require('fs');
+          const cov = JSON.parse(fs.readFileSync('./coverage/coverage-summary.json','utf8'));
+          const t = cov.total;
+          const fmt = (n) => n.toFixed(2) + '%';
+          const lines = t.lines.pct, branches = t.branches.pct, fn = t.functions.pct, stmt = t.statements.pct;
+          console.log('Lines: ' + fmt(lines));
+          console.log('Branches: ' + fmt(branches));
+          console.log('Functions: ' + fmt(fn));
+          console.log('Statements: ' + fmt(stmt));
+          const THRESHOLD = 95;
+          const failed = [lines, branches, fn, stmt].filter(x => x < THRESHOLD);
+          if (failed.length > 0) {
+            console.error('❌ 覆盖率低于 ' + THRESHOLD + '% 门禁');
+            process.exit(1);
+          }
+          console.log('✅ 覆盖率达标');
+          "
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
