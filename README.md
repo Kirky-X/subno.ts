@@ -18,7 +18,7 @@
 
 ---
 
-[🚀 快速开始](#-快速开始) • [📖 API 文档](docs/API_REFERENCE.md) • [🏗️ 架构设计](docs/ARCHITECTURE.md) • [📚 用户指南](docs/USER_GUIDE.md) • [📘 README English](./README_en.md) • [📕 README 中文](./README_zh.md)
+[🚀 Quick Start](#-quick-start) • [📖 API Reference](docs/API_REFERENCE.md) • [🏗️ Architecture](docs/ARCHITECTURE.md) • [📚 User Guide](docs/USER_GUIDE.md) • [📘 README English](./README_EN.md)
 
 </div>
 
