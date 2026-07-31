@@ -30,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 显式指定语言，避免 CodeQL 误检测 Java/C++（原生依赖中含 .java 文件）
       - name: Initialize CodeQL
