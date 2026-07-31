@@ -68,8 +68,8 @@ jobs:
           echo "HTTP $CODE"
           [ "$CODE" = "401" ] || { echo "❌ Subscribe auth failed"; FAIL=1; }
 
-          echo "=== 9. Keys 无 API Key (期望 401) ==="
-          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BASE_URL/api/keys/00000000-0000-0000-0000-000000000000")
+          echo "=== 9. Keys DELETE 无 API Key (期望 401) ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 -X DELETE "$BASE_URL/api/keys/00000000-0000-0000-0000-000000000000")
           echo "HTTP $CODE"
           [ "$CODE" = "401" ] || { echo "❌ Keys auth failed"; FAIL=1; }
 
