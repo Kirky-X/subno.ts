@@ -23,5 +23,5 @@
 # CI/CD 与质量门禁
 /.github/                   @KirkyX
 /.husky/                    @KirkyX
-/eslint.config.js           @KirkyX
+/eslint.config.mjs          @KirkyX
 /vitest.config.ts           @KirkyX

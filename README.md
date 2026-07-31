@@ -115,21 +115,20 @@ npx tsc --noEmit
 
 本项目已配置 Vercel 自动部署，推送至 `main` 分支即自动触发。
 
-1. **Fork 仓库后**，在 Vercel 导入项目
+1. **Fork 仓库后**，在 Vercel 导入项目并连接 GitHub 仓库
 2. **配置环境变量**（Vercel Dashboard → Settings → Environment Variables）：
    - `DATABASE_URL` - PostgreSQL 连接字符串（必需）
    - `REDIS_URL` - Redis 连接字符串（必需，推荐 Upstash）
    - `ADMIN_MASTER_KEY` - 管理主密钥（必需，≥32 字符）
    - `CRON_SECRET` - 定时任务密钥（必需，≥32 字符）
-3. **配置 GitHub Secrets**（用于 CI/CD 部署工作流）：
-   - `VERCEL_TOKEN` - Vercel 访问令牌
-   - `VERCEL_ORG_ID` - Vercel 团队 ID
-   - `VERCEL_PROJECT_ID` - Vercel 项目 ID
-4. 推送至 `main` 分支，GitHub Actions 自动构建、测试、部署
+3. 推送至 `main` 分支，Vercel Git Integration 自动触发构建与部署
+4. GitHub Actions `Deploy` 工作流在部署完成后自动执行 10 项接口冒烟测试
+
+> **注**：Vercel Git Integration 已内置自动部署能力，无需配置 `VERCEL_TOKEN` 等 GitHub Secrets。`Deploy` 工作流仅负责部署后冒烟测试。
 
 **Cron 任务**（已在 `vercel.json` 配置）：
 
-- `/api/cron/cleanup-channels` - 每小时执行
+- `/api/cron/cleanup-channels` - 每天 02:00 执行
 - `/api/cron/cleanup-keys` - 每天 03:30 执行
 
 ### Docker 容器部署

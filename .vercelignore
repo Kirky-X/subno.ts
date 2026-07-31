@@ -1,0 +1,48 @@
+# Vercel 上传忽略清单 — 仅排除非构建必需文件，避免触发 100MB 单文件限制
+# 构建产物由 Vercel 远端重新生成，本地 .next/ 无需上传
+.next/
+.next/cache/
+
+# 测试与覆盖率（不影响运行时）
+coverage/
+__tests__/
+**/*.test.ts
+**/*.spec.ts
+
+# 安全扫描工具二进制（161MB，CI 单独安装）
+bin/
+
+# GitNexus 索引数据（97MB，与运行时无关）
+.gitnexus/
+
+# SDK 子项目（独立发布，不参与主项目部署）
+sdk/
+
+# 脚本与配置（构建时不需要）
+scripts/
+
+# 文档
+*.md
+!README.md
+
+# AI 协作目录
+.claude/
+.trae/
+.sisyphus/
+.opencode/
+.iflow/
+.agents/
+openspec/
+.specmark/
+
+# Husky 内部文件
+.husky/_/
+
+# IDE 配置
+.vscode/
+.idea/
+
+# 环境文件（敏感，由 Vercel dashboard 维护）
+.env
+.env.*
+!.env.example

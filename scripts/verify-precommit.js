@@ -1,12 +1,14 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
 
 /**
  * Pre-commit 配置验证脚本
- * 
+ *
  * 用途：
  * - 验证所有 pre-commit 组件是否正常工作
  * - 检查许可证头、代码格式化、ESLint、TypeScript、依赖安全等
- * 
+ *
  * 使用方法：
  *   node scripts/verify-precommit.js
  */
@@ -45,8 +47,8 @@ function runCommand(command, options = {}) {
     });
     return { success: true, output };
   } catch (error) {
-    return { 
-      success: false, 
+    return {
+      success: false,
       output: error.stdout || error.stderr || error.message,
       code: error.status,
     };
@@ -78,7 +80,7 @@ function verifyHuskyHooks() {
   checkFileExists('.husky/pre-commit', 'Pre-commit 钩子');
   checkFileExists('.husky/commit-msg', 'Commit-msg 钩子');
   checkFileExists('.husky/check-license.js', '许可证检查脚本');
-  
+
   // 检查钩子权限
   const preCommitPath = path.join(process.cwd(), '.husky', 'pre-commit');
   try {
@@ -104,9 +106,9 @@ function verifyConfigFiles() {
 
   checkFileExists('.prettierrc.js', 'Prettier 配置');
   checkFileExists('.prettierignore', 'Prettier 忽略列表');
-  checkFileExists('eslint.config.js', 'ESLint 配置');
+  checkFileExists('eslint.config.mjs', 'ESLint 配置');
   checkFileExists('package.json', 'Package.json');
-  
+
   // 检查 package.json 中的 lint-staged 配置
   const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
   if (packageJson['lint-staged']) {
@@ -160,17 +162,18 @@ function verifyTypeScript() {
 
   // 只检查 src 目录的源代码文件
   const result = runCommand('npx tsc --noEmit 2>&1');
-  
+
   // 分析错误信息，过滤掉测试文件的错误
   if (result.success) {
     results.passed.push('✅ TypeScript 类型检查通过');
   } else {
     // 检查是否只有测试文件的错误
-    const hasSourceErrors = result.output && 
-      !result.output.includes('__tests__') && 
+    const hasSourceErrors =
+      result.output &&
+      !result.output.includes('__tests__') &&
       !result.output.includes('.test.ts') &&
       !result.output.includes('.spec.ts');
-    
+
     if (hasSourceErrors) {
       results.failed.push('❌ TypeScript 类型检查失败（源代码有错误）');
     } else {
@@ -211,7 +214,7 @@ function verifyDependencySecurity() {
       const auditData = JSON.parse(result.output);
       const vulns = auditData.metadata?.vulnerabilities || {};
       const total = vulns.high + vulns.critical || 0;
-      
+
       if (total === 0) {
         results.passed.push('✅ 依赖安全检查通过（无高危漏洞）');
       } else {
@@ -317,7 +320,7 @@ function main() {
   verifyLicenseCheck();
   verifyDependencySecurity();
   verifyNPMScripts();
-  
+
   printSummary();
 }
 

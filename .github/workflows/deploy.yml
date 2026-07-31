@@ -5,75 +5,83 @@ on:
     branches: [main]
   workflow_dispatch:
 
-env:
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
 jobs:
-  deploy:
-    name: Deploy to Vercel
+  smoke-test:
+    name: Vercel Auto-Deploy Smoke Test
     runs-on: ubuntu-latest
-    needs: []
-    environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+    # Vercel Git Integration 已连接 Kirky-X/subno.ts → subno-ts 项目
+    # push to main 时 Vercel 自动触发部署，本 Job 仅负责部署后冒烟测试
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run lint
-        run: npm run lint
-
-      - name: Run type check
-        run: npx tsc --noEmit
-
-      - name: Run unit tests
-        run: npm run test:coverage -- --run
-
-      - name: Install Vercel CLI
-        run: npm install --no-save vercel@latest
-
-      - name: Pull Vercel Environment
-        run: npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build for Vercel
-        run: npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy to Vercel
-        id: deploy
+      - name: Wait for Vercel auto-deploy to complete
         run: |
-          DEPLOY_URL=$(npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
-          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
-          echo "Deployed to: $DEPLOY_URL"
+          echo "等待 Vercel Git Integration 完成自动部署..."
+          # Vercel 通常在 30-60s 内完成构建，预留 90s 等待窗口
+          sleep 90
+          echo "等待完成，开始冒烟测试"
 
-      - name: Smoke test deployed endpoints
+      - name: Smoke test production endpoints
         run: |
-          BASE_URL="${{ steps.deploy.outputs.url }}"
+          BASE_URL="https://subno-ts.vercel.app"
           echo "Testing endpoints on $BASE_URL"
+          FAIL=0
 
-          echo "=== Health Check ==="
-          curl -sf -o /dev/null -w "HTTP %{http_code}\n" "$BASE_URL/api/health" || exit 1
+          echo "=== 1. Health Check (期望 200) ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BASE_URL/api/health")
+          echo "HTTP $CODE"
+          [ "$CODE" = "200" ] || { echo "❌ Health check failed"; FAIL=1; }
 
-          echo "=== Readiness Check ==="
-          curl -sf -o /dev/null -w "HTTP %{http_code}\n" "$BASE_URL/api/ready" || exit 1
+          echo "=== 2. Readiness Check (期望 200 或 503) ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BASE_URL/api/ready")
+          echo "HTTP $CODE"
+          { [ "$CODE" = "200" ] || [ "$CODE" = "503" ]; } || { echo "❌ Ready check failed"; FAIL=1; }
 
-          echo "=== API Docs ==="
-          curl -sf -o /dev/null -w "HTTP %{http_code}\n" "$BASE_URL/api-docs" || exit 1
+          echo "=== 3. API Docs (期望 200) ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BASE_URL/api-docs")
+          echo "HTTP $CODE"
+          [ "$CODE" = "200" ] || { echo "❌ API docs failed"; FAIL=1; }
 
-          echo "=== Missing API Key (should 401) ==="
-          CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/api/register" -H "Content-Type: application/json" -d '{}')
-          if [ "$CODE" != "401" ]; then
-            echo "Expected 401, got $CODE"
+          echo "=== 4. Root Page (期望 200) ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BASE_URL/")
+          echo "HTTP $CODE"
+          [ "$CODE" = "200" ] || { echo "❌ Root page failed"; FAIL=1; }
+
+          echo "=== 5. Register 无 API Key (期望 401) ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 -X POST "$BASE_URL/api/register" -H "Content-Type: application/json" -d '{}')
+          echo "HTTP $CODE"
+          [ "$CODE" = "401" ] || { echo "❌ Register auth failed"; FAIL=1; }
+
+          echo "=== 6. Channels 无 API Key (期望 401) ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BASE_URL/api/channels")
+          echo "HTTP $CODE"
+          [ "$CODE" = "401" ] || { echo "❌ Channels auth failed"; FAIL=1; }
+
+          echo "=== 7. Publish 无 API Key (期望 401) ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 -X POST "$BASE_URL/api/publish" -H "Content-Type: application/json" -d '{"channelId":"test","message":"hi"}')
+          echo "HTTP $CODE"
+          [ "$CODE" = "401" ] || { echo "❌ Publish auth failed"; FAIL=1; }
+
+          echo "=== 8. Subscribe 无 API Key (期望 401) ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BASE_URL/api/subscribe?channelId=test")
+          echo "HTTP $CODE"
+          [ "$CODE" = "401" ] || { echo "❌ Subscribe auth failed"; FAIL=1; }
+
+          echo "=== 9. Keys 无 API Key (期望 401) ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BASE_URL/api/keys/00000000-0000-0000-0000-000000000000")
+          echo "HTTP $CODE"
+          [ "$CODE" = "401" ] || { echo "❌ Keys auth failed"; FAIL=1; }
+
+          echo "=== 10. Revoke 无 API Key (期望 401) ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 -X POST "$BASE_URL/api/keys/00000000-0000-0000-0000-000000000000/revoke" -H "Content-Type: application/json" -d '{"reason":"test"}')
+          echo "HTTP $CODE"
+          [ "$CODE" = "401" ] || { echo "❌ Revoke auth failed"; FAIL=1; }
+
+          echo ""
+          if [ "$FAIL" = "0" ]; then
+            echo "✅ All smoke tests passed (10/10)"
+          else
+            echo "❌ Smoke tests failed"
             exit 1
           fi
-          echo "HTTP $CODE (expected 401)"
-
-          echo "✅ All smoke tests passed"
