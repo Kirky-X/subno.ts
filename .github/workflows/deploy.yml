@@ -13,7 +13,7 @@ jobs:
     # push to main 时 Vercel 自动触发部署，本 Job 仅负责部署后冒烟测试
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Wait for Vercel auto-deploy to complete
         run: |
