@@ -24,7 +24,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # Error handling
-thiserror = "1.0"
+thiserror = "2.0"
 
 # Async traits
 async-trait = "0.1"
@@ -48,7 +48,7 @@ time = { version = "0.3", features = ["serde", "macros"] }
 rand = "0.10"
 
 # SHA256 for deduplication
-sha2 = "0.10"
+sha2 = "0.11"
 
 # UUID for request IDs
 uuid = { version = "1.0", features = ["v4", "serde"] }
@@ -57,7 +57,7 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 parking_lot = { version = "0.12", optional = true }
 
 [build-dependencies]
-uniffi_build = { version = "0.25", optional = true }
+uniffi_build = { version = "0.32", optional = true }
 
 [features]
 default = ["native-tls"]
