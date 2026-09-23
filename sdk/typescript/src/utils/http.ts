@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import type {
-  SuccessResponse,
-  ErrorResponse,
-  ClientOptions,
-  RetryOptions,
-} from "../types/api.js";
-import { SecureNotifyError } from "../types/errors.js";
-import { withRetry, type RetryConfig } from "./retry.js";
-import { MetricsCollector, MetricsContext } from "./metrics.js";
-import { ResponseCache } from "./cache.js";
-import { RequestDeduplicator } from "./requestDeduplicator.js";
+import type { SuccessResponse, ErrorResponse, ClientOptions, RetryOptions } from '../types/api.js';
+import { SecureNotifyError, ErrorCode, type ErrorCodeType } from '../types/errors.js';
+import { withRetry, type RetryConfig } from './retry.js';
+import {
+  MetricsCollector,
+  MetricsContext,
+  type MetricsSummary,
+  type MetricStats,
+} from './metrics.js';
+import { ResponseCache } from './cache.js';
+import { RequestDeduplicator } from './requestDeduplicator.js';
 
 // Import Agent for Node.js SSL/TLS configuration
 let Agent: any;
 try {
-  Agent = require("undici").Agent;
+  Agent = require('undici').Agent;
 } catch {
   // undici not available, will use default fetch
 }
@@ -24,7 +24,7 @@ try {
 /**
  * HTTP method types
  */
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 /**
  * HTTP headers interface
@@ -75,7 +75,7 @@ export class HttpClient {
    * Create a new HTTP client
    */
   constructor(options: ClientOptions = {}) {
-    this.baseUrl = options.baseUrl ?? "http://localhost:3000/api";
+    this.baseUrl = options.baseUrl ?? 'http://localhost:3000/api';
     this.apiKey = options.apiKey;
     this.apiKeyId = options.apiKeyId;
     this.defaultTimeout = options.timeout ?? 30000;
@@ -83,7 +83,9 @@ export class HttpClient {
     this.metricsCollector = options.enableMetrics ? new MetricsCollector(1000) : undefined;
     this.cache = options.enableCache ? new ResponseCache(60, 1000) : undefined;
     this.enableDeduplication = options.enableDeduplication ?? false;
-    this.requestDeduplicator = this.enableDeduplication ? new RequestDeduplicator({ ttlSeconds: 5.0 }) : undefined;
+    this.requestDeduplicator = this.enableDeduplication
+      ? new RequestDeduplicator({ ttlSeconds: 5.0 })
+      : undefined;
   }
 
   /**
@@ -103,7 +105,10 @@ export class HttpClient {
   /**
    * Build the full URL for a request
    */
-  private buildUrl(path: string, query?: Record<string, string | number | boolean | undefined>): string {
+  private buildUrl(
+    path: string,
+    query?: Record<string, string | number | boolean | undefined>,
+  ): string {
     const url = new URL(path, this.baseUrl);
 
     if (query) {
@@ -127,7 +132,10 @@ export class HttpClient {
     try {
       return JSON.stringify(body);
     } catch {
-      throw SecureNotifyError.serialization("Failed to serialize request body");
+      throw new SecureNotifyError(
+        'SERIALIZATION_ERROR' as ErrorCodeType,
+        'Failed to serialize request body',
+      );
     }
   }
 
@@ -138,7 +146,10 @@ export class HttpClient {
     try {
       return JSON.parse(text) as T;
     } catch {
-      throw SecureNotifyError.deserialization("Failed to parse response body");
+      throw new SecureNotifyError(
+        'DESERIALIZATION_ERROR' as ErrorCodeType,
+        'Failed to parse response body',
+      );
     }
   }
 
@@ -158,9 +169,9 @@ export class HttpClient {
    */
   private buildHeaders(additionalHeaders?: HttpHeaders): HttpHeaders {
     const headers: HttpHeaders = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "User-Agent": "SecureNotify-TypeScript/0.1.0",  // Add User-Agent header
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'User-Agent': 'SecureNotify-TypeScript/0.1.0', // Add User-Agent header
     };
 
     // Add API key authentication if available
@@ -168,10 +179,10 @@ export class HttpClient {
     const apiKeyId = this.getApiKeyId();
 
     if (apiKey) {
-      headers["X-API-Key"] = apiKey;
+      headers['X-API-Key'] = apiKey;
     }
     if (apiKeyId) {
-      headers["X-API-Key-Id"] = apiKeyId;
+      headers['X-API-Key-Id'] = apiKeyId;
     }
 
     // Merge additional headers
@@ -189,7 +200,7 @@ export class HttpClient {
    */
   async request<T>(
     options: HttpRequestOptions,
-    retryOptions?: RetryOptions
+    retryOptions?: RetryOptions,
   ): Promise<HttpResponse<T>> {
     // Merge retry options: explicit options > client config > default
     const finalRetryConfig: RetryConfig = retryOptions ?? this.retryConfig ?? {};
@@ -200,8 +211,8 @@ export class HttpClient {
         return await this.executeRequest<T>(options);
       }, finalRetryConfig);
 
-      if (!result.success) {
-        throw result.error;
+      if (!result.success || result.data === undefined) {
+        throw result.error ?? new Error('Request failed');
       }
 
       return result.data;
@@ -209,14 +220,21 @@ export class HttpClient {
 
     if (this.enableDeduplication && this.requestDeduplicator) {
       // Use deduplicator for all requests
-      const dedupKey = `${options.method ?? "GET"}:${options.path}`;
-      const dedupParams = { ...(options.body as Record<string, any> || {}), ...(options.query || {}) };
-      return await this.requestDeduplicator.execute(
+      const dedupKey = `${options.method ?? 'GET'}:${options.path}`;
+      const dedupParams = {
+        ...((options.body as Record<string, any>) || {}),
+        ...(options.query || {}),
+      };
+      const deduped = await this.requestDeduplicator.execute<HttpResponse<T> | undefined>(
         dedupKey,
         dedupParams,
-        executeRequest,
-        options.method === "GET"
+        async () => await executeRequest(),
+        options.method === 'GET',
       );
+      if (deduped === undefined) {
+        throw new Error('Deduplicated request returned no response');
+      }
+      return deduped;
     } else {
       // Execute request directly
       return executeRequest();
@@ -226,9 +244,7 @@ export class HttpClient {
   /**
    * Execute a single HTTP request (without retry logic)
    */
-  private async executeRequest<T>(
-    options: HttpRequestOptions
-  ): Promise<HttpResponse<T>> {
+  private async executeRequest<T>(options: HttpRequestOptions): Promise<HttpResponse<T>> {
     const url = this.buildUrl(options.path, options.query);
     const headers = this.buildHeaders(options.headers);
     const body = this.serializeBody(options.body);
@@ -236,16 +252,16 @@ export class HttpClient {
 
     // Check cache for GET requests if enabled (PERFORMANCE FIX)
     let cacheKey: string | undefined;
-    if (this.cache && options.method === "GET") {
+    if (this.cache && options.method === 'GET') {
       // Create cache key from endpoint and query
-      const queryStr = options.query ? JSON.stringify(options.query) : "";
+      const queryStr = options.query ? JSON.stringify(options.query) : '';
       cacheKey = `${options.method}:${options.path}:${queryStr}`;
       const cachedValue = this.cache.get(cacheKey);
       if (cachedValue !== null) {
         return {
           ok: true,
           status: 200,
-          statusText: "OK",
+          statusText: 'OK',
           data: cachedValue as T,
           headers: {},
           timestamp: new Date().toISOString(),
@@ -255,7 +271,7 @@ export class HttpClient {
 
     // Add request ID for tracing
     const requestId = crypto.randomUUID();
-    headers["X-Request-ID"] = requestId;
+    headers['X-Request-ID'] = requestId;
 
     // Create metrics context for performance monitoring (PERFORMANCE FIX)
     const metricsCtx = this.metricsCollector
@@ -264,27 +280,28 @@ export class HttpClient {
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
+    let response: Response | undefined;
 
     try {
       // Build fetch options with SSL/TLS configuration for Node.js
       const fetchOptions: RequestInit = {
-        method: options.method ?? "GET",
+        method: options.method ?? 'GET',
         headers,
         body,
         signal: controller.signal,
       };
 
       // Add SSL/TLS configuration for Node.js environments (CRITICAL SECURITY FIX)
-      if (Agent && typeof process !== "undefined" && process.versions?.node) {
+      if (Agent && typeof process !== 'undefined' && process.versions?.node) {
         fetchOptions.dispatcher = new Agent({
           connect: {
             rejectUnauthorized: true, // Always verify SSL certificates
-            minVersion: "TLSv1.3", // Enforce TLS 1.3
+            minVersion: 'TLSv1.3', // Enforce TLS 1.3
           },
         });
       }
 
-      const response = await fetch(url, fetchOptions);
+      response = await fetch(url, fetchOptions);
 
       clearTimeout(timeoutId);
 
@@ -305,7 +322,6 @@ export class HttpClient {
 
       // Check for error response
       if (!response.ok) {
-        let errorDetails;
         if (isJson) {
           const errorResponse = this.parseResponse<ErrorResponse>(responseText);
           if (errorResponse.success === false && errorResponse.error) {
@@ -313,24 +329,24 @@ export class HttpClient {
           }
           // If it's a success response wrapper, extract the error
           const successResponse = data as SuccessResponse<unknown>;
-          if (successResponse && "success" in successResponse) {
+          if (successResponse && 'success' in successResponse) {
             throw new SecureNotifyError(
-              "UNKNOWN",
+              ErrorCode.INTERNAL_ERROR,
               `HTTP ${response.status}: ${response.statusText}`,
-              { status: response.status }
+              { status: response.status },
             );
           }
         }
 
         throw new SecureNotifyError(
-          "UNKNOWN",
+          ErrorCode.INTERNAL_ERROR,
           `HTTP ${response.status}: ${response.statusText}`,
-          { status: response.status }
+          { status: response.status },
         );
       }
 
       // Cache successful GET responses (PERFORMANCE FIX)
-      if (this.cache && options.method === "GET" && cacheKey) {
+      if (this.cache && options.method === 'GET' && cacheKey) {
         this.cache.set(cacheKey, data, 60);
       }
 
@@ -355,10 +371,10 @@ export class HttpClient {
       }
 
       if (error instanceof Error) {
-        if (error.name === "AbortError") {
+        if (error.name === 'AbortError') {
           throw SecureNotifyError.timeout(`Request timed out after ${timeout}ms`);
         }
-        if (error.name === "TypeError" && error.message.includes("fetch")) {
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
           throw SecureNotifyError.network(`Network error: ${error.message}`);
         }
       }
@@ -376,36 +392,54 @@ export class HttpClient {
   /**
    * Execute a GET request
    */
-  async get<T>(path: string, query?: Record<string, string | number | boolean | undefined>): Promise<HttpResponse<T>> {
-    return this.request<T>({ method: "GET", path, query });
+  async get<T>(
+    path: string,
+    query?: Record<string, string | number | boolean | undefined>,
+  ): Promise<HttpResponse<T>> {
+    return this.request<T>({ method: 'GET', path, query });
   }
 
   /**
    * Execute a POST request
    */
-  async post<T>(path: string, body?: unknown, query?: Record<string, string | number | boolean | undefined>): Promise<HttpResponse<T>> {
-    return this.request<T>({ method: "POST", path, body, query });
+  async post<T>(
+    path: string,
+    body?: unknown,
+    query?: Record<string, string | number | boolean | undefined>,
+  ): Promise<HttpResponse<T>> {
+    return this.request<T>({ method: 'POST', path, body, query });
   }
 
   /**
    * Execute a PUT request
    */
-  async put<T>(path: string, body?: unknown, query?: Record<string, string | number | boolean | undefined>): Promise<HttpResponse<T>> {
-    return this.request<T>({ method: "PUT", path, body, query });
+  async put<T>(
+    path: string,
+    body?: unknown,
+    query?: Record<string, string | number | boolean | undefined>,
+  ): Promise<HttpResponse<T>> {
+    return this.request<T>({ method: 'PUT', path, body, query });
   }
 
   /**
    * Execute a PATCH request
    */
-  async patch<T>(path: string, body?: unknown, query?: Record<string, string | number | boolean | undefined>): Promise<HttpResponse<T>> {
-    return this.request<T>({ method: "PATCH", path, body, query });
+  async patch<T>(
+    path: string,
+    body?: unknown,
+    query?: Record<string, string | number | boolean | undefined>,
+  ): Promise<HttpResponse<T>> {
+    return this.request<T>({ method: 'PATCH', path, body, query });
   }
 
   /**
    * Execute a DELETE request
    */
-  async delete<T>(path: string, query?: Record<string, string | number | boolean | undefined>): Promise<HttpResponse<T>> {
-    return this.request<T>({ method: "DELETE", path, query });
+  async delete<T>(
+    path: string,
+    query?: Record<string, string | number | boolean | undefined>,
+  ): Promise<HttpResponse<T>> {
+    return this.request<T>({ method: 'DELETE', path, query });
   }
 
   /**
@@ -419,7 +453,7 @@ export class HttpClient {
    * Check if API key is configured
    */
   hasApiKey(): boolean {
-    return this.apiKey !== undefined && this.apiKey !== "";
+    return this.apiKey !== undefined && this.apiKey !== '';
   }
 
   /**
@@ -480,7 +514,13 @@ export class HttpClient {
    *
    * @returns Cache performance metrics or null if cache disabled
    */
-  getCacheMetrics(): { hits: number; misses: number; entries: number; cleanupCount: number; hitRate: number } | null {
+  getCacheMetrics(): {
+    hits: number;
+    misses: number;
+    entries: number;
+    cleanupCount: number;
+    hitRate: number;
+  } | null {
     if (!this.cache) return null;
     const metrics = this.cache.getMetrics();
     return {
@@ -539,16 +579,26 @@ export class HttpClient {
    *
    * @returns Dictionary with statistics or empty object if disabled
    */
-  getDeduplicatorStats(): { hits: number; misses: number; errors: number; hitRate: number; pendingCount: number; completedCount: number; ttlSeconds: number } {
-    return this.requestDeduplicator?.getStats() ?? {
-      hits: 0,
-      misses: 0,
-      errors: 0,
-      hitRate: 0,
-      pendingCount: 0,
-      completedCount: 0,
-      ttlSeconds: 5.0,
-    };
+  getDeduplicatorStats(): {
+    hits: number;
+    misses: number;
+    errors: number;
+    hitRate: number;
+    pendingCount: number;
+    completedCount: number;
+    ttlSeconds: number;
+  } {
+    return (
+      this.requestDeduplicator?.getStats() ?? {
+        hits: 0,
+        misses: 0,
+        errors: 0,
+        hitRate: 0,
+        pendingCount: 0,
+        completedCount: 0,
+        ttlSeconds: 5.0,
+      }
+    );
   }
 
   /**

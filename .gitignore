@@ -85,3 +85,7 @@ specmark/
 
 # Binary executables (trivy 等安全扫描工具)
 bin/
+export-check-report.json
+
+sdk/java/target/
+sdk/rust/target/

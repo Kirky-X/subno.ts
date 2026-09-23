@@ -1,21 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import type {
-  SseMessageEvent,
-  SseConnectedEvent,
-  ClientOptions,
-} from "../types/api.js";
-import type {
-  SseEvent,
-  SseEventHandler,
-  SseEventType,
-} from "../utils/connection.js";
-import {
-  SseConnection,
-  SseConnectionManager,
-} from "../utils/connection.js";
-import { SecureNotifyError } from "../types/errors.js";
+import type { SseMessageEvent, SseConnectedEvent, ClientOptions } from '../types/api.js';
+import type { SseEvent } from '../utils/connection.js';
+import { SseConnection, SseConnectionManager } from '../utils/connection.js';
+import { SecureNotifyError } from '../types/errors.js';
 
 /**
  * Message handler callback type
@@ -30,7 +19,11 @@ export type ConnectionHandler = (event: SseConnectedEvent) => void;
 /**
  * Error handler callback type
  */
-export type SubscribeErrorHandler = (error: { code: string; message: string; reconnectable: boolean }) => void;
+export type SubscribeErrorHandler = (error: {
+  code: string;
+  message: string;
+  reconnectable: boolean;
+}) => void;
 
 /**
  * Subscription info
@@ -69,11 +62,11 @@ export class SubscribeManager {
    */
   async subscribe(channel: string, handler: MessageHandler): Promise<() => Promise<void>> {
     if (!channel) {
-      throw SecureNotifyError.validation("channel is required");
+      throw SecureNotifyError.validation('channel is required');
     }
 
     if (!handler) {
-      throw SecureNotifyError.validation("handler is required");
+      throw SecureNotifyError.validation('handler is required');
     }
 
     // Add the message handler
@@ -117,7 +110,7 @@ export class SubscribeManager {
    */
   private setupChannelHandlers(channel: string, connection: SseConnection): void {
     // Message handler
-    connection.on("message", (event: SseEvent) => {
+    connection.on('message', (event: SseEvent) => {
       const messageCount = this.messageCounts.get(channel) ?? 0;
       this.messageCounts.set(channel, messageCount + 1);
       this.lastMessageTimes.set(channel, Date.now());
@@ -135,7 +128,7 @@ export class SubscribeManager {
     });
 
     // Connection handler
-    connection.on("connected", (event: SseEvent) => {
+    connection.on('connected', (event: SseEvent) => {
       const handlers = this.connectionHandlers.get(channel);
       if (handlers) {
         for (const handler of handlers) {
@@ -149,7 +142,7 @@ export class SubscribeManager {
     });
 
     // Error handler
-    connection.on("error", (event: SseEvent) => {
+    connection.on('error', (event: SseEvent) => {
       const handlers = this.errorHandlers.get(channel);
       if (handlers) {
         for (const handler of handlers) {
@@ -163,12 +156,12 @@ export class SubscribeManager {
     });
 
     // Retry handler
-    connection.on("retry", () => {
+    connection.on('retry', () => {
       // Can be used for logging or notifications
     });
 
     // Close handler
-    connection.on("close", () => {
+    connection.on('close', () => {
       this.messageCounts.delete(channel);
       this.lastMessageTimes.delete(channel);
     });
@@ -182,7 +175,7 @@ export class SubscribeManager {
    */
   async unsubscribe(channel: string, handler?: MessageHandler): Promise<void> {
     if (!channel) {
-      throw SecureNotifyError.validation("channel is required");
+      throw SecureNotifyError.validation('channel is required');
     }
 
     if (handler) {
@@ -226,7 +219,7 @@ export class SubscribeManager {
    */
   onConnected(channel: string, handler: ConnectionHandler): () => void {
     if (!channel) {
-      throw SecureNotifyError.validation("channel is required");
+      throw SecureNotifyError.validation('channel is required');
     }
 
     let handlers = this.connectionHandlers.get(channel);
@@ -249,7 +242,7 @@ export class SubscribeManager {
    */
   onError(channel: string, handler: SubscribeErrorHandler): () => void {
     if (!channel) {
-      throw SecureNotifyError.validation("channel is required");
+      throw SecureNotifyError.validation('channel is required');
     }
 
     let handlers = this.errorHandlers.get(channel);
@@ -326,7 +319,10 @@ export class SubscribeManager {
    * @param timeout - Maximum wait time in milliseconds
    * @returns The message event or undefined if timeout
    */
-  async nextMessage(channel: string, timeout: number = 30000): Promise<SseMessageEvent | undefined> {
+  async nextMessage(
+    channel: string,
+    timeout: number = 30000,
+  ): Promise<SseMessageEvent | undefined> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(async () => {
         const unsub = await unsubscribePromise;
@@ -335,7 +331,7 @@ export class SubscribeManager {
       }, timeout);
 
       let unsubscribePromise: Promise<() => Promise<void>>;
-      unsubscribePromise = this.subscribe(channel, async (event) => {
+      unsubscribePromise = this.subscribe(channel, async event => {
         clearTimeout(timeoutId);
         const unsub = await unsubscribePromise;
         await unsub();
@@ -347,7 +343,7 @@ export class SubscribeManager {
         clearTimeout(timeoutId);
         const unsub = await unsubscribePromise;
         await unsub();
-        reject(new Error("Connection error"));
+        reject(new Error('Connection error'));
       });
     });
   }

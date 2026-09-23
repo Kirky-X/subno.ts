@@ -169,7 +169,7 @@ export class MetricsCollector {
       };
     }
 
-    const durations = samples.map((s) => s.durationMs).sort((a, b) => a - b);
+    const durations = samples.map(s => s.durationMs).sort((a, b) => a - b);
     const totalDuration = durations.reduce((sum, d) => sum + d, 0);
 
     let successCount = 0;
@@ -183,17 +183,18 @@ export class MetricsCollector {
     }
 
     const n = durations.length;
+    const at = (i: number): number => durations[Math.min(Math.max(i, 0), n - 1)] ?? 0;
     return {
       count: n,
       successCount,
       failureCount,
-      minDurationMs: durations[0],
-      maxDurationMs: durations[n - 1],
+      minDurationMs: at(0),
+      maxDurationMs: at(n - 1),
       avgDurationMs: totalDuration / n,
-      p50DurationMs: durations[Math.floor(n / 2)],
-      p95DurationMs: durations[Math.floor(n * 0.95)],
-      p99DurationMs: durations[Math.floor(n * 0.99)],
-      getSuccessRate: () => (successCount / n),
+      p50DurationMs: at(Math.floor(n / 2)),
+      p95DurationMs: at(Math.floor(n * 0.95)),
+      p99DurationMs: at(Math.floor(n * 0.99)),
+      getSuccessRate: () => successCount / n,
     };
   }
 }

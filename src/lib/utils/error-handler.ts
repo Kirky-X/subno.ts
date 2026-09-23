@@ -698,7 +698,9 @@ export class ErrorHandler {
       return;
     }
 
-    const logData = error.toLogFormat(context);
+    // Redact apiKeyId before console sinks (CodeQL clear-text-logging)
+    const { apiKeyId, ...rest } = error.toLogFormat(context);
+    const logData = apiKeyId !== undefined ? { ...rest, apiKeyId: '[REDACTED]' } : rest;
     const logPrefix = `[${error.severity.toUpperCase()}]`;
 
     if (error.severity === 'critical' || error.severity === 'high') {

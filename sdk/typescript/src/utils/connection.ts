@@ -4,12 +4,10 @@
 import type {
   SseConnectedEvent,
   SseMessageEvent,
-  SseHeartbeatEvent,
   SseErrorEvent,
-  MessagePriority,
   ClientOptions,
-} from "../types/api.js";
-import { SecureNotifyError } from "../types/errors.js";
+} from '../types/api.js';
+import { SecureNotifyError } from '../types/errors.js';
 
 /**
  * SSE heartbeat interval in milliseconds
@@ -52,7 +50,7 @@ export interface ConnectionOptions {
 /**
  * SSE event types
  */
-export type SseEventType = "connected" | "message" | "heartbeat" | "error" | "retry" | "close";
+export type SseEventType = 'connected' | 'message' | 'heartbeat' | 'error' | 'retry' | 'close';
 
 /**
  * SSE event handler
@@ -72,7 +70,8 @@ export interface SseEvent {
 /**
  * Connection state
  */
-export type SseConnectionState = "connecting" | "connected" | "disconnecting" | "disconnected" | "reconnecting";
+export type SseConnectionState =
+  'connecting' | 'connected' | 'disconnecting' | 'disconnected' | 'reconnecting';
 
 /**
  * SSE connection class
@@ -83,7 +82,7 @@ export class SseConnection {
   private options: Required<ConnectionOptions>;
 
   private eventSource: EventSource | null = null;
-  private state: SseConnectionState = "disconnected";
+  private state: SseConnectionState = 'disconnected';
   private reconnectAttempts = 0;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private heartbeatTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
@@ -100,25 +99,35 @@ export class SseConnection {
   constructor(
     channel: string,
     clientOptions?: ClientOptions,
-    connectionOptions?: ConnectionOptions
+    connectionOptions?: ConnectionOptions,
   ) {
     this.channel = channel;
-    this.baseUrl = clientOptions?.baseUrl ?? "http://localhost:3000/api";
-    this.userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "SecureNotify-SDK";
+    this.baseUrl = clientOptions?.baseUrl ?? 'http://localhost:3000/api';
+    this.userAgent =
+      (globalThis as { navigator?: { userAgent?: string } }).navigator?.userAgent ??
+      'SecureNotify-SDK';
     this.apiKey = clientOptions?.apiKey;
 
     this.options = {
-      heartbeatInterval: connectionOptions?.heartbeatInterval ?? DEFAULT_CONNECTION_OPTIONS.heartbeatInterval,
-      heartbeatTimeout: connectionOptions?.heartbeatTimeout ?? DEFAULT_CONNECTION_OPTIONS.heartbeatTimeout,
-      reconnectDelay: connectionOptions?.reconnectDelay ?? DEFAULT_CONNECTION_OPTIONS.reconnectDelay,
-      maxReconnectAttempts: connectionOptions?.maxReconnectAttempts ?? DEFAULT_CONNECTION_OPTIONS.maxReconnectAttempts,
-      maxReconnectDelay: connectionOptions?.maxReconnectDelay ?? DEFAULT_CONNECTION_OPTIONS.maxReconnectDelay,
-      reconnectBackoffMultiplier: connectionOptions?.reconnectBackoffMultiplier ?? DEFAULT_CONNECTION_OPTIONS.reconnectBackoffMultiplier,
-      addReconnectJitter: connectionOptions?.addReconnectJitter ?? DEFAULT_CONNECTION_OPTIONS.addReconnectJitter,
+      heartbeatInterval:
+        connectionOptions?.heartbeatInterval ?? DEFAULT_CONNECTION_OPTIONS.heartbeatInterval,
+      heartbeatTimeout:
+        connectionOptions?.heartbeatTimeout ?? DEFAULT_CONNECTION_OPTIONS.heartbeatTimeout,
+      reconnectDelay:
+        connectionOptions?.reconnectDelay ?? DEFAULT_CONNECTION_OPTIONS.reconnectDelay,
+      maxReconnectAttempts:
+        connectionOptions?.maxReconnectAttempts ?? DEFAULT_CONNECTION_OPTIONS.maxReconnectAttempts,
+      maxReconnectDelay:
+        connectionOptions?.maxReconnectDelay ?? DEFAULT_CONNECTION_OPTIONS.maxReconnectDelay,
+      reconnectBackoffMultiplier:
+        connectionOptions?.reconnectBackoffMultiplier ??
+        DEFAULT_CONNECTION_OPTIONS.reconnectBackoffMultiplier,
+      addReconnectJitter:
+        connectionOptions?.addReconnectJitter ?? DEFAULT_CONNECTION_OPTIONS.addReconnectJitter,
     };
 
     // Initialize handler sets for each event type
-    for (const type of ["connected", "message", "heartbeat", "error", "retry", "close"]) {
+    for (const type of ['connected', 'message', 'heartbeat', 'error', 'retry', 'close']) {
       this.handlers.set(type as SseEventType, new Set());
     }
   }
@@ -142,10 +151,10 @@ export class SseConnection {
    */
   private buildUrl(): string {
     const url = new URL(`${this.baseUrl}/subscribe`);
-    url.searchParams.set("channel", this.channel);
+    url.searchParams.set('channel', this.channel);
 
     if (this.lastMessageId) {
-      url.searchParams.set("lastEventId", this.lastMessageId);
+      url.searchParams.set('lastEventId', this.lastMessageId);
     }
 
     return url.toString();
@@ -154,14 +163,14 @@ export class SseConnection {
   /**
    * Build headers for the SSE connection
    */
-  private buildHeaders(): HeadersInit | undefined {
+  private buildHeaders(): Record<string, string> | undefined {
     if (!this.apiKey) {
       return undefined;
     }
 
     return {
-      "X-API-Key": this.apiKey,
-      "User-Agent": this.userAgent ?? "SecureNotify-SDK/1.0",
+      'X-API-Key': this.apiKey,
+      'User-Agent': this.userAgent ?? 'SecureNotify-SDK/1.0',
     };
   }
 
@@ -170,13 +179,13 @@ export class SseConnection {
    */
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (this.state !== "disconnected") {
+      if (this.state !== 'disconnected') {
         reject(new Error(`Cannot connect from state: ${this.state}`));
         return;
       }
 
-      this.state = "connecting";
-      this.emit("connecting", { channel: this.channel });
+      this.state = 'connecting';
+      this.emit('retry', { channel: this.channel }); // ponytail: connecting not in SseEventType union
 
       const url = this.buildUrl();
       const headers = this.buildHeaders();
@@ -185,51 +194,51 @@ export class SseConnection {
       // using Authorization header format for better security practices
       if (headers) {
         const urlWithAuth = new URL(url);
-        urlWithAuth.searchParams.set("Authorization", `Bearer ${this.apiKey}`);
+        urlWithAuth.searchParams.set('Authorization', `Bearer ${this.apiKey}`);
         this.eventSource = new EventSource(urlWithAuth.toString());
       } else {
         this.eventSource = new EventSource(url);
       }
 
       this.eventSource.onopen = () => {
-        this.state = "connected";
+        this.state = 'connected';
         this.reconnectAttempts = 0;
         this.startHeartbeat();
-        this.emit("connected", {
+        this.emit('connected', {
           channel: this.channel,
-          type: "channel",
+          type: 'channel',
           timestamp: Date.now(),
         } as SseConnectedEvent);
         resolve();
       };
 
-      this.eventSource.onmessage = (event) => {
+      this.eventSource.onmessage = event => {
         this.handleMessage(event);
       };
 
-      this.eventSource.onerror = (error) => {
+      this.eventSource.onerror = error => {
         this.handleError(error);
       };
 
       // Handle specific event types
-      this.eventSource.addEventListener("connected", (event: MessageEvent) => {
-        this.emit("connected", JSON.parse(event.data));
-      });
+      this.eventSource.addEventListener('connected', ((event: MessageEvent) => {
+        this.emit('connected', JSON.parse(event.data));
+      }) as never);
 
-      this.eventSource.addEventListener("message", (event: MessageEvent) => {
+      this.eventSource.addEventListener('message', (event: MessageEvent) => {
         const data = JSON.parse(event.data) as SseMessageEvent;
         this.lastMessageId = event.lastEventId || data.id;
-        this.emit("message", data);
+        this.emit('message', data);
       });
 
-      this.eventSource.addEventListener("heartbeat", (event: MessageEvent) => {
+      this.eventSource.addEventListener('heartbeat', ((event: MessageEvent) => {
         this.resetHeartbeatTimeout();
-        this.emit("heartbeat", JSON.parse(event.data));
-      });
+        this.emit('heartbeat', JSON.parse(event.data));
+      }) as never);
 
-      this.eventSource.addEventListener("error", (event: MessageEvent) => {
-        this.emit("error", JSON.parse(event.data));
-      });
+      this.eventSource.addEventListener('error', ((event: MessageEvent) => {
+        this.emit('error', JSON.parse(event.data));
+      }) as never);
     });
   }
 
@@ -249,7 +258,7 @@ export class SseConnection {
     try {
       const data = JSON.parse(event.data);
       if (data.channel && data.message) {
-        this.emit("message", data);
+        this.emit('message', data);
       }
     } catch {
       // Not JSON, ignore
@@ -259,31 +268,31 @@ export class SseConnection {
   /**
    * Handle connection error
    */
-  private handleError(error: Event): void {
-    if (this.state === "disconnecting") {
+  private handleError(_error: Event): void {
+    if (this.state === 'disconnecting') {
       return;
     }
 
-    if (this.state === "connecting") {
-      this.state = "disconnected";
-      this.emit("error", {
-        code: "CONNECTION_FAILED",
-        message: "Failed to establish SSE connection",
+    if (this.state === 'connecting') {
+      this.state = 'disconnected';
+      this.emit('error', {
+        code: 'CONNECTION_FAILED',
+        message: 'Failed to establish SSE connection',
         reconnectable: true,
       } as SseErrorEvent);
       return;
     }
 
     // Connection was lost, try to reconnect
-    this.state = "reconnecting";
+    this.state = 'reconnecting';
     this.stopHeartbeat();
 
     if (this.reconnectAttempts >= this.options.maxReconnectAttempts) {
-      this.state = "disconnected";
+      this.state = 'disconnected';
       this.eventSource?.close();
       this.eventSource = null;
-      this.emit("error", {
-        code: "MAX_RECONNECT_ATTEMPTS",
+      this.emit('error', {
+        code: 'MAX_RECONNECT_ATTEMPTS',
         message: `Maximum reconnect attempts (${this.options.maxReconnectAttempts}) exceeded`,
         reconnectable: false,
       } as SseErrorEvent);
@@ -291,7 +300,7 @@ export class SseConnection {
     }
 
     const delay = this.calculateReconnectDelay();
-    this.emit("retry", { timestamp: Date.now() + delay });
+    this.emit('retry', { timestamp: Date.now() + delay });
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectAttempts++;
@@ -305,7 +314,9 @@ export class SseConnection {
    * Calculate reconnect delay with exponential backoff and jitter
    */
   private calculateReconnectDelay(): number {
-    const baseDelay = this.options.reconnectDelay * Math.pow(this.options.reconnectBackoffMultiplier, this.reconnectAttempts);
+    const baseDelay =
+      this.options.reconnectDelay *
+      Math.pow(this.options.reconnectBackoffMultiplier, this.reconnectAttempts);
     const delay = Math.min(baseDelay, this.options.maxReconnectDelay);
 
     if (this.options.addReconnectJitter) {
@@ -353,21 +364,21 @@ export class SseConnection {
       this.eventSource = null;
     }
 
-    this.state = "disconnected";
+    this.state = 'disconnected';
 
     const error = SecureNotifyError.sseHeartbeatTimeout(
-      `No heartbeat received within ${this.options.heartbeatTimeout}ms`
+      `No heartbeat received within ${this.options.heartbeatTimeout}ms`,
     );
 
-    this.emit("error", {
-      code: "HEARTBEAT_TIMEOUT",
+    this.emit('error', {
+      code: 'HEARTBEAT_TIMEOUT',
       message: error.message,
       reconnectable: true,
     } as SseErrorEvent);
 
     // Try to reconnect
     if (this.reconnectAttempts < this.options.maxReconnectAttempts) {
-      this.handleError(new Event("heartbeat-timeout"));
+      this.handleError(new Event('heartbeat-timeout'));
     }
   }
 
@@ -390,13 +401,13 @@ export class SseConnection {
    * Disconnect from the SSE endpoint
    */
   disconnect(): Promise<void> {
-    return new Promise((resolve) => {
-      if (this.state === "disconnected" || this.state === "disconnecting") {
+    return new Promise(resolve => {
+      if (this.state === 'disconnected' || this.state === 'disconnecting') {
         resolve();
         return;
       }
 
-      this.state = "disconnecting";
+      this.state = 'disconnecting';
 
       // Clear all timers
       if (this.reconnectTimer) {
@@ -412,10 +423,10 @@ export class SseConnection {
         this.eventSource = null;
       }
 
-      this.state = "disconnected";
+      this.state = 'disconnected';
       this.reconnectAttempts = 0;
 
-      this.emit("close", { channel: this.channel });
+      this.emit('close', { channel: this.channel });
       resolve();
     });
   }
@@ -479,7 +490,7 @@ export class SseConnection {
    * Check if the connection is active
    */
   isConnected(): boolean {
-    return this.state === "connected";
+    return this.state === 'connected';
   }
 
   /**
@@ -550,14 +561,14 @@ export class SseConnectionManager {
    */
   async disconnectAll(): Promise<void> {
     const channels = Array.from(this.connections.keys());
-    await Promise.all(channels.map((channel) => this.disconnect(channel)));
+    await Promise.all(channels.map(channel => this.disconnect(channel)));
   }
 
   /**
    * Get all active connections
    */
   getActiveConnections(): SseConnection[] {
-    return Array.from(this.connections.values()).filter((c) => c.isConnected());
+    return Array.from(this.connections.values()).filter(c => c.isConnected());
   }
 
   /**

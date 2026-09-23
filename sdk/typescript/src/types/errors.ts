@@ -1,46 +1,46 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import type { ErrorDetails } from "./api.js";
+import type { ErrorDetails } from './api.js';
 
 /**
  * Error codes for SecureNotify SDK
  */
 export const ErrorCode = {
   // Client errors (4xx)
-  VALIDATION_ERROR: "VALIDATION_ERROR",
-  AUTH_REQUIRED: "AUTH_REQUIRED",
-  AUTH_FAILED: "AUTH_FAILED",
-  FORBIDDEN: "FORBIDDEN",
-  NOT_FOUND: "NOT_FOUND",
-  CHANNEL_EXISTS: "CHANNEL_EXISTS",
-  KEY_EXPIRED: "KEY_EXPIRED",
-  MESSAGE_TOO_LARGE: "MESSAGE_TOO_LARGE",
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  AUTH_REQUIRED: 'AUTH_REQUIRED',
+  AUTH_FAILED: 'AUTH_FAILED',
+  FORBIDDEN: 'FORBIDDEN',
+  NOT_FOUND: 'NOT_FOUND',
+  CHANNEL_EXISTS: 'CHANNEL_EXISTS',
+  KEY_EXPIRED: 'KEY_EXPIRED',
+  MESSAGE_TOO_LARGE: 'MESSAGE_TOO_LARGE',
 
   // Server errors (5xx)
-  RATE_LIMIT_EXCEEDED: "RATE_LIMIT_EXCEEDED",
-  INTERNAL_ERROR: "INTERNAL_ERROR",
-  BAD_GATEWAY: "BAD_GATEWAY",
-  SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
-  GATEWAY_TIMEOUT: "GATEWAY_TIMEOUT",
+  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+  BAD_GATEWAY: 'BAD_GATEWAY',
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+  GATEWAY_TIMEOUT: 'GATEWAY_TIMEOUT',
 
   // Client-side errors
-  NETWORK_ERROR: "NETWORK_ERROR",
-  TIMEOUT_ERROR: "TIMEOUT_ERROR",
-  CONNECTION_ERROR: "CONNECTION_ERROR",
-  CANCELLATION_ERROR: "CANCELLATION_ERROR",
-  SERIALIZATION_ERROR: "SERIALIZATION_ERROR",
-  DESERIALIZATION_ERROR: "DESERIALIZATION_ERROR",
+  NETWORK_ERROR: 'NETWORK_ERROR',
+  TIMEOUT_ERROR: 'TIMEOUT_ERROR',
+  CONNECTION_ERROR: 'CONNECTION_ERROR',
+  CANCELLATION_ERROR: 'CANCELLATION_ERROR',
+  SERIALIZATION_ERROR: 'SERIALIZATION_ERROR',
+  DESERIALIZATION_ERROR: 'DESERIALIZATION_ERROR',
 
   // SSE errors
-  SSE_CONNECTION_ERROR: "SSE_CONNECTION_ERROR",
-  SSE_HEARTBEAT_TIMEOUT: "SSE_HEARTBEAT_TIMEOUT",
-  SSE_UNSUBSCRIBE_ERROR: "SSE_UNSUBSCRIBE_ERROR",
+  SSE_CONNECTION_ERROR: 'SSE_CONNECTION_ERROR',
+  SSE_HEARTBEAT_TIMEOUT: 'SSE_HEARTBEAT_TIMEOUT',
+  SSE_UNSUBSCRIBE_ERROR: 'SSE_UNSUBSCRIBE_ERROR',
 
   // Configuration errors
-  INVALID_OPTIONS: "INVALID_OPTIONS",
-  MISSING_API_KEY: "MISSING_API_KEY",
-  INVALID_BASE_URL: "INVALID_BASE_URL",
+  INVALID_OPTIONS: 'INVALID_OPTIONS',
+  MISSING_API_KEY: 'MISSING_API_KEY',
+  INVALID_BASE_URL: 'INVALID_BASE_URL',
 } as const;
 
 /**
@@ -117,10 +117,10 @@ export class SecureNotifyError extends Error {
       status?: number;
       retryable?: boolean;
       details?: ErrorDetails;
-    }
+    },
   ) {
     super(message);
-    this.name = "SecureNotifyError";
+    this.name = 'SecureNotifyError';
     this.code = code;
     this.status = options?.status ?? ErrorCodeToStatus[code];
     this.retryable = options?.retryable ?? isRetryableError(code);
@@ -150,7 +150,7 @@ export class SecureNotifyError extends Error {
   /**
    * Create a validation error
    */
-  static validation(message: string, details?: Record<string, unknown>): SecureNotifyError {
+  static validation(message: string, _details?: Record<string, unknown>): SecureNotifyError {
     return new SecureNotifyError(ErrorCode.VALIDATION_ERROR, message, {
       details: {
         message,
@@ -164,7 +164,7 @@ export class SecureNotifyError extends Error {
   /**
    * Create an authentication error
    */
-  static authRequired(message: string = "API key is required"): SecureNotifyError {
+  static authRequired(message: string = 'API key is required'): SecureNotifyError {
     return new SecureNotifyError(ErrorCode.AUTH_REQUIRED, message, {
       status: 401,
       retryable: false,
@@ -179,7 +179,7 @@ export class SecureNotifyError extends Error {
   /**
    * Create an authentication failure error
    */
-  static authFailed(message: string = "Invalid API key"): SecureNotifyError {
+  static authFailed(message: string = 'Invalid API key'): SecureNotifyError {
     return new SecureNotifyError(ErrorCode.AUTH_FAILED, message, {
       status: 401,
       retryable: false,
@@ -194,7 +194,10 @@ export class SecureNotifyError extends Error {
   /**
    * Create a rate limit error
    */
-  static rateLimitExceeded(message: string = "Rate limit exceeded", retryAfter?: number): SecureNotifyError {
+  static rateLimitExceeded(
+    message: string = 'Rate limit exceeded',
+    _retryAfter?: number,
+  ): SecureNotifyError {
     return new SecureNotifyError(ErrorCode.RATE_LIMIT_EXCEEDED, message, {
       status: 429,
       retryable: true,
@@ -209,7 +212,7 @@ export class SecureNotifyError extends Error {
   /**
    * Create a network error
    */
-  static network(message: string = "Network error occurred"): SecureNotifyError {
+  static network(message: string = 'Network error occurred'): SecureNotifyError {
     return new SecureNotifyError(ErrorCode.NETWORK_ERROR, message, {
       retryable: true,
       details: {
@@ -223,7 +226,7 @@ export class SecureNotifyError extends Error {
   /**
    * Create a timeout error
    */
-  static timeout(message: string = "Request timed out"): SecureNotifyError {
+  static timeout(message: string = 'Request timed out'): SecureNotifyError {
     return new SecureNotifyError(ErrorCode.TIMEOUT_ERROR, message, {
       retryable: true,
       details: {
@@ -237,7 +240,7 @@ export class SecureNotifyError extends Error {
   /**
    * Create a connection error
    */
-  static connection(message: string = "Connection failed"): SecureNotifyError {
+  static connection(message: string = 'Connection failed'): SecureNotifyError {
     return new SecureNotifyError(ErrorCode.CONNECTION_ERROR, message, {
       retryable: true,
       details: {
@@ -251,7 +254,7 @@ export class SecureNotifyError extends Error {
   /**
    * Create an invalid options error
    */
-  static invalidOptions(message: string, details?: Record<string, unknown>): SecureNotifyError {
+  static invalidOptions(message: string, _details?: Record<string, unknown>): SecureNotifyError {
     return new SecureNotifyError(ErrorCode.INVALID_OPTIONS, message, {
       retryable: false,
       details: {
@@ -268,22 +271,22 @@ export class SecureNotifyError extends Error {
   static missingApiKey(): SecureNotifyError {
     return new SecureNotifyError(
       ErrorCode.MISSING_API_KEY,
-      "API key is required for this operation. Please provide an apiKey when initializing the client.",
+      'API key is required for this operation. Please provide an apiKey when initializing the client.',
       {
         retryable: false,
         details: {
-          message: "API key is required",
+          message: 'API key is required',
           code: ErrorCode.MISSING_API_KEY,
           timestamp: new Date().toISOString(),
         },
-      }
+      },
     );
   }
 
   /**
    * Create an SSE connection error
    */
-  static sseConnection(message: string = "SSE connection failed"): SecureNotifyError {
+  static sseConnection(message: string = 'SSE connection failed'): SecureNotifyError {
     return new SecureNotifyError(ErrorCode.SSE_CONNECTION_ERROR, message, {
       retryable: true,
       details: {
@@ -297,7 +300,7 @@ export class SecureNotifyError extends Error {
   /**
    * Create an SSE heartbeat timeout error
    */
-  static sseHeartbeatTimeout(message: string = "SSE heartbeat timeout"): SecureNotifyError {
+  static sseHeartbeatTimeout(message: string = 'SSE heartbeat timeout'): SecureNotifyError {
     return new SecureNotifyError(ErrorCode.SSE_HEARTBEAT_TIMEOUT, message, {
       retryable: true,
       details: {
@@ -341,7 +344,10 @@ export function isSecureNotifyError(error: unknown): error is SecureNotifyError 
 /**
  * Assert that a value is not null or undefined
  */
-export function assertNotNull<T>(value: T | null | undefined, message: string = "Value cannot be null"): T {
+export function assertNotNull<T>(
+  value: T | null | undefined,
+  message: string = 'Value cannot be null',
+): T {
   if (value === null || value === undefined) {
     throw SecureNotifyError.validation(message);
   }
@@ -351,7 +357,7 @@ export function assertNotNull<T>(value: T | null | undefined, message: string = 
 /**
  * Assert that a condition is true
  */
-export function assert(condition: boolean, message: string = "Assertion failed"): void {
+export function assert(condition: boolean, message: string = 'Assertion failed'): void {
   if (!condition) {
     throw SecureNotifyError.validation(message);
   }

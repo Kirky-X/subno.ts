@@ -64,13 +64,9 @@ export class RequestDeduplicator {
       ttlSeconds?: number;
       maxPending?: number;
       maxCached?: number;
-    } = {}
+    } = {},
   ) {
-    const {
-      ttlSeconds = 5.0,
-      maxPending = 1000,
-      maxCached = 10000,
-    } = options;
+    const { ttlSeconds = 5.0, maxPending = 1000, maxCached = 10000 } = options;
 
     this.options.ttlSeconds = ttlSeconds;
     this.options.maxPending = maxPending;
@@ -92,7 +88,7 @@ export class RequestDeduplicator {
     let hash = 0;
     for (let i = 0; i < key.length; i++) {
       const char = key.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32bit integer
     }
     return `req_${hash}`;
@@ -111,14 +107,15 @@ export class RequestDeduplicator {
     endpoint: string,
     params: Record<string, any> | undefined,
     func: () => Promise<T>,
-    useCache: boolean = true
+    useCache: boolean = true,
   ): Promise<T> {
     const key = this.generateKey(endpoint, params);
 
     // Check completed cache first
     if (useCache && this.completed.has(key)) {
       this.hits++;
-      return this.completed.get(key);
+      const cached = this.completed.get(key) as T;
+      return cached;
     }
 
     // Check pending requests
@@ -142,7 +139,7 @@ export class RequestDeduplicator {
           if (this.completed.size >= (this.options.maxCached || 10000)) {
             // Remove oldest entry (simple FIFO)
             const firstKey = this.completed.keys().next().value;
-            this.completed.delete(firstKey);
+            if (firstKey !== undefined) this.completed.delete(firstKey);
           }
           this.completed.set(key, result);
         }
@@ -161,7 +158,7 @@ export class RequestDeduplicator {
     if (this.pending.size >= (this.options.maxPending || 1000)) {
       // Remove oldest pending request
       const firstKey = this.pending.keys().next().value;
-      this.pending.delete(firstKey);
+      if (firstKey !== undefined) this.pending.delete(firstKey);
     }
 
     this.pending.set(key, {
@@ -179,7 +176,6 @@ export class RequestDeduplicator {
    */
   cleanupExpired(): number {
     let removed = 0;
-    const cutoff = Date.now() - ((this.options.ttlSeconds || 5.0) * 1000);
 
     // Remove oldest entries if we exceed maxCached
     while (this.completed.size > (this.options.maxCached || 10000) * 2) {

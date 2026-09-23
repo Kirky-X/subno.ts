@@ -1,14 +1,16 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 KirkyX. All rights reserved.
 
 /**
  * 模块导出安全检查工具
- * 
+ *
  * 用途：
  * 1. 检测不当的 export * 语句
  * 2. 检查导出的函数是否有 JSDoc 文档
  * 3. 识别可能泄露的内部实现
  * 4. 统计导出数量，监控 API 表面增长
- * 
+ *
  * 使用方法：
  *   npm run check-exports
  *   node scripts/check-module-exports.js
@@ -34,7 +36,7 @@ const config = {
   // 要检查的目录
   srcDir: path.join(__dirname, '..', 'src'),
   sdkDir: path.join(__dirname, '..', 'sdk', 'typescript', 'src'),
-  
+
   // 忽略的文件/目录模式
   ignorePatterns: [
     /\/node_modules\//,
@@ -45,13 +47,10 @@ const config = {
     /\.spec\.ts$/,
     /\/__tests__\//,
   ],
-  
+
   // 允许使用 export * 的文件（白名单）
-  allowExportStar: [
-    'types/index.ts',
-    'types/api.ts',
-  ],
-  
+  allowExportStar: ['types/index.ts', 'types/api.ts'],
+
   // 最大导出数量警告阈值
   maxExportsPerFile: 20,
 };
@@ -75,11 +74,11 @@ function shouldIgnore(filePath) {
  */
 function findTsFiles(dir, fileList = []) {
   const files = fs.readdirSync(dir);
-  
+
   for (const file of files) {
     const filePath = path.join(dir, file);
     const stat = fs.statSync(filePath);
-    
+
     if (stat.isDirectory()) {
       if (!shouldIgnore(filePath)) {
         findTsFiles(filePath, fileList);
@@ -88,7 +87,7 @@ function findTsFiles(dir, fileList = []) {
       fileList.push(filePath);
     }
   }
-  
+
   return fileList;
 }
 
@@ -97,21 +96,16 @@ function findTsFiles(dir, fileList = []) {
  */
 function analyzeFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf-8');
-  
+
   try {
-    const sourceFile = ts.createSourceFile(
-      filePath,
-      content,
-      ts.ScriptTarget.Latest,
-      true
-    );
-    
+    const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true);
+
     const relativePath = path.relative(path.join(__dirname, '..'), filePath);
     const fileName = path.basename(filePath);
-    
+
     let exportCount = 0;
     let hasExportStar = false;
-    
+
     // 遍历 AST
     ts.forEachChild(sourceFile, node => {
       // 检查 export * 语句
@@ -119,11 +113,9 @@ function analyzeFile(filePath) {
         if (!node.moduleSpecifier) {
           // export * from './something'
           hasExportStar = true;
-          
-          const isAllowed = config.allowExportStar.some(allowed => 
-            filePath.endsWith(allowed)
-          );
-          
+
+          const isAllowed = config.allowExportStar.some(allowed => filePath.endsWith(allowed));
+
           if (!isAllowed) {
             issues.errors.push({
               file: relativePath,
@@ -133,17 +125,17 @@ function analyzeFile(filePath) {
             });
           }
         }
-        
+
         exportCount++;
       }
-      
+
       // 检查导出的函数/类
       if (
         (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) &&
         node.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword)
       ) {
         exportCount++;
-        
+
         // 检查是否有 JSDoc 注释
         const jsDocComments = ts.getJSDocCommentsAndTags(node);
         if (jsDocComments.length === 0) {
@@ -155,7 +147,7 @@ function analyzeFile(filePath) {
             code: 'MISSING_JSDOC',
           });
         }
-        
+
         // 检查命名模式（以下划线开头的可能是私有方法）
         if (node.name && node.name.getText(sourceFile).startsWith('_')) {
           issues.suggestions.push({
@@ -166,18 +158,20 @@ function analyzeFile(filePath) {
           });
         }
       }
-      
+
       // 检查导出的变量
       if (ts.isVariableStatement(node)) {
         const isExported = node.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword);
         if (isExported) {
           exportCount++;
-          
+
           // 检查是否是常量配置对象
           const declarations = node.declarationList.declarations;
           for (const decl of declarations) {
-            if (decl.name.getText(sourceFile).includes('CONFIG') || 
-                decl.name.getText(sourceFile).includes('config')) {
+            if (
+              decl.name.getText(sourceFile).includes('CONFIG') ||
+              decl.name.getText(sourceFile).includes('config')
+            ) {
               issues.suggestions.push({
                 file: relativePath,
                 line: sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1,
@@ -189,7 +183,7 @@ function analyzeFile(filePath) {
         }
       }
     });
-    
+
     // 检查导出数量
     if (exportCount > config.maxExportsPerFile) {
       issues.warnings.push({
@@ -199,7 +193,7 @@ function analyzeFile(filePath) {
         code: 'TOO_MANY_EXPORTS',
       });
     }
-    
+
     return { exportCount, hasExportStar };
   } catch (error) {
     issues.errors.push({
@@ -219,13 +213,13 @@ function printReport(fileStats) {
   console.log('\n' + colors.cyan + '='.repeat(80) + colors.reset);
   console.log(colors.cyan + '模块导出安全检查报告' + colors.reset);
   console.log(colors.cyan + '='.repeat(80) + colors.reset + '\n');
-  
+
   // 文件统计
   console.log(colors.blue + '📊 文件统计:' + colors.reset);
   console.log(`   检查了 ${fileStats.length} 个文件`);
   console.log(`   总导出数量：${fileStats.reduce((sum, s) => sum + s.exports, 0)}`);
   console.log(`   使用 export * 的文件：${fileStats.filter(s => s.hasStar).length}\n`);
-  
+
   // 错误
   if (issues.errors.length > 0) {
     console.log(colors.red + '❌ 错误 (' + issues.errors.length + '):' + colors.reset);
@@ -237,7 +231,7 @@ function printReport(fileStats) {
   } else {
     console.log(colors.green + '✅ 没有发现错误' + colors.reset + '\n');
   }
-  
+
   // 警告
   if (issues.warnings.length > 0) {
     console.log(colors.yellow + '⚠️  警告 (' + issues.warnings.length + '):' + colors.reset);
@@ -247,7 +241,7 @@ function printReport(fileStats) {
       console.log(`      代码：${issue.code}\n`);
     });
   }
-  
+
   // 建议
   if (issues.suggestions.length > 0) {
     console.log(colors.magenta + '💡 建议 (' + issues.suggestions.length + '):' + colors.reset);
@@ -257,10 +251,10 @@ function printReport(fileStats) {
       console.log(`      代码：${issue.code}\n`);
     });
   }
-  
+
   // 总结
   console.log(colors.cyan + '='.repeat(80) + colors.reset);
-  
+
   if (issues.errors.length === 0 && issues.warnings.length === 0) {
     console.log(colors.green + '✨ 所有检查通过！代码质量很好！' + colors.reset);
     console.log(colors.cyan + '='.repeat(80) + colors.reset + '\n');
@@ -271,7 +265,7 @@ function printReport(fileStats) {
     console.log(`   - 警告：${issues.warnings.length} 个（建议修复）`);
     console.log(`   - 建议：${issues.suggestions.length} 个（可选优化）`);
     console.log(colors.cyan + '='.repeat(80) + colors.reset + '\n');
-    
+
     // 如果有错误，退出码为 1
     if (issues.errors.length > 0) {
       process.exit(1);
@@ -301,8 +295,8 @@ function generateJsonReport(fileStats) {
       suggestions: issues.suggestions,
     },
   };
-  
-  const outputPath = path.join(__dirname, 'export-check-report.json');
+
+  const outputPath = path.join(__dirname, '..', 'export-check-report.json');
   fs.writeFileSync(outputPath, JSON.stringify(report, null, 2));
   console.log(`\nJSON 报告已保存到：${outputPath}`);
 }
@@ -312,15 +306,12 @@ function generateJsonReport(fileStats) {
  */
 function main() {
   console.log(colors.blue + '🔍 开始检查模块导出...\n' + colors.reset);
-  
+
   // 查找所有 TypeScript 文件
-  const tsFiles = [
-    ...findTsFiles(config.srcDir),
-    ...findTsFiles(config.sdkDir),
-  ];
-  
+  const tsFiles = [...findTsFiles(config.srcDir), ...findTsFiles(config.sdkDir)];
+
   console.log(`找到 ${tsFiles.length} 个 TypeScript 文件\n`);
-  
+
   // 分析每个文件
   const fileStats = tsFiles.map(filePath => {
     const result = analyzeFile(filePath);
@@ -330,12 +321,12 @@ function main() {
       hasStar: result.hasExportStar,
     };
   });
-  
+
+  // 生成 JSON 报告（必须在 printReport 之前，因其内部会 process.exit）
+  generateJsonReport(fileStats);
+
   // 打印报告
   printReport(fileStats);
-  
-  // 生成 JSON 报告
-  generateJsonReport(fileStats);
 }
 
 // 运行检查

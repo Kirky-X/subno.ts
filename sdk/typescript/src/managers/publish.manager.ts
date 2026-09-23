@@ -8,9 +8,9 @@ import type {
   MessageInfo,
   QueueStatusResponse,
   SuccessResponse,
-} from "../types/api.js";
-import type { HttpClient } from "../utils/http.js";
-import { SecureNotifyError } from "../types/errors.js";
+} from '../types/api.js';
+import type { HttpClient } from '../utils/http.js';
+import { SecureNotifyError } from '../types/errors.js';
 
 /**
  * Options for sending a message
@@ -53,7 +53,7 @@ export interface PublishResult extends MessagePublishResponse {}
  */
 export class PublishManager {
   private readonly http: HttpClient;
-  private readonly basePath = "/api/publish";
+  private readonly basePath = '/api/publish';
 
   /**
    * Create a new publish manager
@@ -70,17 +70,17 @@ export class PublishManager {
    */
   async send(options: SendMessageOptions): Promise<PublishResult> {
     if (!options.channel) {
-      throw SecureNotifyError.validation("channel is required");
+      throw SecureNotifyError.validation('channel is required');
     }
 
     if (!options.message) {
-      throw SecureNotifyError.validation("message is required");
+      throw SecureNotifyError.validation('message is required');
     }
 
     const request: MessagePublishRequest = {
       channel: options.channel,
       message: options.message,
-      priority: options.priority ?? "normal",
+      priority: options.priority ?? 'normal',
       sender: options.sender,
       cache: options.cache ?? true,
       encrypted: options.encrypted ?? false,
@@ -90,7 +90,7 @@ export class PublishManager {
 
     const response = await this.http.post<SuccessResponse<MessagePublishResponse>>(
       this.basePath,
-      request
+      request,
     );
 
     return response.data.data;
@@ -107,14 +107,14 @@ export class PublishManager {
   async sendToChannels(
     channels: string[],
     message: string,
-    options?: Omit<SendMessageOptions, "channel" | "message">
+    options?: Omit<SendMessageOptions, 'channel' | 'message'>,
   ): Promise<PublishResult[]> {
     if (!channels || channels.length === 0) {
-      throw SecureNotifyError.validation("channels array is required");
+      throw SecureNotifyError.validation('channels array is required');
     }
 
     if (!message) {
-      throw SecureNotifyError.validation("message is required");
+      throw SecureNotifyError.validation('message is required');
     }
 
     const batchSize = 10;
@@ -123,13 +123,13 @@ export class PublishManager {
     for (let i = 0; i < channels.length; i += batchSize) {
       const batch = channels.slice(i, i + batchSize);
       const batchResults = await Promise.all(
-        batch.map((channel) =>
+        batch.map(channel =>
           this.send({
             channel,
             message,
             ...options,
-          })
-        )
+          }),
+        ),
       );
       results.push(...batchResults);
     }
@@ -146,13 +146,13 @@ export class PublishManager {
    */
   async getQueueStatus(channel: string, count: number = 10): Promise<QueueStatus> {
     if (!channel) {
-      throw SecureNotifyError.validation("channel is required");
+      throw SecureNotifyError.validation('channel is required');
     }
 
-    const response = await this.http.get<SuccessResponse<QueueStatusResponse>>(
-      this.basePath,
-      { channel, count }
-    );
+    const response = await this.http.get<SuccessResponse<QueueStatusResponse>>(this.basePath, {
+      channel,
+      count,
+    });
 
     return response.data.data;
   }
@@ -170,7 +170,7 @@ export class PublishManager {
     priority: MessagePriority,
     channel: string,
     message: string,
-    sender?: string
+    sender?: string,
   ): Promise<PublishResult> {
     return this.send({
       channel,
@@ -188,12 +188,8 @@ export class PublishManager {
    * @param sender - Optional sender identifier
    * @returns The publish result
    */
-  async sendCritical(
-    channel: string,
-    message: string,
-    sender?: string
-  ): Promise<PublishResult> {
-    return this.sendPriority("critical", channel, message, sender);
+  async sendCritical(channel: string, message: string, sender?: string): Promise<PublishResult> {
+    return this.sendPriority('critical', channel, message, sender);
   }
 
   /**
@@ -204,12 +200,8 @@ export class PublishManager {
    * @param sender - Optional sender identifier
    * @returns The publish result
    */
-  async sendHigh(
-    channel: string,
-    message: string,
-    sender?: string
-  ): Promise<PublishResult> {
-    return this.sendPriority("high", channel, message, sender);
+  async sendHigh(channel: string, message: string, sender?: string): Promise<PublishResult> {
+    return this.sendPriority('high', channel, message, sender);
   }
 
   /**
@@ -220,12 +212,8 @@ export class PublishManager {
    * @param sender - Optional sender identifier
    * @returns The publish result
    */
-  async sendNormal(
-    channel: string,
-    message: string,
-    sender?: string
-  ): Promise<PublishResult> {
-    return this.sendPriority("normal", channel, message, sender);
+  async sendNormal(channel: string, message: string, sender?: string): Promise<PublishResult> {
+    return this.sendPriority('normal', channel, message, sender);
   }
 
   /**
@@ -236,12 +224,8 @@ export class PublishManager {
    * @param sender - Optional sender identifier
    * @returns The publish result
    */
-  async sendLow(
-    channel: string,
-    message: string,
-    sender?: string
-  ): Promise<PublishResult> {
-    return this.sendPriority("low", channel, message, sender);
+  async sendLow(channel: string, message: string, sender?: string): Promise<PublishResult> {
+    return this.sendPriority('low', channel, message, sender);
   }
 
   /**
@@ -252,12 +236,8 @@ export class PublishManager {
    * @param sender - Optional sender identifier
    * @returns The publish result
    */
-  async sendBulk(
-    channel: string,
-    message: string,
-    sender?: string
-  ): Promise<PublishResult> {
-    return this.sendPriority("bulk", channel, message, sender);
+  async sendBulk(channel: string, message: string, sender?: string): Promise<PublishResult> {
+    return this.sendPriority('bulk', channel, message, sender);
   }
 
   /**
@@ -271,15 +251,18 @@ export class PublishManager {
   async broadcast(
     channels: string[],
     message: string,
-    options?: Omit<SendMessageOptions, "channel" | "message">
+    options?: Omit<SendMessageOptions, 'channel' | 'message'>,
   ): Promise<{ channel: string; result?: PublishResult; error?: Error }[]> {
     const results = await Promise.allSettled(
-      channels.map((channel) => this.send({ channel, message, ...options }))
+      channels.map(channel => this.send({ channel, message, ...options })),
     );
 
     return channels.map((channel, index) => {
       const result = results[index];
-      if (result.status === "fulfilled") {
+      if (!result) {
+        return { channel, error: new Error('Missing result') };
+      }
+      if (result.status === 'fulfilled') {
         return { channel, result: result.value };
       } else {
         return { channel, error: result.reason as Error };

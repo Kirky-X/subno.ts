@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 KirkyX. All rights reserved.
 
-import { SecureNotifyError, isRetryableError } from "../types/errors.js";
+import { SecureNotifyError, ErrorCode, type ErrorCodeType } from '../types/errors.js';
 
 /**
  * Default retry configuration
@@ -52,16 +52,14 @@ export interface RetryResult<T> {
 /**
  * Calculate delay with exponential backoff and jitter
  */
-function calculateDelay(
-  attempt: number,
-  config: Required<RetryConfig>
-): number {
+function calculateDelay(attempt: number, config: Required<RetryConfig>): number {
   const baseDelay = config.initialDelay * Math.pow(config.backoffMultiplier, attempt);
   const maxDelay = Math.min(baseDelay, config.maxDelay);
 
   if (config.jitter) {
     // Add random jitter between 0 and baseDelay
-    const jitterAmount = Math.random() * config.initialDelay * Math.pow(config.backoffMultiplier, attempt);
+    const jitterAmount =
+      Math.random() * config.initialDelay * Math.pow(config.backoffMultiplier, attempt);
     const delay = Math.min(jitterAmount, config.maxDelay);
     return Math.floor(delay);
   }
@@ -90,7 +88,7 @@ function shouldRetry(error: SecureNotifyError, config: Required<RetryConfig>): b
  * Sleep for a specified duration
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
@@ -98,7 +96,7 @@ function sleep(ms: number): Promise<void> {
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  config?: RetryConfig
+  config?: RetryConfig,
 ): Promise<RetryResult<T>> {
   const finalConfig: Required<RetryConfig> = {
     maxRetries: config?.maxRetries ?? DEFAULT_RETRY_OPTIONS.maxRetries,
@@ -134,8 +132,8 @@ export async function withRetry<T>(
       if (!(error instanceof SecureNotifyError)) {
         // Convert unknown errors to SecureNotifyError
         lastError = new SecureNotifyError(
-          "UNKNOWN",
-          `Unknown error: ${(error as Error).message}`
+          ErrorCode.INTERNAL_ERROR as ErrorCodeType,
+          `Unknown error: ${(error as Error).message}`,
         );
       } else {
         lastError = error as SecureNotifyError;
@@ -179,7 +177,7 @@ function parseRetryAfter(error: SecureNotifyError): number | undefined {
   if (error.details?.message) {
     // Try to extract seconds from message
     const match = error.details.message.match(/retry after\s+(\d+)\s*sec/i);
-    if (match) {
+    if (match?.[1]) {
       return parseInt(match[1], 10) * 1000;
     }
   }
@@ -190,10 +188,11 @@ function parseRetryAfter(error: SecureNotifyError): number | undefined {
 /**
  * Create a retryable version of a function
  */
-export function createRetryableFunction<T extends (...args: Args) => Promise<Return>, Args extends unknown[], Return>(
-  fn: T,
-  config?: RetryConfig
-): (...args: Args) => Promise<Return> {
+export function createRetryableFunction<
+  T extends (...args: Args) => Promise<Return>,
+  Args extends unknown[],
+  Return,
+>(fn: T, config?: RetryConfig): (...args: Args) => Promise<Return> {
   return async (...args: Args): Promise<Return> => {
     const result = await withRetry(() => fn(...args), config);
     if (!result.success) {
@@ -206,40 +205,27 @@ export function createRetryableFunction<T extends (...args: Args) => Promise<Ret
 /**
  * Decorator for adding retry logic to class methods
  */
-export function withRetryDecorated(
-  config?: RetryConfig
-): MethodDecorator {
-  return function <T>(
+export function withRetryDecorated(config?: RetryConfig): MethodDecorator {
+  // ponytail: cast satisfies MethodDecorator while keeping loose impl typing
+  return function (
     _target: object,
     _propertyKey: string | symbol,
-    descriptor: TypedPropertyDescriptor<T>
-  ): TypedPropertyDescriptor<T> {
+    descriptor: TypedPropertyDescriptor<(...args: never[]) => Promise<unknown>>,
+  ): TypedPropertyDescriptor<(...args: never[]) => Promise<unknown>> {
     const originalMethod = descriptor.value;
     if (!originalMethod) return descriptor;
 
-    descriptor.value = (async function (this: unknown, ...args: Parameters<T extends (...args: infer A) => Promise<unknown> ? (...args: A) => Promise<unknown> : never>) {
-      const result = await withRetry(() => originalMethod.apply(this, args), config);
+    descriptor.value = async function (this: unknown, ...args: never[]) {
+      const result = await withRetry(
+        () => (originalMethod as (...a: unknown[]) => Promise<unknown>).apply(this, args),
+        config,
+      );
       if (!result.success) {
         throw result.error;
       }
       return result.data;
-    }) as T extends (...args: infer A) => Promise<infer R> ? (...args: A) => Promise<R> : never;
+    };
 
     return descriptor;
-  };
-}
-
-/**
- * Utility to check if a request should be retried based on status code
- */
-export function isRetryableStatusCode(status: number, config?: RetryConfig): boolean {
-  const retryCodes = config?.retryOnStatusCodes ?? DEFAULT_RETRY_OPTIONS.retryOnStatusCodes;
-  return retryCodes.includes(status);
-}
-
-/**
- * Utility to check if an error is retryable
- */
-export function isErrorRetryable(error: SecureNotifyError): boolean {
-  return isRetryableError(error.code);
+  } as MethodDecorator;
 }
