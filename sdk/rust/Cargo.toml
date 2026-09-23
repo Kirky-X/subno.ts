@@ -45,7 +45,7 @@ http = "1.0"
 time = { version = "0.3", features = ["serde", "macros"] }
 
 # Random for jitter
-rand = "0.8"
+rand = "0.10"
 
 # SHA256 for deduplication
 sha2 = "0.10"
