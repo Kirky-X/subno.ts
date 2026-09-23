@@ -57,7 +57,7 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 parking_lot = { version = "0.12", optional = true }
 
 [build-dependencies]
-uniffi_build = { version = "0.25", optional = true }
+uniffi_build = { version = "0.32", optional = true }
 
 [features]
 default = ["native-tls"]
