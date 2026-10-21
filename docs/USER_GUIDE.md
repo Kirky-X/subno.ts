@@ -6,6 +6,21 @@
 
 ---
 
+## 📋 目录
+
+- [产品概述](#产品概述)
+- [核心概念](#核心概念)
+- [快速开始](#快速开始)
+- [使用场景](#使用场景)
+- [端到端示例](#端到端示例)
+- [安全最佳实践](#安全最佳实践)
+- [SDK 使用](#sdk-使用)
+- [故障排查](#故障排查)
+- [常见问题](#常见问题)
+- [相关资源](#相关资源)
+
+---
+
 ## 产品概述
 
 ### 什么是 SecureNotify？
@@ -14,13 +29,13 @@
 
 ### 核心价值
 
-| 价值 | 说明 |
-|------|------|
-| **端到端加密** | 消息全程加密，服务提供商无法解密 |
-| **实时推送** | 基于 SSE 的即时消息推送 |
+| 价值               | 说明                             |
+| ------------------ | -------------------------------- |
+| **端到端加密**     | 消息全程加密，服务提供商无法解密 |
+| **实时推送**       | 基于 SSE 的即时消息推送          |
 | **灵活的频道管理** | 支持公开、加密、临时三种频道类型 |
-| **完善的密钥管理** | 自动化的公钥生命周期管理 |
-| **企业级安全** | API 密钥认证、请求限流、审计日志 |
+| **完善的密钥管理** | 自动化的公钥生命周期管理         |
+| **企业级安全**     | API 密钥认证、请求限流、审计日志 |
 
 ### 适用场景
 
@@ -39,11 +54,11 @@
 
 **支持的算法**：
 
-| 算法 | 密钥长度 | 说明 |
-|------|----------|------|
-| **RSA-2048** | 2048 位 | 默认选项 |
-| **RSA-4096** | 4096 位 | 更高安全性 |
-| **ECC-SECP256K1** | 256 位 | 椭圆曲线加密 |
+| 算法              | 密钥长度 | 说明         |
+| ----------------- | -------- | ------------ |
+| **RSA-2048**      | 2048 位  | 默认选项     |
+| **RSA-4096**      | 4096 位  | 更高安全性   |
+| **ECC-SECP256K1** | 256 位   | 椭圆曲线加密 |
 
 ### 2. 频道 (Channel)
 
@@ -51,11 +66,11 @@
 
 **频道类型**：
 
-| 类型 | ID 前缀 | 加密 | 使用场景 |
-|------|---------|------|----------|
-| **公开频道** | `pub_` | ❌ | 公告、广播 |
-| **加密频道** | `enc_` | ✅ | 私密消息 |
-| **临时频道** | `tmp_` | ❌/✅ | 临时会话 |
+| 类型         | ID 前缀 | 加密  | 使用场景   |
+| ------------ | ------- | ----- | ---------- |
+| **公开频道** | `pub_`  | ❌    | 公告、广播 |
+| **加密频道** | `enc_`  | ✅    | 私密消息   |
+| **临时频道** | `tmp_`  | ❌/✅ | 临时会话   |
 
 ### 3. 消息 (Message)
 
@@ -63,13 +78,13 @@
 
 **消息优先级**：
 
-| 优先级 | 值 | 说明 |
-|--------|-----|------|
+| 优先级       | 值  | 说明       |
+| ------------ | --- | ---------- |
 | **CRITICAL** | 100 | 最高优先级 |
-| **HIGH** | 75 | 高优先级 |
-| **NORMAL** | 50 | 默认优先级 |
-| **LOW** | 25 | 低优先级 |
-| **BULK** | 0 | 批量消息 |
+| **HIGH**     | 75  | 高优先级   |
+| **NORMAL**   | 50  | 默认优先级 |
+| **LOW**      | 25  | 低优先级   |
+| **BULK**     | 0   | 批量消息   |
 
 ### 4. API 密钥 (API Key)
 
@@ -77,10 +92,10 @@ API 密钥用于认证和授权 API 请求。
 
 **权限模型**：
 
-| 权限 | 说明 |
-|------|------|
-| **read** | 读取频道、消息、密钥 |
-| **write** | 发布消息、创建频道 |
+| 权限      | 说明                    |
+| --------- | ----------------------- |
+| **read**  | 读取频道、消息、密钥    |
+| **write** | 发布消息、创建频道      |
 | **admin** | 管理 API 密钥、撤销密钥 |
 
 ---
@@ -216,7 +231,7 @@ const { generateKeyPairSync, publicEncrypt } = require('crypto');
 const { publicKey, privateKey } = generateKeyPairSync('rsa', {
   modulusLength: 2048,
   publicKeyEncoding: { type: 'spki', format: 'pem' },
-  privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+  privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
 });
 
 // 注册公钥
@@ -227,8 +242,8 @@ async function registerPublicKey(publicKey) {
     body: JSON.stringify({
       publicKey,
       algorithm: 'RSA-2048',
-      expiresIn: 604800
-    })
+      expiresIn: 604800,
+    }),
   });
   return response.json();
 }
@@ -236,15 +251,15 @@ async function registerPublicKey(publicKey) {
 // 发送加密消息
 async function sendEncryptedMessage(channelId, message) {
   const encrypted = publicEncrypt(publicKey, Buffer.from(message));
-  
+
   const response = await fetch('http://localhost:3000/api/publish', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       channel: channelId,
       message: encrypted.toString('base64'),
-      encrypted: true
-    })
+      encrypted: true,
+    }),
   });
   return response.json();
 }
@@ -256,19 +271,14 @@ const { privateDecrypt } = require('crypto');
 
 // 订阅实时消息
 function subscribe(channelId) {
-  const eventSource = new EventSource(
-    `http://localhost:3000/api/subscribe?channel=${channelId}`
-  );
+  const eventSource = new EventSource(`http://localhost:3000/api/subscribe?channel=${channelId}`);
 
-  eventSource.addEventListener('message', (event) => {
+  eventSource.addEventListener('message', event => {
     const data = JSON.parse(event.data);
-    
+
     if (data.encrypted) {
       // 解密消息
-      const decrypted = privateDecrypt(
-        privateKey,
-        Buffer.from(data.message, 'base64')
-      );
+      const decrypted = privateDecrypt(privateKey, Buffer.from(data.message, 'base64'));
       console.log('收到消息:', decrypted.toString());
     }
   });
@@ -299,12 +309,12 @@ function subscribe(channelId) {
 const channelConfig = {
   // 公开信息
   announcements: { type: 'public' },
-  
+
   // 敏感但需要分享
   teamUpdates: { type: 'encrypted' },
-  
+
   // 高度敏感
-  financialAlerts: { type: 'encrypted' }
+  financialAlerts: { type: 'encrypted' },
 };
 ```
 
@@ -315,12 +325,12 @@ const channelConfig = {
 const keyPermissions = {
   // 只读服务
   reader: ['read'],
-  
+
   // 消息发送服务
   publisher: ['read', 'write'],
-  
+
   // 完整管理权限
-  admin: ['read', 'write', 'admin']
+  admin: ['read', 'write', 'admin'],
 };
 ```
 
@@ -330,19 +340,19 @@ const keyPermissions = {
 
 ### Q1：如何选择加密算法？
 
-| 场景 | 推荐算法 | 说明 |
-|------|----------|------|
-| 通用场景 | RSA-2048 | 默认选择 |
-| 高安全性需求 | RSA-4096 | 更高安全级别 |
+| 场景         | 推荐算法      | 说明               |
+| ------------ | ------------- | ------------------ |
+| 通用场景     | RSA-2048      | 默认选择           |
+| 高安全性需求 | RSA-4096      | 更高安全级别       |
 | 资源受限环境 | ECC-SECP256K1 | 密钥短，计算效率高 |
 
 ### Q2：消息能发送多大？
 
-| 类型 | 最大大小 |
-|------|----------|
-| 单条消息 | 4.5 MB |
-| 公钥 | 4 KB |
-| 频道元数据 | 2 KB |
+| 类型       | 最大大小 |
+| ---------- | -------- |
+| 单条消息   | 4.5 MB   |
+| 公钥       | 4 KB     |
+| 频道元数据 | 2 KB     |
 
 ### Q3：如何清理过期数据？
 
@@ -357,13 +367,106 @@ curl "http://localhost:3000/api/cron/cleanup-keys?task=all" \
 
 ---
 
+## SDK 使用
+
+### TypeScript SDK
+
+```typescript
+import { SecureNotify } from '@securenotify/sdk';
+
+const client = new SecureNotify({
+  baseURL: 'http://localhost:3000/api',
+  apiKey: 'your-api-key',
+});
+
+// 1. 注册公钥
+const registration = await client.register({
+  publicKey: '-----BEGIN PUBLIC KEY-----\n...',
+  algorithm: 'RSA-2048',
+  expiresIn: 604800,
+});
+
+// 2. 发布消息
+await client.publish({
+  channel: registration.channelId,
+  message: 'Hello, World!',
+  priority: 'normal',
+});
+
+// 3. 订阅消息
+const subscription = await client.subscribe(registration.channelId);
+subscription.on('message', msg => {
+  console.log('收到消息:', msg);
+});
+```
+
+### Python SDK
+
+```python
+from securenotify import SecureNotify
+
+client = SecureNotify(
+    base_url="http://localhost:3000/api",
+    api_key="your-api-key"
+)
+
+# 注册公钥
+registration = client.register(
+    public_key="-----BEGIN PUBLIC KEY-----\n...",
+    algorithm="RSA-2048",
+    expires_in=604800
+)
+
+# 发布消息
+client.publish(
+    channel=registration.channel_id,
+    message="Hello, World!",
+    priority="normal"
+)
+```
+
+---
+
+## 故障排查
+
+### 连接问题
+
+| 问题           | 可能原因     | 解决方案                    |
+| -------------- | ------------ | --------------------------- |
+| `ECONNREFUSED` | 服务未启动   | 检查 `npm run dev` 是否运行 |
+| `ETIMEDOUT`    | 网络超时     | 检查网络连接，增加超时时间  |
+| `ENOTFOUND`    | DNS 解析失败 | 检查域名配置                |
+
+### 认证问题
+
+| 问题            | 可能原因        | 解决方案                |
+| --------------- | --------------- | ----------------------- |
+| `AUTH_REQUIRED` | 未提供 API 密钥 | 添加 `X-API-Key` 请求头 |
+| `AUTH_FAILED`   | API 密钥无效    | 检查 API 密钥是否正确   |
+| `FORBIDDEN`     | 权限不足        | 检查 API 密钥权限       |
+
+### 速率限制
+
+| 问题                  | 可能原因     | 解决方案                   |
+| --------------------- | ------------ | -------------------------- |
+| `RATE_LIMIT_EXCEEDED` | 请求过于频繁 | 降低请求频率，实现退避重试 |
+
+### SSE 连接问题
+
+| 问题     | 可能原因           | 解决方案                  |
+| -------- | ------------------ | ------------------------- |
+| 连接断开 | 网络不稳定         | 客户端实现自动重连        |
+| 消息丢失 | 连接中断期间的消息 | 使用 `Last-Event-ID` 恢复 |
+
+---
+
 ## 相关资源
 
-| 资源 | 链接 |
-|------|------|
+| 资源     | 链接                                      |
+| -------- | ----------------------------------------- |
 | API 参考 | [docs/API_REFERENCE.md](API_REFERENCE.md) |
-| 架构设计 | [docs/ARCHITECTURE.md](ARCHITECTURE.md) |
-| 项目仓库 | https://github.com/your-org/subno.ts |
+| 架构设计 | [docs/ARCHITECTURE.md](ARCHITECTURE.md)   |
+| 项目仓库 | https://github.com/your-org/subno.ts      |
 
 ---
 

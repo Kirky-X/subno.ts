@@ -6,6 +6,25 @@
 
 ---
 
+## 📋 目录
+
+- [概述](#概述)
+- [认证](#认证)
+- [API 实现状态总览](#api-实现状态总览)
+- [健康检查](#健康检查)
+- [公钥注册](#公钥注册)
+- [频道管理](#频道管理)
+- [消息推送](#消息推送)
+- [实时订阅](#实时订阅)
+- [密钥管理](#密钥管理)
+- [定时任务](#定时任务)
+- [错误处理](#错误处理)
+- [速率限制](#速率限制)
+- [SDK 集成](#sdk-集成)
+- [版本控制](#版本控制)
+
+---
+
 ## 概述
 
 ### 基础 URL
@@ -32,6 +51,62 @@ interface ErrorResponse {
     code: string;
     timestamp: string;
   };
+}
+```
+
+---
+
+## 认证
+
+### API 密钥认证
+
+除健康检查端点外，所有 API 端点都需要认证。
+
+**请求头：**
+
+```
+X-API-Key: your-api-key
+```
+
+**权限模型：**
+
+| 权限    | 说明                    | 可用端点    |
+| ------- | ----------------------- | ----------- |
+| `read`  | 读取频道、消息、密钥    | GET 端点    |
+| `write` | 发布消息、创建频道      | POST 端点   |
+| `admin` | 管理 API 密钥、撤销密钥 | DELETE 端点 |
+
+**认证失败响应：**
+
+```json
+// 401 - 未提供 API 密钥
+{
+  "success": false,
+  "error": {
+    "message": "API key required",
+    "code": "AUTH_REQUIRED",
+    "timestamp": "2026-01-13T00:00:00.000Z"
+  }
+}
+
+// 401 - API 密钥无效
+{
+  "success": false,
+  "error": {
+    "message": "Invalid API key",
+    "code": "AUTH_FAILED",
+    "timestamp": "2026-01-13T00:00:00.000Z"
+  }
+}
+
+// 403 - 权限不足
+{
+  "success": false,
+  "error": {
+    "message": "Insufficient permissions",
+    "code": "FORBIDDEN",
+    "timestamp": "2026-01-13T00:00:00.000Z"
+  }
 }
 ```
 
@@ -601,6 +676,107 @@ X-Cron-Secret: your-cron-secret
 | POST /api/publish  | 10 次 | 60 秒    |
 | POST /api/register | 5 次  | 60 秒    |
 | GET /api/subscribe | 5 次  | 60 秒    |
+
+**限流响应：**
+
+```json
+// 429 - 请求过于频繁
+{
+  "success": false,
+  "error": {
+    "message": "Rate limit exceeded",
+    "code": "RATE_LIMIT_EXCEEDED",
+    "timestamp": "2026-01-13T00:00:00.000Z"
+  }
+}
+```
+
+---
+
+## SDK 集成
+
+### TypeScript SDK
+
+```typescript
+import { SecureNotify } from '@securenotify/sdk';
+
+const client = new SecureNotify({
+  baseURL: 'https://your-domain.com/api',
+  apiKey: 'your-api-key',
+});
+
+// 注册公键
+const registration = await client.register({
+  publicKey: '-----BEGIN PUBLIC KEY-----\n...',
+  algorithm: 'RSA-2048',
+  expiresIn: 604800,
+});
+
+// 发布消息
+const result = await client.publish({
+  channel: registration.channelId,
+  message: 'Hello, World!',
+  priority: 'normal',
+});
+
+// 订阅消息
+const subscription = await client.subscribe(registration.channelId);
+subscription.on('message', msg => {
+  console.log('收到消息:', msg);
+});
+```
+
+### cURL 示例
+
+```bash
+# 注册公钥
+curl -X POST https://your-domain.com/api/register \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "publicKey": "-----BEGIN PUBLIC KEY-----\n...",
+    "algorithm": "RSA-4096",
+    "expiresIn": 604800
+  }'
+
+# 发布消息
+curl -X POST https://your-domain.com/api/publish \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "enc_xxx",
+    "message": "Hello, World!",
+    "priority": "normal"
+  }'
+
+# 订阅消息
+curl -N https://your-domain.com/api/subscribe?channel=enc_xxx \
+  -H "X-API-Key: your-api-key"
+```
+
+---
+
+## 版本控制
+
+### 当前版本
+
+**v0.2.2**
+
+### 版本策略
+
+本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)：
+
+| 版本号       | 说明                 |
+| ------------ | -------------------- |
+| **主版本号** | 不兼容的 API 修改    |
+| **次版本号** | 向下兼容的功能性新增 |
+| **修订号**   | 向下兼容的问题修正   |
+
+### API 兼容性
+
+- ✅ 同一主版本号内 API 完全兼容
+- ⚠️ 主版本号变更可能包含破坏性变更
+- 📋 破坏性变更将在 [更新日志](CHANGELOG.md) 中明确标注
 
 ---
 
